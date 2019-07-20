@@ -1,0 +1,20 @@
+{
+  "name": "enigma-mixer",
+  "version": "1.0.0",
+  "description": "",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "dotenv": "^8.0.0",
+    "enigma-js": "0.0.5",
+    "discovery-cli": "./lib/discovery-cli"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dc": "node ./lib/discovery-cli/src/index.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
