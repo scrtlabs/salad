@@ -21,13 +21,21 @@ extern crate eng_wasm_derive;
 // Serialization stuff
 extern crate rustc_hex;
 
+// Crypto stuff
+extern crate ring;
+
 // eng_wasm
 use eng_wasm::*;
 use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
-use eng_wasm::{String, H256, H160};
-// use std::collections::HashMap;
+use eng_wasm::{String, H256, H160, Vec};
 use rustc_hex::ToHex;
+use ring::aead::{self, Nonce, Aad, Algorithm};
+
+const IV_SIZE: usize = 96 / 8;
+static AES_MODE: &Algorithm = &aead::AES_256_GCM;
+
+type IV = [u8; IV_SIZE];
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -40,7 +48,7 @@ static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 #[pub_interface]
 pub trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
-    fn execute_deal(deal_id: H256, encrypted_addresses: Vec<String>);
+    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> String;
 }
 
 // The implementation of the exported ESC functions should be defined in the trait implementation
@@ -53,7 +61,31 @@ pub struct Contract;
 impl Contract {
     // Read voting address of VotingETH contract
     fn get_mixer_eth_addr() -> String {
+        // TODO: Try unwrap_or
         read_state!(MIXER_ETH_ADDR).unwrap_or_default()
+    }
+
+    fn seal_with_key(
+        algorithm: &'static Algorithm,
+        key_bytes: &[u8; 32],
+        nonce: Nonce,
+        in_out: &mut Vec<u8>,
+    ) {
+        let unbound_key = aead::UnboundKey::new(algorithm, key_bytes).unwrap();
+        let key = aead::LessSafeKey::new(unbound_key);
+        key.seal_in_place_append_tag(nonce, Aad::empty(), in_out).unwrap();
+    }
+
+    fn encrypt_with_nonce(message: Vec<u8>, key: &[u8; 32], iv: IV) -> Vec<u8> {
+        let mut in_out = message.clone();
+        let nonce = Nonce::assume_unique_for_key(iv);
+        Self::seal_with_key(
+            AES_MODE,
+            key,
+            nonce,
+            &mut in_out,
+        );
+        in_out
     }
 }
 
@@ -66,11 +98,23 @@ impl ContractInterface for Contract {
     }
 
     #[no_mangle]
-    fn execute_deal(deal_id: H256, encrypted_addresses: Vec<String>) {
+    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> String {
+        eprint!("In execute_deal({:?}, {:?})", deal_id, enc_recipients);
+        let key: [u8; 32] = [0; 32];
+        let msg = b"This Is Enigma".to_vec();
+        let iv = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        let result = Self::encrypt_with_nonce(msg, &key, iv);
+        eprint!("The encrypted string: {}", result.to_hex::<String>());
+
+        let encrypted_addresses: Vec<String> = Vec::new();
         eprint!("Mixing address for deal {:?}: {:?}", deal_id, encrypted_addresses);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let eth_contract = EthContract::new(&mixer_eth_addr);
-        let recipients: Vec<H160> = vec![H160::from(0)];
-        eth_contract.distribute(deal_id, recipients);
+        let mut recipients: Vec<H160> = Vec::new();
+        let address_bytes: [u8; 20] = [0; 20];
+        recipients.push(H160::from(&address_bytes));
+        let deal_id_uint = U256::from(deal_id);
+        eth_contract.distribute(deal_id_uint, recipients);
+        "Hello".to_string()
     }
 }

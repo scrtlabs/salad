@@ -5,7 +5,7 @@ import "./IMixer.sol";
 contract Mixer is IMixer {
     struct Deal {
         address organizer;
-        bytes32 title;
+        string title;
         mapping(address => uint) deposit;
         uint depositSum;
         uint numDeposits;
@@ -23,7 +23,7 @@ contract Mixer is IMixer {
     mapping(bytes32 => Deal) deals;
     bytes32[] dealIds;
 
-    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, bytes32 _title, uint _depositInWei, uint _numParticipants, bool _success, string _err);
+    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, string _title, uint _depositInWei, uint _numParticipants, bool _success, string _err);
     event Deposit(address indexed _depositor, bytes32 indexed _dealId, bytes32 _recipientHash, uint _value, bool _success, string _err);
     event Distribute(bytes32 indexed _dealId, uint individualAmountInWei, uint32 nbTransfers, bool _success, string _err);
 
@@ -39,7 +39,7 @@ contract Mixer is IMixer {
         _;
     }
 
-    function newDeal(bytes32 _title, uint _depositInWei, uint _numParticipants)
+    function newDeal(string memory _title, uint _depositInWei, uint _numParticipants)
     public {
         bytes32 dealId = bytes32(dealIds.length);
 
@@ -81,18 +81,19 @@ contract Mixer is IMixer {
         }
     }
 
-    function distribute(bytes32 dealId, address payable[] memory recipients)
+    function distribute(uint256 _dealId, address payable[] memory _recipients)
     public
     onlyEnigma() {
         // Distribute the deposits to destination addresses
+        bytes32 dealId = bytes32(_dealId);
         require(deals[dealId].status == 1, "Deal is not executed.");
-        deals[dealId].recipients = recipients;
+        deals[dealId].recipients = _recipients;
 
-        for (uint i = 0; i < recipients.length; i++) {
-            recipients[i].transfer(deals[dealId].depositInWei);
+        for (uint i = 0; i < _recipients.length; i++) {
+            _recipients[i].transfer(deals[dealId].depositInWei);
         }
 
-        emit Distribute(dealId, deals[dealId].depositInWei, uint32(deals[dealId].recipients.length), true, "all good");
+        emit Distribute(dealId, deals[dealId].depositInWei, uint32(_recipients.length), true, "all good");
     }
 
     function listDeals()
@@ -122,9 +123,9 @@ contract Mixer is IMixer {
     function dealStatus(bytes32 _dealId)
     public
     view
-    returns (bytes32, uint, uint, uint, uint, uint) {
+    returns (string memory, uint, uint, uint, uint, uint) {
         // Key attributes of a deal
-        bytes32 title = deals[_dealId].title;
+        string memory title = deals[_dealId].title;
         uint numParticipants = deals[_dealId].numParticipants;
         uint deposit = deals[_dealId].depositInWei;
         uint numDeposits = deals[_dealId].numDeposits;

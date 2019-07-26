@@ -1,0 +1,20 @@
+[
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "name": "_dealId",
+        "type": "uint256"
+      },
+      {
+        "name": "_recipients",
+        "type": "address[]"
+      }
+    ],
+    "name": "distribute",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

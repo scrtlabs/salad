@@ -40,13 +40,16 @@ contract("Mixer", accounts => {
 
     let task;
     it('should execute a mixer deal', async () => {
-        let taskFn = 'execute_deal(bytes32,string[])';
-        let taskArgs = [
-            [web3.utils.keccak256('test'), 'bytes32'],
-            [['hello', 'world'], 'string[]'],
+        console.log('Create `execute_deal` task');
+        const taskFn = 'execute_deal(bytes32,string[])';
+        const hash = web3.utils.keccak256('test');
+        const encRecipientsPayload = web3.utils.bytesToHex([1, 1, 0, 1, 1]);
+        const taskArgs = [
+            [hash, 'bytes32'],
+            [encRecipientsPayload, 'bytes'],
         ];
-        let taskGasLimit = 100000;
-        let taskGasPx = utils.toGrains(1);
+        const taskGasLimit = 500000;
+        const taskGasPx = utils.toGrains(1);
         const contractAddr = fs.readFileSync('test/mixer.txt', 'utf-8');
         task = await new Promise((resolve, reject) => {
             enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, accounts[0], contractAddr)
@@ -64,10 +67,10 @@ contract("Mixer", accounts => {
         do {
             await sleep(1000);
             task = await enigma.getTaskRecordStatus(task);
-            process.stdout.write('Waiting. Current Task Status is ' + task.ethStatus + '\r');
-        } while (task.ethStatus != 2);
+            console.log('Waiting. Current Task Status is ' + task.ethStatus + '\r');
+        } while (task.ethStatus === 1);
         expect(task.ethStatus).to.equal(2);
-        process.stdout.write('Completed. Final Task Status is ' + task.ethStatus + '\n');
+        console.log('Completed. Final Task Status is ' + task.ethStatus + '\n');
     }, 10000);
 
     it('should get the result and verify the computation is correct', async () => {
@@ -78,7 +81,8 @@ contract("Mixer", accounts => {
         });
         expect(task.engStatus).to.equal('SUCCESS');
         task = await enigma.decryptTaskResult(task);
-        expect(parseInt(task.decryptedOutput, 16)).to.equal(76 + 17);
+        console.log('The decrypted output:', web3.utils.hexToAscii(`0x${task.decryptedOutput}`));
+        // expect(parseInt(task.decryptedOutput, 16)).to.equal(76 + 17);
     });
 
 });
