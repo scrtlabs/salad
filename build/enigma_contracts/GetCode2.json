@@ -1,0 +1,406 @@
+{
+  "contractName": "GetCode2",
+  "abi": [],
+  "metadata": "{\"compiler\":{\"version\":\"0.5.8+commit.23d335f2\"},\"language\":\"Solidity\",\"output\":{\"abi\":[],\"devdoc\":{\"methods\":{}},\"userdoc\":{\"methods\":{}}},\"settings\":{\"compilationTarget\":{\"/root/enigma-contract/contracts/utils/GetCode2.sol\":\"GetCode2\"},\"evmVersion\":\"petersburg\",\"libraries\":{},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[]},\"sources\":{\"/root/enigma-contract/contracts/utils/GetCode2.sol\":{\"keccak256\":\"0x4227efa068289bc37bc30c9f97fb999874217376d1c0199c490f06d8ee4fe654\",\"urls\":[\"bzzr://7831d08d2d2378c1e27418ce58f840c1aae0d8674d8c18010e43905395ca4e5a\"]}},\"version\":1}",
+  "bytecode": "0x604c6023600b82828239805160001a607314601657fe5b30600052607381538281f3fe73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a72305820b94c9597fec0c64463a68a119eb241702b71af67f7a84d66f3227fd9342fa6a00029",
+  "deployedBytecode": "0x73000000000000000000000000000000000000000030146080604052600080fdfea165627a7a72305820b94c9597fec0c64463a68a119eb241702b71af67f7a84d66f3227fd9342fa6a00029",
+  "sourceMap": "25:734:22:-;;132:2:-1;166:7;155:9;146:7;137:37;255:7;249:14;246:1;241:23;235:4;232:33;222:2;;269:9;222:2;293:9;290:1;283:20;323:4;314:7;306:22;347:7;338;331:24",
+  "deployedSourceMap": "25:734:22:-;;;;;;;;",
+  "source": "pragma solidity ^0.5.0;\n\nlibrary GetCode2 {\n    function at(address _addr) internal view returns (bytes memory o_code) {\n        assembly {\n            // retrieve the size of the code, this needs assembly\n            let size := extcodesize(_addr)\n            // allocate output byte array - this could also be done without assembly\n            // by using o_code = new bytes(size)\n            o_code := mload(0x40)\n            // new \"memory end\" including padding\n            mstore(0x40, add(o_code, and(add(add(size, 0x20), 0x1f), not(0x1f))))\n            // store length in memory\n            mstore(o_code, size)\n            // actually retrieve the code, this needs assembly\n            extcodecopy(_addr, add(o_code, 0x20), 0, size)\n        }\n    }\n}\n",
+  "sourcePath": "/root/enigma-contract/contracts/utils/GetCode2.sol",
+  "ast": {
+    "absolutePath": "/root/enigma-contract/contracts/utils/GetCode2.sol",
+    "exportedSymbols": {
+      "GetCode2": [
+        12129
+      ]
+    },
+    "id": 12130,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 12119,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:22"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "library",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 12129,
+        "linearizedBaseContracts": [
+          12129
+        ],
+        "name": "GetCode2",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": {
+              "id": 12127,
+              "nodeType": "Block",
+              "src": "119:638:22",
+              "statements": [
+                {
+                  "externalReferences": [
+                    {
+                      "_addr": {
+                        "declaration": 12121,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "242:5:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "395:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "606:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "718:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "496:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "_addr": {
+                        "declaration": 12121,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "707:5:22",
+                        "valueSize": 1
+                      }
+                    }
+                  ],
+                  "id": 12126,
+                  "nodeType": "InlineAssembly",
+                  "operations": "{\n    let size := extcodesize(_addr)\n    o_code := mload(0x40)\n    mstore(0x40, add(o_code, and(add(add(size, 0x20), 0x1f), not(0x1f))))\n    mstore(o_code, size)\n    extcodecopy(_addr, add(o_code, 0x20), 0, size)\n}",
+                  "src": "129:622:22"
+                }
+              ]
+            },
+            "documentation": null,
+            "id": 12128,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "at",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 12122,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12121,
+                  "name": "_addr",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12128,
+                  "src": "60:13:22",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 12120,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "60:7:22",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "59:15:22"
+            },
+            "returnParameters": {
+              "id": 12125,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12124,
+                  "name": "o_code",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12128,
+                  "src": "98:19:22",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 12123,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "98:5:22",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "97:21:22"
+            },
+            "scope": 12129,
+            "src": "48:709:22",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "internal"
+          }
+        ],
+        "scope": 12130,
+        "src": "25:734:22"
+      }
+    ],
+    "src": "0:760:22"
+  },
+  "legacyAST": {
+    "absolutePath": "/root/enigma-contract/contracts/utils/GetCode2.sol",
+    "exportedSymbols": {
+      "GetCode2": [
+        12129
+      ]
+    },
+    "id": 12130,
+    "nodeType": "SourceUnit",
+    "nodes": [
+      {
+        "id": 12119,
+        "literals": [
+          "solidity",
+          "^",
+          "0.5",
+          ".0"
+        ],
+        "nodeType": "PragmaDirective",
+        "src": "0:23:22"
+      },
+      {
+        "baseContracts": [],
+        "contractDependencies": [],
+        "contractKind": "library",
+        "documentation": null,
+        "fullyImplemented": true,
+        "id": 12129,
+        "linearizedBaseContracts": [
+          12129
+        ],
+        "name": "GetCode2",
+        "nodeType": "ContractDefinition",
+        "nodes": [
+          {
+            "body": {
+              "id": 12127,
+              "nodeType": "Block",
+              "src": "119:638:22",
+              "statements": [
+                {
+                  "externalReferences": [
+                    {
+                      "_addr": {
+                        "declaration": 12121,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "242:5:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "395:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "606:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "718:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "o_code": {
+                        "declaration": 12124,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "496:6:22",
+                        "valueSize": 1
+                      }
+                    },
+                    {
+                      "_addr": {
+                        "declaration": 12121,
+                        "isOffset": false,
+                        "isSlot": false,
+                        "src": "707:5:22",
+                        "valueSize": 1
+                      }
+                    }
+                  ],
+                  "id": 12126,
+                  "nodeType": "InlineAssembly",
+                  "operations": "{\n    let size := extcodesize(_addr)\n    o_code := mload(0x40)\n    mstore(0x40, add(o_code, and(add(add(size, 0x20), 0x1f), not(0x1f))))\n    mstore(o_code, size)\n    extcodecopy(_addr, add(o_code, 0x20), 0, size)\n}",
+                  "src": "129:622:22"
+                }
+              ]
+            },
+            "documentation": null,
+            "id": 12128,
+            "implemented": true,
+            "kind": "function",
+            "modifiers": [],
+            "name": "at",
+            "nodeType": "FunctionDefinition",
+            "parameters": {
+              "id": 12122,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12121,
+                  "name": "_addr",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12128,
+                  "src": "60:13:22",
+                  "stateVariable": false,
+                  "storageLocation": "default",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_address",
+                    "typeString": "address"
+                  },
+                  "typeName": {
+                    "id": 12120,
+                    "name": "address",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "60:7:22",
+                    "stateMutability": "nonpayable",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_address",
+                      "typeString": "address"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "59:15:22"
+            },
+            "returnParameters": {
+              "id": 12125,
+              "nodeType": "ParameterList",
+              "parameters": [
+                {
+                  "constant": false,
+                  "id": 12124,
+                  "name": "o_code",
+                  "nodeType": "VariableDeclaration",
+                  "scope": 12128,
+                  "src": "98:19:22",
+                  "stateVariable": false,
+                  "storageLocation": "memory",
+                  "typeDescriptions": {
+                    "typeIdentifier": "t_bytes_memory_ptr",
+                    "typeString": "bytes"
+                  },
+                  "typeName": {
+                    "id": 12123,
+                    "name": "bytes",
+                    "nodeType": "ElementaryTypeName",
+                    "src": "98:5:22",
+                    "typeDescriptions": {
+                      "typeIdentifier": "t_bytes_storage_ptr",
+                      "typeString": "bytes"
+                    }
+                  },
+                  "value": null,
+                  "visibility": "internal"
+                }
+              ],
+              "src": "97:21:22"
+            },
+            "scope": 12129,
+            "src": "48:709:22",
+            "stateMutability": "view",
+            "superFunction": null,
+            "visibility": "internal"
+          }
+        ],
+        "scope": 12130,
+        "src": "25:734:22"
+      }
+    ],
+    "src": "0:760:22"
+  },
+  "compiler": {
+    "name": "solc",
+    "version": "0.5.8+commit.23d335f2.Emscripten.clang"
+  },
+  "networks": {},
+  "schemaVersion": "3.0.11",
+  "updatedAt": "2019-07-18T19:16:53.750Z",
+  "devdoc": {
+    "methods": {}
+  },
+  "userdoc": {
+    "methods": {}
+  }
+}
