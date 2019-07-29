@@ -6,14 +6,14 @@
     "test": "test"
   },
   "dependencies": {
+    "@enigmampc/discovery-cli": "^0.0.18",
     "dotenv": "^8.0.0",
-    "enigma-js": "0.0.5",
-    "discovery-cli": "./lib/discovery-cli"
+    "enigma-js": "0.0.5"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dc": "node ./lib/discovery-cli/src/index.js"
+    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
   },
   "author": "",
   "license": "ISC"
