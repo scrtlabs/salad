@@ -3,6 +3,8 @@
 - `node == v11.15.0`
 - `rustc == 1.36.0-nightly (6afcb5628 2019-05-19`
 - `yarn == 1.17.3`
+- `Docker == 18.09.8-ce, build 0dd43dd87f`
+- `docker-compose == 1.24.1, build 4667896`
 
 ### Instructions
 - `git clone https://github.com/enigmampc/coinjoin-poc`
