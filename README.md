@@ -3,3 +3,4 @@
 - [ ] Unable to pass `string[]` to secret contract
 - [ ] Deployment often fails 
 - [ ] Can't use the `vec![]` macro
+- [ ] Starting the network sometimes fails, resulting in a `Division by zero` error during deployment
