@@ -66,8 +66,9 @@ Here is the high-level workflow:
 ### Notes
 #### On Competing Approaches
 Mixers are fashionable at the moment, here comprehensive info about
-competing projects: https://hackmd.io/rCARMvVQSCKDHFk19bVhww?view. 
+competing projects: <https://hackmd.io/rCARMvVQSCKDHFk19bVhww?view> 
 Basically, there is ongoing work to standardize on a ZK mixer. 
+Here is the Semaphore implementation: <https://hackmd.io/qlKORn5MSOes1WtsEznu_g#Withdrawals-at-midnight-UTC>
 At the time of writing, here are some potential benefits of our approach.
 These need be confirmed as the ZK implementations evolve and others
 might be added to the list.
@@ -118,3 +119,10 @@ the same participant submit the node and a recipient address. Assuming
 that the proof does not leak information, the deposit
 address is never directly linked to the recipient address.
 
+#### Attack Vectors
+1. Spam: An attacker could submit large amount of deposits to create
+artificial liquidity and de-anonymize other participants. If there
+are 10 participants in a deal, and 9 of those are the attacker, the 1 left
+isn't anonymous to the attacker. Semaphore addresses this by executing deals
+on a schedule, not by a participation threshold. The best solution is
+probably a combination of both. More research needed. 
