@@ -88,7 +88,8 @@ this period based on available liquidity. Doing this with ZK would require
 Bob to manually submit a note each time. This might help with
 liquidity. <- I'm verifying this. I'm
 not sure if there's a Relayer solution that would permit this.
- 
+4. Frontrunning: Enigma transactions are encrypted therefore more
+difficult to frondrun. Frontrunning withdraw is possible with ZK mixers. 
 
 #### On Economic Abstraction
 Other than for his deposit (which could be replace by a proxy
