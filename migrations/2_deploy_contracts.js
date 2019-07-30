@@ -109,7 +109,7 @@ module.exports = async function (deployer, network, accounts) {
         filename: 'mixer.wasm',
         fn: 'construct()',
         args: [],
-        gasLimit: 200000,
+        gasLimit: 1000000,
         gasPrice: utils.toGrains(1),
         from: accounts[0]
     };

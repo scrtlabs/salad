@@ -22,7 +22,7 @@ extern crate eng_wasm_derive;
 extern crate rustc_hex;
 
 // Crypto stuff
-extern crate ring;
+extern crate recrypt;
 
 // eng_wasm
 use eng_wasm::*;
@@ -30,12 +30,8 @@ use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
 use eng_wasm::{String, H256, H160, Vec};
 use rustc_hex::ToHex;
-use ring::aead::{self, Nonce, Aad, Algorithm};
-
-const IV_SIZE: usize = 96 / 8;
-static AES_MODE: &Algorithm = &aead::AES_256_GCM;
-
-type IV = [u8; IV_SIZE];
+use recrypt::prelude::*;
+use recrypt::Revealed;
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -65,27 +61,23 @@ impl Contract {
         read_state!(MIXER_ETH_ADDR).unwrap_or_default()
     }
 
-    fn seal_with_key(
-        algorithm: &'static Algorithm,
-        key_bytes: &[u8; 32],
-        nonce: Nonce,
-        in_out: &mut Vec<u8>,
-    ) {
-        let unbound_key = aead::UnboundKey::new(algorithm, key_bytes).unwrap();
-        let key = aead::LessSafeKey::new(unbound_key);
-        key.seal_in_place_append_tag(nonce, Aad::empty(), in_out).unwrap();
-    }
+    fn decrypt(message: Vec<u8>) -> Vec<u8> {
+        // create a new recrypt
+        let mut recrypt = Recrypt::new();
 
-    fn encrypt_with_nonce(message: Vec<u8>, key: &[u8; 32], iv: IV) -> Vec<u8> {
-        let mut in_out = message.clone();
-        let nonce = Nonce::assume_unique_for_key(iv);
-        Self::seal_with_key(
-            AES_MODE,
-            key,
-            nonce,
-            &mut in_out,
-        );
-        in_out
+        // generate a plaintext to encrypt
+        let pt = recrypt.gen_plaintext();
+
+        // generate a public/private keypair and some signing keys
+        let (priv_key, pub_key) = recrypt.generate_key_pair().unwrap();
+        let signing_keypair = recrypt.generate_ed25519_key_pair();
+
+        // encrypt!
+        let encrypted_val = recrypt.encrypt(&pt, &pub_key, &signing_keypair).unwrap();
+
+        // decrypt!
+        let decrypted_val = recrypt.decrypt(encrypted_val, &priv_key).unwrap();
+        decrypted_val.bytes().to_vec()
     }
 }
 
@@ -100,10 +92,7 @@ impl ContractInterface for Contract {
     #[no_mangle]
     fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> String {
         eprint!("In execute_deal({:?}, {:?})", deal_id, enc_recipients);
-        let key: [u8; 32] = [0; 32];
-        let msg = b"This Is Enigma".to_vec();
-        let iv = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-        let result = Self::encrypt_with_nonce(msg, &key, iv);
+        let result = Self::decrypt(enc_recipients);
         eprint!("The encrypted string: {}", result.to_hex::<String>());
 
         let encrypted_addresses: Vec<String> = Vec::new();

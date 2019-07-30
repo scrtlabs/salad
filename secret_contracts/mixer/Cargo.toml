@@ -8,7 +8,7 @@ eng-wasm-derive = "0.1.3"
 rustc-hex = "2.0.1"
 serde_derive = "1.0.84"
 serde = "1.0.84"
-ring = "0.16.4"
+recrypt = {version = "0.8.1",default-features = false, features = ["wasm"]}
 
 
 [lib]
