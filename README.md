@@ -14,6 +14,7 @@
 - `docker-compose up` <- In background or separate terminal
 - `yarn dc compile`
 - `yarn dc migrate`
+- `yarn dc test`
 
 ## Problems
 - [ ] Unable to use latest ring. Error during migration.

@@ -63,21 +63,24 @@ impl Contract {
 
     fn decrypt(message: Vec<u8>) -> Vec<u8> {
         // create a new recrypt
+        eprint!("Instantiating Recrypt...");
         let mut recrypt = Recrypt::new();
 
         // generate a plaintext to encrypt
-        let pt = recrypt.gen_plaintext();
+//        let pt = recrypt.gen_plaintext();
 
         // generate a public/private keypair and some signing keys
-        let (priv_key, pub_key) = recrypt.generate_key_pair().unwrap();
-        let signing_keypair = recrypt.generate_ed25519_key_pair();
+//        let (priv_key, pub_key) = recrypt.generate_key_pair().unwrap();
+//        let signing_keypair = recrypt.generate_ed25519_key_pair();
 
         // encrypt!
-        let encrypted_val = recrypt.encrypt(&pt, &pub_key, &signing_keypair).unwrap();
+//        let encrypted_val = recrypt.encrypt(&pt, &pub_key, &signing_keypair).unwrap();
 
         // decrypt!
-        let decrypted_val = recrypt.decrypt(encrypted_val, &priv_key).unwrap();
-        decrypted_val.bytes().to_vec()
+//        let decrypted_val = recrypt.decrypt(encrypted_val, &priv_key).unwrap();
+//        decrypted_val.bytes().to_vec()
+        eprint!("Got Recrypt");
+        message
     }
 }
 
