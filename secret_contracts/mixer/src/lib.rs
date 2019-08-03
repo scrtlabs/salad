@@ -18,11 +18,11 @@ extern crate eng_wasm;
 //     - Ability to call functions of ethereum contracts from ESC
 extern crate eng_wasm_derive;
 
+// The asymmetric features of enigma_crypto
+extern crate enigma_crypto;
+
 // Serialization stuff
 extern crate rustc_hex;
-
-// Crypto stuff
-extern crate recrypt;
 
 // eng_wasm
 use eng_wasm::*;
@@ -30,8 +30,7 @@ use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
 use eng_wasm::{String, H256, H160, Vec};
 use rustc_hex::ToHex;
-use recrypt::prelude::*;
-use recrypt::Revealed;
+use enigma_crypto::asymmetric::KeyPair;
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -39,12 +38,14 @@ struct EthContract;
 
 // State key name "mixer_eth_addr" holding eth address of Mixer contract
 static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
+static ENCRYPTION_KEY: &str = "encryption_key";
 
 // For contract-exposed functions, declare such functions under the following public trait:
 #[pub_interface]
 pub trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
-    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> String;
+    fn get_pub_key() -> Vec<u8>;
+    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> Vec<H160>;
 }
 
 // The implementation of the exported ESC functions should be defined in the trait implementation
@@ -57,30 +58,22 @@ pub struct Contract;
 impl Contract {
     // Read voting address of VotingETH contract
     fn get_mixer_eth_addr() -> String {
-        // TODO: Try unwrap_or
         read_state!(MIXER_ETH_ADDR).unwrap_or_default()
+    }
+
+    fn get_encryption_key() -> SymmetricKey {
+        let key = read_state!(ENCRYPTION_KEY).unwrap_or_default();
+        eprint!("Got key: {:?}", key);
+        key
     }
 
     fn decrypt(message: Vec<u8>) -> Vec<u8> {
         // create a new recrypt
-        eprint!("Instantiating Recrypt...");
-        let mut recrypt = Recrypt::new();
-
-        // generate a plaintext to encrypt
-//        let pt = recrypt.gen_plaintext();
-
-        // generate a public/private keypair and some signing keys
-//        let (priv_key, pub_key) = recrypt.generate_key_pair().unwrap();
-//        let signing_keypair = recrypt.generate_ed25519_key_pair();
-
-        // encrypt!
-//        let encrypted_val = recrypt.encrypt(&pt, &pub_key, &signing_keypair).unwrap();
-
-        // decrypt!
-//        let decrypted_val = recrypt.decrypt(encrypted_val, &priv_key).unwrap();
-//        decrypted_val.bytes().to_vec()
-        eprint!("Got Recrypt");
-        message
+        eprint!("Decrypting message ...");
+        let key = Self::get_encryption_key();
+        let mut buf: Vec<u8> = Vec::new();
+        decrypt(&message, &key, &mut buf);
+        buf
     }
 }
 
@@ -90,23 +83,33 @@ impl ContractInterface for Contract {
     fn construct(mixer_eth_addr: H160) {
         let mixer_eth_addr_str: String = mixer_eth_addr.to_hex();
         write_state!(MIXER_ETH_ADDR => mixer_eth_addr_str);
+
+        // Create new random encryption key
+        let key = generate_key();
+        write_state!(ENCRYPTION_KEY => key);
+    }
+
+    fn get_pub_key() -> Vec<u8> {
+        let key = Self::get_encryption_key();
+        let key_pair = KeyPair::from_slice(&key).unwrap();
+        let mut pub_key = key_pair.get_pubkey();
+        pub_key.to_vec()
     }
 
     #[no_mangle]
-    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> String {
+    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> Vec<H160> {
         eprint!("In execute_deal({:?}, {:?})", deal_id, enc_recipients);
         let result = Self::decrypt(enc_recipients);
-        eprint!("The encrypted string: {}", result.to_hex::<String>());
+        eprint!("The decrypted addresses: {}", result.to_hex::<String>());
 
-        let encrypted_addresses: Vec<String> = Vec::new();
-        eprint!("Mixing address for deal {:?}: {:?}", deal_id, encrypted_addresses);
+        eprint!("Mixing address for deal: {:?}", deal_id);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let eth_contract = EthContract::new(&mixer_eth_addr);
         let mut recipients: Vec<H160> = Vec::new();
         let address_bytes: [u8; 20] = [0; 20];
         recipients.push(H160::from(&address_bytes));
         let deal_id_uint = U256::from(deal_id);
-        eth_contract.distribute(deal_id_uint, recipients);
-        "Hello".to_string()
+        eth_contract.distribute(deal_id_uint, recipients.clone());
+        recipients
     }
 }

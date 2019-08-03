@@ -58,7 +58,12 @@ services:
       - "${BUILD_CONTRACTS_PATH}:/root/enigma-contract/build/contracts"
 
   core:
-    image: enigmampc/enigma_core_hw:${DOCKER_TAG}
+#    image: enigmampc/enigma_core_hw:${DOCKER_TAG}
+    build:
+      context: ../../Enigma/discovery-docker-network/enigma-core
+      args:
+        - GIT_BRANCH_CORE=crypto-service
+        - SGX_MODE=HW
     stdin_open: true
     tty: true
     hostname: core
