@@ -68,7 +68,6 @@ impl Contract {
     }
 
     fn decrypt(message: Vec<u8>) -> Vec<u8> {
-        // create a new recrypt
         eprint!("Decrypting message ...");
         let key = Self::get_encryption_key();
         let mut buf: Vec<u8> = Vec::new();
