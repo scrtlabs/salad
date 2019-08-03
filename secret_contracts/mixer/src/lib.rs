@@ -88,7 +88,9 @@ impl ContractInterface for Contract {
         write_state!(ENCRYPTION_KEY => key);
     }
 
+    #[no_mangle]
     fn get_pub_key() -> Vec<u8> {
+        eprint!("in get_pub_key");
         let key = Self::get_encryption_key();
         let key_pair = KeyPair::from_slice(&key).unwrap();
         let mut pub_key = key_pair.get_pubkey();
