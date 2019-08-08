@@ -61,18 +61,22 @@ impl Contract {
         read_state!(MIXER_ETH_ADDR).unwrap_or_default()
     }
 
-    fn get_encryption_key() -> SymmetricKey {
+    fn get_pkey() -> SymmetricKey {
         let key = read_state!(ENCRYPTION_KEY).unwrap_or_default();
         eprint!("Got key: {:?}", key);
         key
     }
 
-    fn decrypt(message: Vec<u8>) -> Vec<u8> {
-        eprint!("Decrypting message ...");
-        let key = Self::get_encryption_key();
-        let mut buf: Vec<u8> = Vec::new();
-        decrypt(&message, &key, &mut buf);
-        buf
+    fn decrypt(enc_msg: &Vec<u8>) -> Vec<u8> {
+        let key = Self::get_pkey();
+        eprint!("Decrypting bytes ({:?})", enc_msg);
+        decrypt(enc_msg, &key)
+    }
+
+    fn encrypt(plaintext_msg: &Vec<u8>) -> Vec<u8> {
+        let key = Self::get_pkey();
+        eprint!("Encrypting bytes ({:?})", plaintext_msg);
+        encrypt(plaintext_msg, &key)
     }
 }
 
@@ -91,7 +95,7 @@ impl ContractInterface for Contract {
     #[no_mangle]
     fn get_pub_key() -> Vec<u8> {
         eprint!("in get_pub_key");
-        let key = Self::get_encryption_key();
+        let key = Self::get_pkey();
         let key_pair = KeyPair::from_slice(&key).unwrap();
         let mut pub_key = key_pair.get_pubkey();
         pub_key.to_vec()
@@ -100,7 +104,7 @@ impl ContractInterface for Contract {
     #[no_mangle]
     fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> Vec<H160> {
         eprint!("In execute_deal({:?}, {:?})", deal_id, enc_recipients);
-        let result = Self::decrypt(enc_recipients);
+        let result = Self::decrypt(&enc_recipients);
         eprint!("The decrypted addresses: {}", result.to_hex::<String>());
 
         eprint!("Mixing address for deal: {:?}", deal_id);

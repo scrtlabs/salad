@@ -1,0 +1,20 @@
+{
+  "name": "enigma-mixer-operator",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "dotenv": "^8.0.0",
+    "mongodb": "^3.3.0-beta2",
+    "node-forge": "^0.8.5",
+    "web3": "^1.0.0-beta.37",
+    "ws": "^7.1.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "test": "mocha"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.2.0"
+  }
+}
