@@ -56,6 +56,7 @@ class DealManager {
         const participants = deposits.map((deposit) => deposit.sender);
         return this.contract.methods.newDeal(dealId, depositAmount, participants).send({
             ...opts,
+            gas: process.env.CREATE_DEAL_GAS,
             from: this.scClient.getOperatorAccount(),
         });
     }

@@ -3,7 +3,7 @@ const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
 const {MemoryStore} = require("./memoryStore");
 const WebSocket = require('ws');
-const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("./actions");
+const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 
@@ -18,7 +18,8 @@ async function startServer(provider, scAddr, accountIndex = 0) {
     const sc = new SecretContractClient(web3, scAddr, accountIndex);
     await sc.initAsync();
 
-    const dealManager = new DealManager(web3, sc, store, 1);
+    const quorum = parseInt(process.env.QUORUM);
+    const dealManager = new DealManager(web3, sc, store, quorum);
 
     const opts = {
         gas: 100712388,

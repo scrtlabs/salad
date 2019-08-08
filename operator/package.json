@@ -1,13 +1,15 @@
 {
-  "name": "enigma-mixer-operator",
+  "name": "enigma-coinjoin-operator",
   "version": "0.1.0",
   "private": true,
+  "main": "src/index.js",
   "dependencies": {
     "dotenv": "^8.0.0",
     "mongodb": "^3.3.0-beta2",
     "node-forge": "^0.8.5",
     "web3": "^1.0.0-beta.37",
-    "ws": "^7.1.1"
+    "ws": "^7.1.1",
+    "engima-conjoin-client": "./client"
   },
   "scripts": {
     "start": "react-scripts start",

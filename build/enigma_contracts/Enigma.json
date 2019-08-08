@@ -22808,11 +22808,11 @@
         "SecretContractImpl": "0xD833215cBcc3f914bD1C9ece3EE7BF8B14f841bb"
       },
       "address": "0x59d3631c86BbE35EF041872d502F218A39FBa150",
-      "transactionHash": "0xc6a1b1376f6c55fed4ccd270aabadab61bc7041978c1235947a8217a555069db"
+      "transactionHash": "0x5506c249fa42aa990cc640e6c7dddedca260eb7b6abca15ee29ea6796e25e319"
     }
   },
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-07-23T23:46:35.107Z",
+  "updatedAt": "2019-08-08T17:16:34.142Z",
   "devdoc": {
     "methods": {
       "commitReceipt(bytes32,bytes32,bytes32,bytes32,bytes,address,uint64,bytes)": {
