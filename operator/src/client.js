@@ -1,5 +1,6 @@
-const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS} = require("./actions");
+const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = require("./actions");
 
+const EventEmitter = require('events');
 const Web3 = require('web3');
 const {utils} = require('enigma-js/node');
 const forge = require('node-forge');
@@ -17,9 +18,23 @@ class CoinjoinClient {
         this.pubKey = null;
     }
 
+    async waitConnectAsync() {
+        return new Promise((resolve) => {
+            this.ws.on('open', function open() {
+                console.log('Connected to server');
+                resolve(true);
+            });
+        });
+    }
+
     async initAsync() {
+        await this.waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
         this.watch();
+    }
+
+    async shutdownAsync() {
+       this.ws.close();
     }
 
     watch() {
@@ -53,6 +68,14 @@ class CoinjoinClient {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
         });
         this.ws.send(JSON.stringify({action: SUBMIT_DEPOSIT_METADATA, payload: {sender, amount, encRecipient}}));
+        return promise;
+    }
+
+    async fetchFillableDeposits(minAmount = 0) {
+        const promise = new Promise((resolve) => {
+            this.ee.once(FETCH_FILLABLE_SUCCESS, (result) => resolve(result));
+        });
+        this.ws.send(JSON.stringify({action: FETCH_FILLABLE_DEPOSITS, payload: {minAmount}}));
         return promise;
     }
 }

@@ -12,11 +12,28 @@ class DealManager {
         this.participantThreshold = participantThreshold;
     }
 
-    async registerDepositAsync(sender, amount, encRecipient) {
-        console.log('Registering deposit', sender, amount, encRecipient);
+    async verifyDepositAmountAsync(sender, amount) {
         return new Promise((resolve) => {
             resolve(true);
         });
+    }
+
+    async registerDepositAsync(sender, amount, encRecipient) {
+        console.log('Registering deposit', sender, amount, encRecipient);
+        await this.verifyDepositAmountAsync(sender, amount);
+        const deposit = {sender, amount, encRecipient};
+        this.store.insertDeposit(deposit);
+    }
+
+    async fetchFillableDeposits(minimumAmount = 0) {
+        return new Promise((resolve) => {
+            resolve(this.store.queryFillableDeposits(minimumAmount));
+        });
+    }
+
+    async createDeal(deposits) {
+        const dealId = this.web3.utils.keccak256(JSON.stringify(deposits)); // TODO: Add uniqueness
+        this.store.insertDeal(dealId, deposits);
     }
 }
 
