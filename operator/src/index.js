@@ -18,7 +18,12 @@ async function startServer(provider, scAddr, accountIndex = 0) {
     const sc = new SecretContractClient(web3, scAddr, accountIndex);
     await sc.initAsync();
 
-    const dealManager = new DealManager(web3, sc, store);
+    const dealManager = new DealManager(web3, sc, store, 1);
+
+    const opts = {
+        gas: 100712388,
+        gasPrice: process.env.GAS_PRICE,
+    };
 
     process.on('SIGINT', async () => {
         console.log('Caught interrupt signal');
@@ -45,6 +50,8 @@ async function startServer(provider, scAddr, accountIndex = 0) {
                 case SUBMIT_DEPOSIT_METADATA:
                     const {sender, amount, encRecipient} = payload;
                     await dealManager.registerDepositAsync(sender, amount, encRecipient);
+                    // TODO: Not sure if it is the best place to put this
+                    await dealManager.createDealIfQuorumReachedAsync(opts);
                     ws.send(JSON.stringify({action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true}));
                     break;
                 case FETCH_FILLABLE_DEPOSITS:

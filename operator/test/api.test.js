@@ -54,7 +54,7 @@ describe('sockets', () => {
         const recipient = cjc.accounts[6];
         const result = await cjc.submitDepositMetadata(sender, amount, recipient);
         expect(result).to.equal(true);
-    });
+    }).timeout(5000);
 
     it('should verify that the submitted deposit is fillable', async () => {
         const {deposits} = await cjc.fetchFillableDeposits();

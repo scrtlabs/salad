@@ -5,20 +5,16 @@ const Web3 = require('web3');
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class DealManager {
-    constructor(web3, scClient, store, participantThreshold = 2) {
+    constructor(web3, scClient, store, quorum = 2) {
         this.web3 = web3;
         this.scClient = scClient;
         this.store = store;
-        this.participantThreshold = participantThreshold;
+        this.quorum = quorum;
         // const networkId = process.env.ETH_NETWORK_ID;
         // console.log(networkId, EnigmaCoinjoinContract);
         // const contractAddr = EnigmaCoinjoinContract.networks[networkId].address;
         const contractAddr = this.web3.utils.toChecksumAddress(process.env.CONTRACT_ADDRESS);
-        const txDefaults = {
-            gas: 4712388,
-            gasPrice: 100000000000,
-        };
-        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr, txDefaults);
+        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
     async verifyDepositAmountAsync(sender, amount) {
@@ -37,15 +33,31 @@ class DealManager {
         this.store.insertDeposit(deposit);
     }
 
+    async createDealIfQuorumReachedAsync(opts, amount = 0) {
+        const deposits = await this.fetchFillableDeposits(amount);
+        if (deposits.length >= this.quorum) {
+            console.log('Quorum reached with deposits', deposits);
+            await this.createDeal(deposits);
+        }
+    }
+
     async fetchFillableDeposits(minimumAmount = 0) {
         return new Promise((resolve) => {
             resolve(this.store.queryFillableDeposits(minimumAmount));
         });
     }
 
-    async createDeal(deposits) {
+    async createDeal(deposits, opts) {
         const dealId = this.web3.utils.keccak256(JSON.stringify(deposits)); // TODO: Add uniqueness
-        this.store.insertDeal(dealId, deposits);
+        // this.store.insertDeal(dealId, deposits);
+        console.log('Creating deal with deposits', dealId, deposits);
+        // TODO: Assuming that all deposits are equal for now
+        const depositAmount = this.web3.utils.toWei(deposits[0].amount);
+        const participants = deposits.map((deposit) => deposit.sender);
+        return this.contract.methods.newDeal(dealId, depositAmount, participants).send({
+            ...opts,
+            from: this.scClient.getOperatorAccount(),
+        });
     }
 }
 
