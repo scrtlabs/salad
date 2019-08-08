@@ -5,26 +5,21 @@ import "./IMixer.sol";
 contract Mixer is IMixer {
     struct Deal {
         address organizer;
-        string title;
         mapping(address => uint) deposit;
-        uint depositSum;
-        uint numDeposits;
 
         uint startTime;
         uint depositInWei;
         uint numParticipants;
-
-        bytes32[] recipientHashes;
         address[] recipients;
-
         uint status; // 0: active; 1: funded; 2: executed; 3: cancelled
     }
 
     mapping(bytes32 => Deal) deals;
+    mapping(address => uint) balances;
     bytes32[] dealIds;
 
-    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, string _title, uint _depositInWei, uint _numParticipants, bool _success, string _err);
-    event Deposit(address indexed _depositor, bytes32 indexed _dealId, bytes32 _recipientHash, uint _value, bool _success, string _err);
+    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
+    event Deposit(address indexed _depositor, uint _value, uint _balance, bool _success, string _err);
     event Distribute(bytes32 indexed _dealId, uint individualAmountInWei, uint32 nbTransfers, bool _success, string _err);
 
     event TransferredToken(address indexed to, uint256 value);
@@ -39,46 +34,30 @@ contract Mixer is IMixer {
         _;
     }
 
-    function newDeal(string memory _title, uint _depositInWei, uint _numParticipants)
+    function newDeal(bytes32 _dealId, uint _depositInWei, address[] memory _participants)
     public {
-        bytes32 dealId = bytes32(dealIds.length);
-
-        dealIds.push(dealId);
-        deals[dealId].organizer = msg.sender;
-        deals[dealId].title = _title;
-        deals[dealId].depositSum = 0;
-        deals[dealId].numDeposits = 0;
-        deals[dealId].startTime = now;
-        deals[dealId].depositInWei = _depositInWei;
-        deals[dealId].numParticipants = _numParticipants;
-        deals[dealId].recipientHashes = new bytes32[](_numParticipants);
-        deals[dealId].recipients = new address[](_numParticipants);
-        deals[dealId].status = 0;
-        emit NewDeal(msg.sender, dealId, now, _title, _depositInWei, _numParticipants, true, "all good");
+        // TODO: Verify balances
+        dealIds.push(_dealId);
+        deals[_dealId].organizer = msg.sender;
+        deals[_dealId].startTime = now;
+        deals[_dealId].depositInWei = _depositInWei;
+        deals[_dealId].numParticipants = _participants.length;
+        deals[_dealId].recipients = new address[](_participants.length);
+        deals[_dealId].status = 0;
+        emit NewDeal(msg.sender, _dealId, now, _depositInWei, _participants.length, true, "all good");
     }
 
-    function makeDeposit(bytes32 dealId, bytes32 recipientHash)
+    function makeDeposit()
     public
     payable {
         require(msg.value > 0, "Deposit value must be positive.");
-        require(deals[dealId].status == 0, "Illegal state for deposits.");
+        // TODO: use safeMath
+        balances[msg.sender] = balances[msg.sender] + msg.value;
+        emit Deposit(msg.sender, msg.value, balances[msg.sender], true, "all good");
+    }
 
-        Deal storage deal = deals[dealId];
-        require((msg.value % deal.depositInWei) == 0, "Deposit value must be a multiple of claim value");
-        require(deal.deposit[msg.sender] == 0, "Cannot deposit twice with the same address");
-
-        // actual deposit
-        deal.depositSum += msg.value;
-        deal.deposit[msg.sender] = msg.value;
-        deal.recipientHashes[deal.numDeposits] = recipientHash;
-        deal.numDeposits += 1;
-
-        emit Deposit(msg.sender, dealId, recipientHash, msg.value, true, "all good");
-
-        if (deal.numDeposits >= deal.numParticipants) {
-            deal.status = 1;
-            emit DealFullyFunded(dealId);
-        }
+    function getParticipantBalance(address _account) public view returns (uint) {
+        return balances[_account];
     }
 
     function distribute(uint256 _dealId, address payable[] memory _recipients)
@@ -123,31 +102,12 @@ contract Mixer is IMixer {
     function dealStatus(bytes32 _dealId)
     public
     view
-    returns (string memory, uint, uint, uint, uint, uint) {
+    returns (uint, uint, uint) {
         // Key attributes of a deal
-        string memory title = deals[_dealId].title;
         uint numParticipants = deals[_dealId].numParticipants;
         uint deposit = deals[_dealId].depositInWei;
-        uint numDeposits = deals[_dealId].numDeposits;
-        uint depositSum = deals[_dealId].depositSum;
         uint numDestAddresses = deals[_dealId].recipients.length;
 
-        return (title, numParticipants, deposit, numDeposits, depositSum, numDestAddresses);
-    }
-
-    function countEncryptedAddresses(bytes32 _dealId)
-    public
-    view
-    returns (uint) {
-        // Count the addresses
-        return deals[_dealId].recipientHashes.length;
-    }
-
-    function getRecipientHash(bytes32 _dealId, uint index)
-    public
-    view
-    returns (bytes32) {
-        // Returns an array of encrypted addresses
-        return deals[_dealId].recipientHashes[index];
+        return (numParticipants, deposit, numDestAddresses);
     }
 }

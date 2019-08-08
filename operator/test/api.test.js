@@ -8,6 +8,7 @@ const {expect} = require('chai');
 
 describe('sockets', () => {
     let cjc;
+    let opts;
     before(async () => {
         const operatorAccountIndex = 0;
         const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
@@ -23,6 +24,10 @@ describe('sockets', () => {
             process.exit();
         });
         await cjc.initAsync();
+        opts = {
+            gas: 4712388,
+            gasPrice: 100000000000,
+        };
     });
 
     it('should connect to the WS server', async () => {
@@ -37,11 +42,16 @@ describe('sockets', () => {
         expect(await action).to.equal('pong');
     });
 
+    const amount = '10';
+    let sender;
+    it('should make deposit on Ethereum', async () => {
+        sender = cjc.accounts[1];
+        const receipt = await cjc.makeDepositAsync(sender, amount, opts);
+        console.log('Made deposit', receipt);
+    });
+
     it('should submit encrypted deposit', async () => {
-        const amount = 10;
-        const sender = cjc.accounts[1];
         const recipient = cjc.accounts[6];
-        const receipt = await cjc.makeDepositAsync(sender, amount);
         const result = await cjc.submitDepositMetadata(sender, amount, recipient);
         expect(result).to.equal(true);
     });

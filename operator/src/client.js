@@ -6,9 +6,8 @@ const {utils} = require('enigma-js/node');
 const forge = require('node-forge');
 const WebSocket = require('ws');
 
-// TODO: For browser implementation, get JSON files form github
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
-const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
+// TODO: Move path to config and reference Github
+const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class CoinjoinClient {
     constructor(operatorUrl = 'http://localhost:3346', provider = Web3.givenProvider) {
@@ -16,6 +15,9 @@ class CoinjoinClient {
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
         this.pubKey = null;
+        // const contractAddr = EnigmaCoinjoinContract.networks[process.env.ETH_NETWORK_ID].address;
+        const contractAddr = this.web3.utils.toChecksumAddress(process.env.CONTRACT_ADDRESS);
+        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
     async waitConnectAsync() {
@@ -34,7 +36,7 @@ class CoinjoinClient {
     }
 
     async shutdownAsync() {
-       this.ws.close();
+        this.ws.close();
     }
 
     watch() {
@@ -51,8 +53,14 @@ class CoinjoinClient {
         });
     }
 
-    async makeDepositAsync(sender, amount) {
+    async makeDepositAsync(sender, amount, opts) {
         console.log('Posting deposit to the smart contract', amount);
+        const amountInWei = this.web3.utils.toWei(amount, 'ether');
+
+        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amountInWei})
+        // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
+        // console.log('Got balance', balance);
+        return receipt;
     }
 
     async encryptRecipient(recipient) {
