@@ -9,7 +9,8 @@
     "node-forge": "^0.8.5",
     "web3": "^1.0.0-beta.37",
     "ws": "^7.1.1",
-    "engima-conjoin-client": "./client"
+    "enigma-js": "0.0.6",
+    "enigma-coinjoin-client": "0.1.0"
   },
   "scripts": {
     "start": "react-scripts start",
