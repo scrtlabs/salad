@@ -3,8 +3,7 @@ const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS,
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
-const {utils} = require('enigma-js/node');
-const forge = require('node-forge');
+const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
 const WebSocket = require('ws');
 
 // TODO: Move path to config and reference Github
@@ -16,7 +15,6 @@ class CoinjoinClient {
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
         this.pubKey = null;
-        // const contractAddr = EnigmaCoinjoinContract.networks[process.env.ETH_NETWORK_ID].address;
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
