@@ -47,26 +47,26 @@ contract('Mixer', () => {
 
     });
 
-    it('should distribute ENG equally to all accounts', async () => {
-        const operator = accounts[0];
-        const balance = web3Utils.toBN(await token.methods.balanceOf(operator).call());
-        console.log('The operator account balance', balance.toString());
-        const shares = web3Utils.toBN(10);
-        for (let i = 1; i < accounts.length; i++) {
-            const recipient = accounts[i];
-            let recipientBalance = web3Utils.toBN(await token.methods.balanceOf(recipient).call());
-            if (recipientBalance.gt(web3Utils.toBN(0))) {
-                console.log('Found balance greater than 0', recipientBalance.toString(), 'aborting distribution');
-                break;
-            }
-            const amount = balance.div(shares);
-            console.log('Transferring', amount.toString(), 'to', recipient);
-            await token.methods.approve(recipient, amount.toString()).send({from: operator});
-            await token.methods.transfer(recipient, amount.toString()).send({from: operator});
-            recipientBalance = await token.methods.balanceOf(recipient).call();
-            console.log('The recipient account balance', recipientBalance);
-        }
-    });
+    // it('should distribute ENG equally to all accounts', async () => {
+    //     const operator = accounts[0];
+    //     const balance = web3Utils.toBN(await token.methods.balanceOf(operator).call());
+    //     console.log('The operator account balance', balance.toString());
+    //     const shares = web3Utils.toBN(10);
+    //     for (let i = 1; i < accounts.length; i++) {
+    //         const recipient = accounts[i];
+    //         let recipientBalance = web3Utils.toBN(await token.methods.balanceOf(recipient).call());
+    //         if (recipientBalance.gt(web3Utils.toBN(0))) {
+    //             console.log('Found balance greater than 0', recipientBalance.toString(), 'aborting distribution');
+    //             break;
+    //         }
+    //         const amount = balance.div(shares);
+    //         console.log('Transferring', amount.toString(), 'to', recipient);
+    //         await token.methods.approve(recipient, amount.toString()).send({from: operator});
+    //         await token.methods.transfer(recipient, amount.toString()).send({from: operator});
+    //         recipientBalance = await token.methods.balanceOf(recipient).call();
+    //         console.log('The recipient account balance', recipientBalance);
+    //     }
+    // });
 
     it('should connect to the WS server', async () => {
         console.log('Testing connection');
