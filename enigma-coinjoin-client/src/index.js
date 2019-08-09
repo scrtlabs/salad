@@ -20,7 +20,7 @@ class CoinjoinClient {
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
-    async waitConnectAsync() {
+    async _waitConnectAsync() {
         return new Promise((resolve) => {
             this.ws.on('open', function open() {
                 console.log('Connected to server');
@@ -29,12 +29,22 @@ class CoinjoinClient {
         });
     }
 
+    /**
+     * Init the client
+     * 1- Wait for the WS client connection
+     * 2- Fetch Ethereum accounts
+     * @returns {Promise<void>}
+     */
     async initAsync() {
-        await this.waitConnectAsync();
+        await this._waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
         this.watch();
     }
 
+    /**
+     * Shutdown the WS client
+     * @returns {Promise<void>}
+     */
     async shutdownAsync() {
         this.ws.close();
     }
@@ -53,16 +63,28 @@ class CoinjoinClient {
         });
     }
 
+    /**
+     * Make user deposit on Ethereum
+     * @param {string} sender - The deposit sender's Ethereum address
+     * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
+     * @param {Object} [opts] - The optional Web3 send options, sender will be overwritten
+     * @returns {Promise<Receipt>}
+     */
     async makeDepositAsync(sender, amount, opts) {
         console.log('Posting deposit to the smart contract', amount);
         const amountInWei = this.web3.utils.toWei(amount, 'ether');
 
-        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amountInWei})
+        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amountInWei});
         // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
         // console.log('Got balance', balance);
         return receipt;
     }
 
+    /**
+     * Encrypt the user recipient address in-memory. Plaintext recipient should not leave the browser.
+     * @param  {string} recipient - The plaintext recipient Ethereum address
+     * @returns {Promise<string>}
+     */
     async encryptRecipient(recipient) {
         if (!this.pubKey) {
             throw new Error('Public encryption key not available');
@@ -70,7 +92,14 @@ class CoinjoinClient {
         return utils.encryptMessage(this.pubKey, recipient);
     }
 
-    async submitDepositMetadata(sender, amount, encRecipient) {
+    /**
+     * Submit the deposit metadata to including the encrypted recipient address
+     * @param {string} sender - The deposit sender's Ethereum address
+     * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
+     * @param {string} encRecipient - The encrypted recipient Ethereum address
+     * @returns {Promise<boolean>}
+     */
+    async submitDepositMetadataAsync(sender, amount, encRecipient) {
         console.log('Submitting deposit metadata to the operator', amount, encRecipient);
         const promise = new Promise((resolve) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
@@ -79,7 +108,12 @@ class CoinjoinClient {
         return promise;
     }
 
-    async fetchFillableDeposits(minAmount = 0) {
+    /**
+     * Fetch all fillable deposits for the given minimum amount
+     * @param {number} [minAmount=0] - The optional minimum amount filter
+     * @returns {Promise<Object>}
+     */
+    async fetchFillableDepositsAsync(minAmount = 0) {
         const promise = new Promise((resolve) => {
             this.ee.once(FETCH_FILLABLE_SUCCESS, (result) => resolve(result));
         });
@@ -87,7 +121,11 @@ class CoinjoinClient {
         return promise;
     }
 
-    async fetchActiveDeals() {
+    /**
+     * Fetch all active (registered on-chain but not executed) deals
+     * @returns {Promise<Array<Object>>}
+     */
+    async fetchActiveDealsAsync() {
         const dealsFlat = await this.contract.methods.listDeals().call();
         // TODO: Does this work?
         if (!dealsFlat) {

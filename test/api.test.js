@@ -90,7 +90,7 @@ contract('Mixer', () => {
 
     it('should submit encrypted deposit', async () => {
         const recipient = cjc.accounts[6];
-        const result = await cjc.submitDepositMetadata(sender, amount, recipient);
+        const result = await cjc.submitDepositMetadataAsync(sender, amount, recipient);
         expect(result).to.equal(true);
     }).timeout(5000);
 
@@ -107,7 +107,7 @@ contract('Mixer', () => {
 
     it('should submit the second encrypted deposit', async () => {
         const recipient = cjc.accounts[7];
-        const result = await cjc.submitDepositMetadata(sender, amount, recipient);
+        const result = await cjc.submitDepositMetadataAsync(sender, amount, recipient);
         expect(result).to.equal(true);
     }).timeout(5000);
 
@@ -117,6 +117,6 @@ contract('Mixer', () => {
     }).timeout(5000);
 
     it('should verify that a deal was created since the threshold is reached', async () => {
-        const deals = await cjc.fetchActiveDeals();
+        const deals = await cjc.fetchActiveDealsAsync();
     }).timeout(5000);
 });
