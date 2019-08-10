@@ -18,6 +18,7 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `cd coinjoin-operator-poc`
 - Create `.env` from `.env.template` after review or edit
 - `cd ..`
+- Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
 - `yarn install`
 - `yarn dc pull`
 - `yarn dc start` <- In background or separate terminal
