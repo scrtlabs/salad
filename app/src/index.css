@@ -13,6 +13,15 @@ code {
     monospace;
 }
 
+form > div {
+  margin-bottom: 15px;
+}
+
+form > div:last-child {
+  margin-top: 35px;
+  margin-bottom: 0;
+}
+
 .App {
   text-align: center;
 }

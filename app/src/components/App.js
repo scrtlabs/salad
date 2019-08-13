@@ -6,13 +6,13 @@ import connect from 'react-redux/es/connect/connect';
 import { Container, Message } from 'semantic-ui-react';
 import Paper from '@material-ui/core/Paper';
 import { withStyles } from '@material-ui/core';
-// Imports - Initialize Enigma
-import getEnigmaInit from '../utils/getEnigmaInit.js';
 // Imports - Components
 import Header from './Header';
 import DataValidation from './Mixer';
 // Imports - Actions (Redux)
-import { initializeEnigma, initializeAccounts } from '../actions';
+import { initializeWeb3, initializeAccounts } from '../actions';
+
+import getWeb3 from '../utils/getWeb3';
 
 const styles = theme => ({
     root: {
@@ -27,22 +27,18 @@ const styles = theme => ({
 
 class App extends Component {
     async componentDidMount() {
-        // Initialize enigma-js client library (including web3)
-        const enigma = await getEnigmaInit();
-        // Create redux action to initialize set state variable containing enigma-js client library
-        this.props.initializeEnigma(enigma);
-        // Initialize unlocked accounts
-        const accounts = await enigma.web3.eth.getAccounts();
-        // Create redux action to initialize set state variable containing unlocked accounts
+        const web3 = await getWeb3();
+        const accounts = await web3.eth.getAccounts();
+        this.props.initializeWeb3(web3);
         this.props.initializeAccounts(accounts);
     }
 
     render() {
-        if (!this.props.enigma) {
+        if (!this.props.web3) {
             return (
                 <div className="App">
                     <Header/>
-                    <Message color="red">Enigma setup still loading...</Message>
+                    <Message color="red">Please allow account authorization in your MetaMask...</Message>
                 </div>
             );
         }
@@ -65,11 +61,11 @@ class App extends Component {
 
 const mapStateToProps = (state) => {
     return {
-        enigma: state.enigma,
+        web3: state.web3,
     }
 };
 
 export default connect(
     mapStateToProps,
-    { initializeEnigma, initializeAccounts }
+    { initializeWeb3, initializeAccounts }
 )(withStyles(styles)(App));

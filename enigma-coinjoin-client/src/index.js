@@ -4,13 +4,12 @@ const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS,
 const EventEmitter = require('events');
 const Web3 = require('web3');
 const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
-const WebSocket = require('ws');
 
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, operatorUrl = 'http://localhost:3346', provider = Web3.givenProvider) {
+    constructor(contractAddr, operatorUrl = 'ws://localhost:3346', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -20,10 +19,10 @@ class CoinjoinClient {
 
     async _waitConnectAsync() {
         return new Promise((resolve) => {
-            this.ws.on('open', function open() {
+            this.ws.onopen = () => {
                 console.log('Connected to server');
                 resolve(true);
-            });
+            };
         });
     }
 
@@ -48,8 +47,9 @@ class CoinjoinClient {
     }
 
     watch() {
-        this.ws.on('message', (msg) => {
+        this.ws.onmessage = (msg) => {
             const {action, payload} = JSON.parse(msg);
+            // noinspection JSRedundantSwitchStatement
             switch (action) {
                 case PUB_KEY_UPDATE:
                     const pubKey = {payload};
@@ -58,7 +58,7 @@ class CoinjoinClient {
                 default:
                     this.ee.emit(action, payload);
             }
-        });
+        };
     }
 
     /**

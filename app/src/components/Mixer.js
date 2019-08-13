@@ -2,7 +2,8 @@
 import React, { Component } from 'react';
 // Imports - Redux
 import { connect } from 'react-redux';
-import { Field, reduxForm } from 'redux-form';
+import { Field, reduxForm, SubmissionError } from 'redux-form';
+// import { CoinjoinClient, actions } from 'enigma-coinjoin-client';
 // Imports - Frameworks (Semantic-UI and Material-UI)
 import Grid from '@material-ui/core/Grid';
 import Button from '@material-ui/core/Button';
@@ -11,7 +12,7 @@ import InputLabel from '@material-ui/core/InputLabel/InputLabel';
 import Select from '@material-ui/core/Select/Select';
 import TextField from '@material-ui/core/TextField/TextField';
 // Imports - Components
-import Notifier from './Notifier';
+import Notifier, { openSnackbar } from './Notifier';
 
 class Mixer extends Component {
   constructor(props) {
@@ -19,6 +20,7 @@ class Mixer extends Component {
     this.state = {
       isPending: false
     };
+    // this.service = new CoinjoinClient(0, undefined, web3);
   }
 
   // Redux form/material-ui render address select component
@@ -31,8 +33,8 @@ class Mixer extends Component {
             {...input}
             {...custom}
             inputProps={{
-              name: 'ownerAddress',
-              id: 'owner-address'
+              name: 'sender',
+              id: 'sender'
             }}
             required
           >
@@ -60,6 +62,22 @@ class Mixer extends Component {
     )
   }
 
+  onSubmit = async ({ sender, recipient, amount }) => {
+    if (!this.props.web3.utils.isAddress(recipient)) {
+      throw new SubmissionError({ recipient: 'Invalid address' });
+    }
+    console.log('hey', sender, recipient, amount);
+    // this.setState({ isPending: true });
+    // this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
+    //   openSnackbar({ message: 'Deposit has been successfully submitted!' });
+    //   this.setState({ isPending: false });
+    // });
+    // await this.service.initAsync();
+    // await this.service.makeDepositAsync(sender, amount);
+    // const encRecipient = await this.service.encryptRecipient(recipient);
+    // await this.service.submitDepositMetadataAsync(sender, amount, encRecipient);
+  };
+
   render() {
     return (
       <div>
@@ -68,11 +86,11 @@ class Mixer extends Component {
             <div>
               <Notifier />
               <h4>Mix Coins</h4>
-              <form>
+              <form onSubmit={this.props.handleSubmit(this.onSubmit)}>
                 <div>
-                  <InputLabel htmlFor="owner-address">Address *</InputLabel>
+                  <InputLabel htmlFor="sender">Sender *</InputLabel>
                   <Field
-                    name="ownerAddress"
+                    name="sender"
                     component={Mixer.renderAddressInput}
                   >
                     <option value="" />
@@ -91,7 +109,17 @@ class Mixer extends Component {
                     required
                   />
                 </div>
-                <br />
+                <div>
+                  <Field
+                    name="amount"
+                    type="number"
+                    step="0.0001"
+                    min="0"
+                    component={Mixer.renderStringInput}
+                    label="Amount"
+                    required
+                  />
+                </div>
                 <div>
                   <Button
                     variant='outlined'
@@ -111,7 +139,7 @@ class Mixer extends Component {
 }
 const mapStateToProps = (state) => {
   return {
-    enigma: state.enigma,
+    web3: state.web3,
     accounts: state.accounts,
   }
 };

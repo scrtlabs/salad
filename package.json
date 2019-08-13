@@ -24,6 +24,7 @@
   "license": "ISC",
   "workspaces": [
     "enigma-coinjoin-operator",
-    "enigma-coinjoin-client"
+    "enigma-coinjoin-client",
+    "app"
   ]
 }

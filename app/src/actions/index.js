@@ -1,7 +1,7 @@
-export const initializeEnigma = (enigma) => {
+export const initializeWeb3 = (web3) => {
     return {
-        type: 'ENIGMA_INITIALIZED',
-        payload: enigma
+        type: 'WEB3_INITIALIZED',
+        payload: web3
     };
 };
 
