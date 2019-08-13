@@ -34,7 +34,8 @@ async function deploySecretContract(config, mixerEthAddress) {
 
     try {
         preCode = fs.readFileSync(path.resolve(migrationsFolder, '../build/secret_contracts', config.filename));
-        preCode = preCode.toString('hex');
+        console.log('The pre-code', preCode);
+        // preCode = preCode.toString('hex');
     } catch (e) {
         throw new Error(`Unable to read the secret contract build file: ${e}`);
     }
@@ -48,7 +49,7 @@ async function deploySecretContract(config, mixerEthAddress) {
                 .on(eeConstants.ERROR, (error) => reject(error));
         });
     } catch (e) {
-        throw new Error(`Unable to create deploy sc task: ${e}`);
+        throw new Error(`Unable to create deploy sc task: ${e.message}`);
     }
 
     // Wait for the confirmed deploy contract task
@@ -83,12 +84,12 @@ async function deploySecretContract(config, mixerEthAddress) {
 }
 
 module.exports = async function (deployer, network, accounts) {
-
+    console.log('Migrating');
     enigma = new Enigma(
         web3,
         EnigmaContract.networks['4447'].address,
         EnigmaTokenContract.networks['4447'].address,
-        'http://localhost:3346',
+        'http://core:3346',
         {
             gas: 4712388,
             gasPrice: 100000000000,
