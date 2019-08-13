@@ -5,15 +5,11 @@ const Web3 = require('web3');
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class DealManager {
-    constructor(web3, scClient, store, quorum = 2) {
+    constructor(web3, scClient, contractAddr, store, quorum = 2) {
         this.web3 = web3;
         this.scClient = scClient;
         this.store = store;
         this.quorum = quorum;
-        // const networkId = process.env.ETH_NETWORK_ID;
-        // console.log(networkId, EnigmaCoinjoinContract);
-        // const contractAddr = EnigmaCoinjoinContract.networks[networkId].address;
-        const contractAddr = this.web3.utils.toChecksumAddress(process.env.CONTRACT_ADDRESS);
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
