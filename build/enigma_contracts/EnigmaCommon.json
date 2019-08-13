@@ -3214,7 +3214,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-07-18T19:16:53.612Z",
+  "updatedAt": "2019-08-12T23:37:42.927Z",
   "devdoc": {
     "author": "Enigma * This library contains the common structs and enums used throughout the Enigma codebase",
     "methods": {}

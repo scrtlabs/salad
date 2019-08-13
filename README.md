@@ -18,6 +18,7 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `cd enigma-coinjoin-operator`
 - Create `.env` from `.env.template` after review or edit
 - `cd ..`
+- Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
 - `yarn install`
 - `yarn dc pull`
 - `yarn dc start` <- In background or separate terminal
@@ -82,22 +83,24 @@ The encryption scheme isn't yet fully defined but it is implied that participant
 2. Users get selected worker public key using `enigma-js` and use for encryption. The problem with this is that deals cannot include deposits from earlier epochs. 
 3. Consider proxy re-encryption. 
 
-For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize encryption like this because mixing requires 2-step process. First, a participant computes a ZK proof and gets a Note. At a later time, the same participant submit the node and a recipient address. Assuming that the proof does not leak information, the deposit address is never directly linked to the recipient address.
+For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize encryption like this because mixing requires 2-step process. First, a participant computes a ZK proof and gets a Note. At a later time, the same participant submit the Note and a recipient address. Assuming that the proof does not leak information, the deposit address is never directly linked to the recipient address.
 
 #### Attack Vectors
 1. *Spam*: An attacker could submit large amount of deposits to create artificial liquidity and de-anonymize other participants. If there are 10 participants in a deal, and 9 of those are the attacker, the 1 left isn't anonymous to the attacker. Semaphore addresses this by executing deals on a schedule, not by a participation threshold. The best solution is probably a combination of both. More research needed. 
 
 ## Problems
-- [ ] Unable to use latest ring. Error during migration.
+- [x] Unable to use latest ring. Error during migration.
       ```
       core_1      | Error in deployment of smart contract function: Error in execution of WASM code: Instantiation: Export GFp_gcm_gmult_4bit not found
       core_1      | 15:20:18 [INFO] deploy_contract() => Ok(FailedTask { result: FailedTask { output: "435880ff72171fdbebbdc06f22c27e39957af05de3c963682e340e1f512cf69b583ba0a3eaad3b56f1afa9a5560d9d5be371b99cd12db45fa5754781e7f26f3ed4b6eef50a041be4f06b1f5f75953672c552f5ac72f51389b1ca05ecbf15a274436807cb79f0699e96e0beeaa9346d", used_gas: 0, signature: "800208408c6ee1bd8e6f233557821f99d748ba3ab600e8fb74de8d674505048d2956a582b8515e0c25ea29c0e86b30468f51e4fcf8d177d1964502c4ab883ab81b" } })
       ```
 - [ ] Keeping the built Enigma contracts should not be necessary. Add to `discovery-cli`.
-- [ ] How to approach error handling in secret contracts?
+- [x] How to approach error handling in secret contracts?
 - [ ] Intermittent: `Wrong epoch for this task` errors      
 - [ ] Unable to pass `bytes32` to smart contracts
 - [ ] Unable to pass `string[]` to secret contract. The current workaround is to concat/split a `Vec<u8>` argument.
 - [ ] Deployment often fails 
-- [ ] Can't use the `vec![]` macro
+- [x] Can't use the `vec![]` macro
 - [ ] Starting the network sometimes fails, resulting in a `Division by zero` error during deployment
+
+C
