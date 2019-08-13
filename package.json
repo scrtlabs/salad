@@ -15,7 +15,9 @@
     "enigma-js": "0.0.8",
     "node-forge": "^0.8.5"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "husky": "^3.0.3"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
