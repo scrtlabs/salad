@@ -83,7 +83,7 @@ The encryption scheme isn't yet fully defined but it is implied that participant
 2. Users get selected worker public key using `enigma-js` and use for encryption. The problem with this is that deals cannot include deposits from earlier epochs. 
 3. Consider proxy re-encryption. 
 
-For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize encryption like this because mixing requires 2-step process. First, a participant computes a ZK proof and gets a Note. At a later time, the same participant submit the node and a recipient address. Assuming that the proof does not leak information, the deposit address is never directly linked to the recipient address.
+For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize encryption like this because mixing requires 2-step process. First, a participant computes a ZK proof and gets a Note. At a later time, the same participant submit the Note and a recipient address. Assuming that the proof does not leak information, the deposit address is never directly linked to the recipient address.
 
 #### Attack Vectors
 1. *Spam*: An attacker could submit large amount of deposits to create artificial liquidity and de-anonymize other participants. If there are 10 participants in a deal, and 9 of those are the attacker, the 1 left isn't anonymous to the attacker. Semaphore addresses this by executing deals on a schedule, not by a participation threshold. The best solution is probably a combination of both. More research needed. 
