@@ -35,7 +35,7 @@ services:
     environment:
       - NETWORK=${COMPOSE_PROJECT_NAME}
     volumes:
-        - "${BUILD_CONTRACTS_PATH}:/root/enigma-p2p/test/ethereum/scripts/build/contracts"
+      - "${BUILD_CONTRACTS_PATH}:/root/enigma-p2p/test/ethereum/scripts/build/contracts"
     ports:
       - "3346:3346"
 
@@ -58,22 +58,15 @@ services:
       - "${BUILD_CONTRACTS_PATH}:/root/enigma-contract/build/contracts"
 
   core:
-    image: enigmampc/enigma_core_hw:${DOCKER_TAG}
-#    build:
-#      context: ../../Enigma/discovery-docker-network/enigma-core
-#      args:
-#        - GIT_BRANCH_CORE=crypto-service
-#        - SGX_MODE=HW
+    image: enigmampc/enigma_core_sw:${DOCKER_TAG}
     stdin_open: true
     tty: true
     hostname: core
     networks:
       - net
-    devices:
-      - "/dev/isgx:/dev/isgx"
 
   km:
-    image: enigmampc/enigma_km_hw:${DOCKER_TAG}
+    image: enigmampc/enigma_km_sw:${DOCKER_TAG}
     stdin_open: true
     tty: true
     hostname: km
@@ -81,11 +74,9 @@ services:
       - net
     volumes:
       - "shared:/root/.enigma"
-    devices:
-      - "/dev/isgx:/dev/isgx"
 
 networks:
-    net:
+  net:
 
 volumes:
   shared:

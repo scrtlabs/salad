@@ -1,4 +1,0 @@
-COMPOSE_PROJECT_NAME=enigma
-SGX_MODE=HW
-BUILD_CONTRACTS_PATH=/home/user/src/Mixer/enigma-mixer/build/enigma_contracts
-DOCKER_TAG=latest

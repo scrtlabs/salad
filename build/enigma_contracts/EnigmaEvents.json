@@ -3803,7 +3803,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-07-18T19:16:53.614Z",
+  "updatedAt": "2019-08-12T23:37:42.930Z",
   "devdoc": {
     "author": "Enigma * Registers events to be emitted by the various functionalities of the Enigma codebase (need to be detailed here as well as in the individual library as well",
     "methods": {}
