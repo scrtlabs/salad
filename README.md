@@ -15,7 +15,7 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `git clone https://github.com/enigmampc/coinjoin-poc`
 - `cd coinjoin-poc`
 - Create `.env` from `.env.template` after review or edit
-- `cd coinjoin-operator-poc`
+- `cd enigma-coinjoin-operator`
 - Create `.env` from `.env.template` after review or edit
 - `cd ..`
 - Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
