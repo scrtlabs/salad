@@ -19,7 +19,7 @@ contract('Mixer', () => {
     before(async () => {
         const operatorAccountIndex = 0;
         const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
-        const scAddr = fs.readFileSync('../test/mixer.txt', 'utf-8');
+        const scAddr = fs.readFileSync(`${__dirname}/coinjoin.txt`, 'utf-8');
 
         await startServer(provider, scAddr, operatorAccountIndex);
 
