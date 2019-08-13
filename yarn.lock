@@ -18,14 +18,6 @@
     esutils "^2.0.2"
     js-tokens "^4.0.0"
 
-"@babel/polyfill@^7.0.0":
-  version "7.4.4"
-  resolved "https://registry.yarnpkg.com/@babel/polyfill/-/polyfill-7.4.4.tgz#78801cf3dbe657844eeabf31c1cae3828051e893"
-  integrity sha512-WlthFLfhQQhh+A2Gn5NSFl0Huxz36x86Jn+E9OW7ibK8edKPq+KLy4apM1yDpQ8kJOVi1OVjpP4vSDLdrI04dg==
-  dependencies:
-    core-js "^2.6.5"
-    regenerator-runtime "^0.13.2"
-
 "@babel/runtime-corejs2@^7.2.0":
   version "7.5.5"
   resolved "https://registry.yarnpkg.com/@babel/runtime-corejs2/-/runtime-corejs2-7.5.5.tgz#c3214c08ef20341af4187f1c9fbdc357fbec96b2"
@@ -49,17 +41,24 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
+<<<<<<< HEAD
 "@enigmampc/discovery-cli@^0.0.18":
   version "0.0.18"
   resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.0.18.tgz#9764ad798ee3e9d089ab9f7f98432b9d86c295c5"
   integrity sha512-62H1xnYqLlo4SULq9csDC39qB3aInxiaE1sQ0Ui3GMGFRbv20kZIbEQaz1KY2e09dWY0dpZSc85PB+7IpeaqDg==
+=======
+"@enigmampc/discovery-cli@0.0.25":
+  version "0.0.25"
+  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.0.25.tgz#82003acf2d273e00cc39229ae5fdb9d26bfc3849"
+  integrity sha512-HwtEPLRyUHLlTS0kW2xbsMLAGpYObGc74J16CepgFqNtCl05/2UcJZpePLRyKck+/yZ8dQeqNsHIUpEMgUSRRw==
+>>>>>>> master
   dependencies:
     axios "^0.18.1"
     chalk "^2.4.2"
     clui "^0.3.6"
     docker-compose "^0.17.4"
     dotenv "^8.0.0"
-    enigma-js "^0.0.5"
+    enigma-js "^0.0.8"
     get-cursor-position "^1.0.5"
     hasbin "^1.2.3"
     inquirer "^6.4.1"
@@ -601,7 +600,7 @@ aws4@^1.8.0:
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.8.0.tgz#f0e003d9ca9e7f59c7a508945d7b2ef9a04a542f"
   integrity sha512-ReZxvNHIOv88FlT7rxcXIIC0fPt4KZqZbOlivyWtXLt8ESx84zd3kMC6iK5jVeS2qt+g7ftS7ye4fi06X5rtRQ==
 
-axios@0.18.1, axios@^0.18.0, axios@^0.18.1:
+axios@0.18.1, axios@^0.18.1:
   version "0.18.1"
   resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.1.tgz#ff3f0de2e7b5d180e757ad98000f1081b87bcea3"
   integrity sha512-0BfJq4NSfQXd+SkFdrvFbG7addhYSBA2mQwISr46pD6E5iqkWg02RAs8vyTT/j0RTnoYmeXauBuSv1qKwR179g==
@@ -2089,6 +2088,19 @@ core-js@^2.4.0, core-js@^2.5.0, core-js@^2.6.5:
   resolved "https://registry.yarnpkg.com/core-js/-/core-js-2.6.9.tgz#6b4b214620c834152e179323727fc19741b084f2"
   integrity sha512-HOpZf6eXmnl7la+cUdMnLvUxKNqLUzJvgIziQ0DiF3JwSImNphIqdGqzj6hIKyX04MmV0poclQ7+wjWvxQyR2A==
 
+<<<<<<< HEAD
+=======
+core-js@^3.1.4:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.2.1.tgz#cd41f38534da6cc59f7db050fe67307de9868b09"
+  integrity sha512-Qa5XSVefSVPRxy2XfUC13WbvqkxhkwB3ve+pgCQveNgYzbM/UxZeu1dcOX/xr4UmfUd+muuvsaxilQzCyUurMw==
+
+core-js@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.2.0.tgz#0a835fdf6aa677fff83a823a7b5276c9e7cebb76"
+  integrity sha512-gybgLzmr7SQRSF6UzGYXducx4eE10ONQlyEnQoqiGPbmbn7zLkb73tPfc4YbZN0lvcTQwoLNPjq4RuCaCumGyQ==
+
+>>>>>>> master
 core-util-is@1.0.2, core-util-is@~1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/core-util-is/-/core-util-is-1.0.2.tgz#b5fd54220aa2bc5ab57aab7140c940754503c1a7"
@@ -2813,16 +2825,24 @@ enigma-js@0.0.5, enigma-js@^0.0.5:
     webpack-node-externals "^1.7.2"
     whatwg-fetch "^3.0.0"
 
+<<<<<<< HEAD
 enigma-js@0.0.6:
   version "0.0.6"
   resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.6.tgz#9fbe24a17729d534fcde81cc7ba0e67d2cdd042d"
   integrity sha512-fSEPk1/smA+UX+CsL2ZzOSuEYGLTBbTsGUwmLciuUX8Oaw7gTo2o85YwlzQwO9L5fTxnYmQalXD4qktY7hm7wQ==
+=======
+enigma-js@0.0.8, enigma-js@^0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.8.tgz#7d7d984bdeb6c695b1bdb84fc7e6824f30a40c1e"
+  integrity sha512-oVXfAPIbJwenQdj9+CQV+JobZGlcmmuLd5bul+E/nR4OS7Y9OPbSyapeD45CrPYXK31TdNjwSglqdiTZpTX9OA==
+>>>>>>> master
   dependencies:
     any-promise "^1.3.0"
     axios "0.18.1"
     body-parser "^1.18.3"
     buffer "^5.1.0"
     connect "^3.6.6"
+    core-js "^3.1.4"
     create-file-webpack "^1.0.2"
     elliptic "6.4.0"
     eth-crypto "^1.2.2"
@@ -2836,6 +2856,7 @@ enigma-js@0.0.6:
     node-fetch "^2.3.0"
     node-forge "^0.7.6"
     openzeppelin-solidity "2.1"
+    regenerator-runtime "^0.13.3"
     rlp "2.1.0"
     source-map-support "^0.5.9"
     tls "0.0.1"
@@ -3282,15 +3303,7 @@ ethereumjs-abi@0.6.5:
     bn.js "^4.10.0"
     ethereumjs-util "^4.3.0"
 
-ethereumjs-abi@^0.6.5:
-  version "0.6.7"
-  resolved "https://registry.yarnpkg.com/ethereumjs-abi/-/ethereumjs-abi-0.6.7.tgz#d1d1c5cdb8d910a7d97645ba9e93be5d153bba2e"
-  integrity sha512-EMLOA8ICO5yAaXDhjVEfYjsJIXYutY8ufTE93eEKwsVtp2usQreKwsDTJ9zvam3omYqNuffr8IONIqb2uUslGQ==
-  dependencies:
-    bn.js "^4.11.8"
-    ethereumjs-util "^6.0.0"
-
-"ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
+ethereumjs-abi@^0.6.5, "ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
   version "0.6.7"
   resolved "git+https://github.com/ethereumjs/ethereumjs-abi.git#8431eab7b3384e65e8126a4602520b78031666fb"
   dependencies:
@@ -5287,20 +5300,6 @@ isurl@^1.0.0-alpha5:
   dependencies:
     has-to-string-tag-x "^1.2.0"
     is-object "^1.0.1"
-
-jayson@^2.1.0:
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/jayson/-/jayson-2.1.2.tgz#3612f578529b5cc84301f098f29cd1612119e53d"
-  integrity sha512-2GejcQnEV35KYTXoBvzALIDdO/1oyEIoJHBnaJFhJhcurv0x2JqUXQW6xlDUhcNOpN9t+d2w+JGA6vOphb+5mg==
-  dependencies:
-    "@types/node" "^10.3.5"
-    JSONStream "^1.3.1"
-    commander "^2.12.2"
-    es6-promisify "^5.0.0"
-    eyes "^0.1.8"
-    json-stringify-safe "^5.0.1"
-    lodash "^4.17.11"
-    uuid "^3.2.1"
 
 jayson@^3.0.1:
   version "3.0.2"
@@ -7551,7 +7550,7 @@ regenerator-runtime@^0.11.0:
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.11.1.tgz#be05ad7f9bf7d22e056f9726cee5017fbf19e2e9"
   integrity sha512-MguG95oij0fC3QV3URf4V2SDYGJhJnJGqvIIgdECeODCT98wSWDAJ94SSuVpYQUoTcGUIL6L4yNB7j1DFFHSBg==
 
-regenerator-runtime@^0.13.2:
+regenerator-runtime@^0.13.2, regenerator-runtime@^0.13.3:
   version "0.13.3"
   resolved "https://registry.yarnpkg.com/regenerator-runtime/-/regenerator-runtime-0.13.3.tgz#7cf6a77d8f5c6f60eb73c5fc1955b2ceb01e6bf5"
   integrity sha512-naKIZz2GQ8JWh///G7L3X6LaQUAMp2lvb1rvwwsURe/VXwD6VMfr+/1NuNw3ag8v2kY1aQ/go5SNn79O9JU7yw==

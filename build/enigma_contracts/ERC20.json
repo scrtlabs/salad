@@ -1872,7 +1872,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-07-18T19:18:54.767Z",
+  "updatedAt": "2019-08-12T23:39:54.651Z",
   "devdoc": {
     "author": "Enigma * ERC20 interface to wrap the EnigmaToken contract",
     "methods": {}
