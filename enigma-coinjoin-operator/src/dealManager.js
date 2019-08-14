@@ -58,12 +58,12 @@ class DealManager {
         // TODO: Assuming that all deposits are equal for now
         const depositAmount = this.web3.utils.toWei(deposits[0].amount);
         const participants = deposits.map((deposit) => deposit.sender);
-        // TODO: Return the deal attributes
-        return this.contract.methods.newDeal(dealId, depositAmount, participants).send({
+        const receipt = await this.contract.methods.newDeal(dealId, depositAmount, participants).send({
             ...opts,
             gas: this.gasValues.createDeal,
             from: this.scClient.getOperatorAccount(),
         });
+        return {dealId, depositAmount, participants, _tx: receipt.transactionHash};
     }
 }
 

@@ -180,6 +180,7 @@ class CoinjoinClient {
      * @returns {Promise<Array<Object>>}
      */
     async fetchActiveDealsAsync() {
+        // TODO: Not returning what I want
         const dealsFlat = await this.contract.methods.listDeals().call();
         // TODO: Does this work?
         if (!dealsFlat) {
@@ -190,6 +191,7 @@ class CoinjoinClient {
             deals.push({status: dealsFlat[0][i], participates: dealsFlat[1][i], organizes: dealsFlat[2][i]});
         }
         console.log('The active deals', deals);
+        return deals;
     }
 }
 

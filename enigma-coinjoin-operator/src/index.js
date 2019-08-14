@@ -74,9 +74,8 @@ async function startServer(provider, contractAddr, scAddr, threshold, accountInd
                     (async () => {
                         console.log('Evaluating deal creation in non-blocking scope');
                         const deal = await dealManager.createDealIfQuorumReachedAsync(opts);
-                        console.log('Is deal?', deal);
                         if (deal !== null) {
-                            console.log('Broadcasting new deal', deal);
+                            console.log('Broadcasting new deal');
                             broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
                             console.log('Broadcasting quorum value 0 after new deal');
                             broadcast({action: QUORUM_UPDATE, payload: {quorum: 0}});

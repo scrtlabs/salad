@@ -108,6 +108,7 @@ contract('Mixer', () => {
 
     it('should verify that a deal was created since the threshold is reached', async () => {
         const deal = await dealPromise;
+        console.log('Created deal', deal);
         const deals = await cjc.fetchActiveDealsAsync();
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
