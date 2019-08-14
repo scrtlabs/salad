@@ -21,7 +21,7 @@ if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW'
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const provider = new Web3.providers.HttpProvider('http://localhost:9545');
 const web3 = new Web3(provider);
-let enigma = null;
+var enigma = null;
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -29,48 +29,36 @@ function sleep(ms) {
 
 async function deploySecretContract(config, mixerEthAddress) {
     console.log(`Deploying Secret Contract "${config.filename}"...`);
-    let scTask;
-    let preCode;
+    var scTask;
+    var preCode;
 
     try {
         preCode = fs.readFileSync(path.resolve(migrationsFolder, '../build/secret_contracts', config.filename));
-        console.log('The pre-code', preCode);
-        // preCode = preCode.toString('hex');
     } catch (e) {
-        throw new Error(`Unable to read the secret contract build file: ${e}`);
+        console.log('Error:', e.stack);
     }
 
     const {args} = config;
     args.push([mixerEthAddress, 'address']);
-    try {
-        scTask = await new Promise((resolve, reject) => {
-            enigma.deploySecretContract(config.fn, args, config.gasLimit, config.gasPrice, config.from, preCode)
-                .on(eeConstants.DEPLOY_SECRET_CONTRACT_RESULT, (receipt) => resolve(receipt))
-                .on(eeConstants.ERROR, (error) => reject(error));
-        });
-    } catch (e) {
-        throw new Error(`Unable to create deploy sc task: ${e.message}`);
-    }
+    scTask = await new Promise((resolve, reject) => {
+        enigma.deploySecretContract(config.fn, args, config.gasLimit, config.gasPrice, config.from, preCode)
+            .on(eeConstants.DEPLOY_SECRET_CONTRACT_RESULT, (receipt) => resolve(receipt))
+            .on(eeConstants.ERROR, (error) => reject(error));
+    });
 
     // Wait for the confirmed deploy contract task
     do {
-        console.log('Waiting for deploy task');
         await sleep(1000);
         scTask = await enigma.getTaskRecordStatus(scTask);
-        console.log('Waiting. Current Task Status is ' + scTask.ethStatus + '\r');
+        process.stdout.write('Waiting. Current Task Status is ' + scTask.ethStatus + '\r');
     } while (scTask.ethStatus === 1);
+    process.stdout.write('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
 
-    if (scTask.ethStatus === 3) {
-        console.error('Task failed:', scTask);
-        process.exit();
-    }
-
-    console.log('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
     // Verify deployed contract
-    const result = await enigma.admin.isDeployed(scTask.scAddr);
+    var result = await enigma.admin.isDeployed(scTask.scAddr);
     if (result) {
 
-        fs.writeFile(path.join('./test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
+        fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
             if (err) {
                 return console.log(err);
             }
@@ -78,18 +66,19 @@ async function deploySecretContract(config, mixerEthAddress) {
 
         return scTask.scAddr;
     } else {
-        console.error('Something went wrong deploying Secret Contract "${contract}", aborting');
+        console.log('Something went wrong deploying Secret Contract:', scTask.scAddr, ', aborting');
+        console.log(scTask);
         process.exit();
     }
 }
 
 module.exports = async function (deployer, network, accounts) {
-    console.log('Migrating');
+
     enigma = new Enigma(
         web3,
         EnigmaContract.networks['4447'].address,
         EnigmaTokenContract.networks['4447'].address,
-        'http://core:3346',
+        'http://localhost:3346',
         {
             gas: 4712388,
             gasPrice: 100000000000,
@@ -99,25 +88,20 @@ module.exports = async function (deployer, network, accounts) {
     enigma.admin();
 
     // Deploy your Smart and Secret contracts below this point:
-    try {
-        await deployer.deploy(Mixer);
-    } catch (e) {
-        console.error('Unable to deploy smart contract', e);
-    }
-    console.log(`Smart Contract "Mixer.Sol" has been deployed at ETH address: ${Mixer.address}`);
+
+    deployer.deploy(Mixer).then(function () {
+        console.log(`Smart Contract "Mixer.Sol" has been deployed at ETH address: ${Mixer.address}`);
+        return;
+    });
 
     const config = {
-        filename: 'mixer.wasm',
+        filename: 'coinjoin.wasm',
         fn: 'construct()',
         args: [],
         gasLimit: 1000000,
         gasPrice: utils.toGrains(1),
         from: accounts[0]
     };
-    try {
-        const address = await deploySecretContract(config, Mixer.address);
-        console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
-    } catch (e) {
-        console.error('Unable to deploy secret contract', e);
-    }
+    const address = await deploySecretContract(config, Mixer.address);
+    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
 };

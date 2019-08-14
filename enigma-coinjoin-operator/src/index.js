@@ -9,7 +9,7 @@ const {DealManager} = require("./dealManager");
 
 const port = process.env.WS_PORT;
 
-async function startServer(provider, scAddr, accountIndex = 0) {
+async function startServer(provider, contractAddr, scAddr, accountIndex = 0) {
     // const store = new Store();
     const store = new MemoryStore(); // TODO: Use db backend
     await store.initAsync();
@@ -19,7 +19,7 @@ async function startServer(provider, scAddr, accountIndex = 0) {
     await sc.initAsync();
 
     const quorum = parseInt(process.env.QUORUM);
-    const dealManager = new DealManager(web3, sc, store, quorum);
+    const dealManager = new DealManager(web3, sc, contractAddr, store, quorum);
 
     const opts = {
         gas: 100712388,
