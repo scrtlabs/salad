@@ -22800,7 +22800,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-08-12T23:39:54.459Z",
+  "updatedAt": "2019-08-13T03:51:06.628Z",
   "devdoc": {
     "methods": {
       "commitReceipt(bytes32,bytes32,bytes32,bytes32,bytes,address,uint64,bytes)": {
