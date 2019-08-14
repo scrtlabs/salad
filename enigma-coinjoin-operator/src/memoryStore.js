@@ -1,8 +1,7 @@
-
 class MemoryStore {
     constructor() {
         this.fillableDeposits = [];
-        this.pendingDeals = [];
+        this.deals = [];
     }
 
     initAsync() {
@@ -12,26 +11,24 @@ class MemoryStore {
         });
     }
 
+    /**
+     * Insert Deposit
+     * @param {Deposit} deposit
+     */
     insertDeposit(deposit) {
         this.fillableDeposits.push(deposit);
     }
 
-    insertDeal(dealId, deposits) {
-        for (let i =0; i<this.fillableDeposits.length; i++) {
-            if (deposits.includes(this.fillableDeposits[i])) {
-                this.fillableDeposits.splice(i, 1);
-            }
-        }
-        const deal = {dealId, deposits};
-        this.pendingDeals.push(deal);
+    /**
+     * Insert Deal
+     * @param {Deal} deal
+     */
+    insertDeal(deal) {
+        this.deals.push(deal);
     }
 
-    updateDealActive(dealId) {
-
-    }
-
-    updateDealExecuted(dealId) {
-
+    setDealExecutable(deal) {
+        this.fillableDeposits = [];
     }
 
     queryFillableDeposits(minimumAmount) {

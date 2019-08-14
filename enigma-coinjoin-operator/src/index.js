@@ -9,6 +9,7 @@ const {DealManager} = require("./dealManager");
 
 const port = process.env.WS_PORT;
 
+// TODO: Getting ugly, consider creating a class
 async function startServer(provider, contractAddr, scAddr, threshold, accountIndex = 0) {
     // const store = new Store();
     const store = new MemoryStore(); // TODO: Use db backend
@@ -46,6 +47,23 @@ async function startServer(provider, contractAddr, scAddr, threshold, accountInd
             });
         }
 
+        async function postDeposit() {
+            console.log('Evaluating deal creation in non-blocking scope');
+            const deal = await dealManager.createDealIfQuorumReachedAsync(opts);
+            if (deal !== null) {
+                console.log('Broadcasting new deal');
+                broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
+                console.log('Broadcasting quorum value 0 after new deal');
+                const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
+                console.log('Fillable deposits after deal', fillableDeposits);
+                const quorum = fillableDeposits.length;
+                if (quorum !== 0) {
+                    throw new Error('Data corruption, the quorum should be 0 after creating a deal');
+                }
+                broadcast({action: QUORUM_UPDATE, payload: {quorum}});
+            }
+        }
+
         const pubKey = await sc.getPubKeyAsync();
         ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
         ws.send(JSON.stringify({action: THRESHOLD_UPDATE, payload: {threshold}}));
@@ -63,28 +81,19 @@ async function startServer(provider, contractAddr, scAddr, threshold, accountInd
                     const registeredDeposit = await dealManager.registerDepositAsync(sender, amount, encRecipient);
                     console.log('Registered deposit', registeredDeposit);
 
-                    const fillableDeposits = await dealManager.fetchFillableDeposits();
+                    const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
                     const quorum = fillableDeposits.length;
                     ws.send(JSON.stringify({action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true}));
 
                     console.log('Broadcasting quorum update', quorum);
                     broadcast({action: QUORUM_UPDATE, payload: {quorum}});
 
-                    // TODO: Not sure if it is the best place to put this
-                    (async () => {
-                        console.log('Evaluating deal creation in non-blocking scope');
-                        const deal = await dealManager.createDealIfQuorumReachedAsync(opts);
-                        if (deal !== null) {
-                            console.log('Broadcasting new deal');
-                            broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
-                            console.log('Broadcasting quorum value 0 after new deal');
-                            broadcast({action: QUORUM_UPDATE, payload: {quorum: 0}});
-                        }
-                    })();
+                    // Non-blocking, do not wait for the outcome of port-processing
+                    postDeposit();
                     break;
                 case FETCH_FILLABLE_DEPOSITS:
                     const {minimumAmount} = payload;
-                    const deposits = await dealManager.fetchFillableDeposits(minimumAmount);
+                    const deposits = await dealManager.fetchFillableDepositsAsync(minimumAmount);
                     ws.send(JSON.stringify({action: FETCH_FILLABLE_SUCCESS, payload: {deposits}}));
                     break;
                 default:
