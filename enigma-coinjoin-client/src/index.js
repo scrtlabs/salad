@@ -3,7 +3,13 @@ const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS,
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
-const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
+
+if (typeof window === 'undefined') {
+    const {utils} = require('enigma-js/node');
+    const WebSocket = require('ws');
+} else {
+    const {utils} = require('enigma-js');
+}
 
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
