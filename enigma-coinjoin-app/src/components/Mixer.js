@@ -24,6 +24,7 @@ class Mixer extends Component {
       quorum: 0,
       threshold: 0,
     };
+    // TODO uncomment code below
     // this.service = new CoinjoinClient(0, undefined, web3);
     // this.service.initAsync();
     // this.service.onThresholdValue(({ payload }) => {
@@ -45,7 +46,6 @@ class Mixer extends Component {
     //   });
     //   this.setState({ isPending: false });
     // });
-
   }
 
   // Redux form/material-ui render address select component
@@ -92,6 +92,7 @@ class Mixer extends Component {
       throw new SubmissionError({ recipient: 'Invalid address' });
     }
     console.log('hey', sender, recipient, amount);
+    // TODO uncomment code below
     // this.setState({ isSubmitting: true });
     // await this.service.makeDepositAsync(sender, amount);
     // const encRecipient = await this.service.encryptRecipient(recipient);
