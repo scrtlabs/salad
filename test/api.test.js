@@ -13,17 +13,17 @@ contract('Mixer', () => {
     let cjc;
     let opts;
     let token;
-    let web3;
     let web3Utils;
     let accounts;
     before(async () => {
         const operatorAccountIndex = 0;
-        const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
-        const scAddr = fs.readFileSync('../test/mixer.txt', 'utf-8');
+        const provider = web3._provider;
+        const scAddr = fs.readFileSync(`${__dirname}/coinjoin.txt`, 'utf-8');
 
-        await startServer(provider, scAddr, operatorAccountIndex);
+        const contractAddr = web3.utils.toChecksumAddress(MixerContract.address);
+        console.log('Contract address:', contractAddr);
+        await startServer(provider, contractAddr, scAddr, operatorAccountIndex);
 
-        const contractAddr = this.web3.utils.toChecksumAddress(process.env.CONTRACT_ADDRESS);
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
         cjc = new CoinjoinClient(contractAddr, operatorUrl, provider);
         // Always shutdown the WS server when tests end
@@ -34,8 +34,7 @@ contract('Mixer', () => {
         });
         await cjc.initAsync();
         // Convenience shortcuts
-        web3 = cjc.web3;
-        web3Utils = cjc.web3.utils;
+        web3Utils = web3.utils;
         accounts = cjc.accounts;
         // Default options of client-side transactions
         opts = {
@@ -46,27 +45,6 @@ contract('Mixer', () => {
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
 
     });
-
-    // it('should distribute ENG equally to all accounts', async () => {
-    //     const operator = accounts[0];
-    //     const balance = web3Utils.toBN(await token.methods.balanceOf(operator).call());
-    //     console.log('The operator account balance', balance.toString());
-    //     const shares = web3Utils.toBN(10);
-    //     for (let i = 1; i < accounts.length; i++) {
-    //         const recipient = accounts[i];
-    //         let recipientBalance = web3Utils.toBN(await token.methods.balanceOf(recipient).call());
-    //         if (recipientBalance.gt(web3Utils.toBN(0))) {
-    //             console.log('Found balance greater than 0', recipientBalance.toString(), 'aborting distribution');
-    //             break;
-    //         }
-    //         const amount = balance.div(shares);
-    //         console.log('Transferring', amount.toString(), 'to', recipient);
-    //         await token.methods.approve(recipient, amount.toString()).send({from: operator});
-    //         await token.methods.transfer(recipient, amount.toString()).send({from: operator});
-    //         recipientBalance = await token.methods.balanceOf(recipient).call();
-    //         console.log('The recipient account balance', recipientBalance);
-    //     }
-    // });
 
     it('should connect to the WS server', async () => {
         console.log('Testing connection');
@@ -95,7 +73,7 @@ contract('Mixer', () => {
     }).timeout(5000);
 
     it('should verify that the submitted deposit is fillable', async () => {
-        const {deposits} = await cjc.fetchFillableDeposits();
+        const {deposits} = await cjc.fetchFillableDepositsAsync();
         expect(deposits.length).to.equal(1);
     }).timeout(5000);
 
@@ -112,7 +90,7 @@ contract('Mixer', () => {
     }).timeout(5000);
 
     it('should verify that both submitted deposits are fillable', async () => {
-        const {deposits} = await cjc.fetchFillableDeposits();
+        const {deposits} = await cjc.fetchFillableDepositsAsync();
         expect(deposits.length).to.equal(2);
     }).timeout(5000);
 

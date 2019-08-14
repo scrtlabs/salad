@@ -1146,7 +1146,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-08-12T23:39:54.472Z",
+  "updatedAt": "2019-08-13T03:51:06.641Z",
   "devdoc": {
     "author": "Enigma * Maintains the state of the Enigma contract (and the associated libraries)",
     "methods": {}
