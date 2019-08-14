@@ -19,10 +19,10 @@ contract('Mixer', () => {
         const operatorAccountIndex = 0;
         const provider = web3._provider;
         const scAddr = fs.readFileSync(`${__dirname}/coinjoin.txt`, 'utf-8');
-
+        const threshold = 2;
         const contractAddr = web3.utils.toChecksumAddress(MixerContract.address);
         console.log('Contract address:', contractAddr);
-        await startServer(provider, contractAddr, scAddr, operatorAccountIndex);
+        await startServer(provider, contractAddr, scAddr, threshold, operatorAccountIndex);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
         cjc = new CoinjoinClient(contractAddr, operatorUrl, provider);
@@ -70,6 +70,8 @@ contract('Mixer', () => {
         const recipient = cjc.accounts[6];
         const result = await cjc.submitDepositMetadataAsync(sender, amount, recipient);
         expect(result).to.equal(true);
+        // Quorum should be 1 after first deposit
+        expect(cjc.quorum).to.equal(1);
     }).timeout(5000);
 
     it('should verify that the submitted deposit is fillable', async () => {
@@ -81,12 +83,22 @@ contract('Mixer', () => {
         sender = cjc.accounts[2];
         const receipt = await cjc.makeDepositAsync(sender, amount, opts);
         console.log('Made deposit', receipt);
+        // Quorum should still be 1 since the deposit hasn't been received by the operator yet
+        expect(cjc.quorum).to.equal(1);
     });
 
+    let dealPromise;
     it('should submit the second encrypted deposit', async () => {
         const recipient = cjc.accounts[7];
+        // Since the threshold is 2, this will also create a deal
         const result = await cjc.submitDepositMetadataAsync(sender, amount, recipient);
+        // Catching the deal created event
+        dealPromise = new Promise((resolve) => {
+            cjc.onDealCreated((deal) => resolve(deal));
+        });
         expect(result).to.equal(true);
+        // Quorum should be 2 after first deposit
+        expect(cjc.quorum).to.equal(2);
     }).timeout(5000);
 
     it('should verify that both submitted deposits are fillable', async () => {
@@ -95,6 +107,10 @@ contract('Mixer', () => {
     }).timeout(5000);
 
     it('should verify that a deal was created since the threshold is reached', async () => {
+        const deal = await dealPromise;
         const deals = await cjc.fetchActiveDealsAsync();
+        expect(deals.length).to.equal(1);
+        // Quorum should be reset to 0 after deal creation
+        expect(cjc.quorum).to.equal(0);
     }).timeout(5000);
 });

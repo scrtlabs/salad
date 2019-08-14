@@ -5,12 +5,16 @@ const Web3 = require('web3');
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class DealManager {
-    constructor(web3, scClient, contractAddr, store, quorum = 2) {
+    constructor(web3, scClient, contractAddr, store, threshold, gasValues = {
+        createDeal: 4712388,
+        fetchPubKey: 4712388,
+    }) {
         this.web3 = web3;
         this.scClient = scClient;
         this.store = store;
-        this.quorum = quorum;
+        this.threshold = threshold;
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+        this.gasValues = gasValues;
     }
 
     async verifyDepositAmountAsync(sender, amount) {
@@ -27,14 +31,18 @@ class DealManager {
         await this.verifyDepositAmountAsync(sender, amount);
         const deposit = {sender, amount, encRecipient};
         this.store.insertDeposit(deposit);
+        return deposit;
     }
 
     async createDealIfQuorumReachedAsync(opts, amount = 0) {
         const deposits = await this.fetchFillableDeposits(amount);
-        if (deposits.length >= this.quorum) {
+        console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
+        let deal = null;
+        if (deposits.length >= this.threshold) {
             console.log('Quorum reached with deposits', deposits);
-            await this.createDeal(deposits);
+            deal = await this.createDeal(deposits);
         }
+        return deal;
     }
 
     async fetchFillableDeposits(minimumAmount = 0) {
@@ -50,9 +58,10 @@ class DealManager {
         // TODO: Assuming that all deposits are equal for now
         const depositAmount = this.web3.utils.toWei(deposits[0].amount);
         const participants = deposits.map((deposit) => deposit.sender);
+        // TODO: Return the deal attributes
         return this.contract.methods.newDeal(dealId, depositAmount, participants).send({
             ...opts,
-            gas: process.env.CREATE_DEAL_GAS,
+            gas: this.gasValues.createDeal,
             from: this.scClient.getOperatorAccount(),
         });
     }
