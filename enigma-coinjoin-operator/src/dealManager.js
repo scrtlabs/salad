@@ -72,10 +72,11 @@ class DealManager {
     /**
      * Create deal on Ethereum if quorum reached or exit
      * @param {Object} opts - Ethereum transaction options
+     * @param {Object} taskRecordOpts - Enigma transaction options
      * @param {string} amount - The minimum deposit amount in wei
      * @returns {Promise<Deal>}
      */
-    async createDealIfQuorumReachedAsync(opts, engOpts, amount = 0) {
+    async createDealIfQuorumReachedAsync(opts, taskRecordOpts, amount = 0) {
         const deposits = await this.fetchFillableDepositsAsync(amount);
         console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
@@ -84,7 +85,7 @@ class DealManager {
             console.log('Quorum reached with deposits', deposits);
             deal = await this.createDealAsync(deposits, opts);
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            await this.executeDealAsync(deal, engOpts);
+            await this.executeDealAsync(deal, taskRecordOpts);
         }
         return deal;
     }
@@ -141,10 +142,15 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {dealId, participants} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
-        console.log('The encrypted participants', deposits);
-        console.log('The encrypted participants count', deposits.map(d => d.encRecipient.length));
-        // await this.scClient.executeDealAsync(dealId)
-        deal.status = DEAL_STATUS.EXECUTABLE;
+        const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
+        console.log('The encrypted participants', encRecipientsBytes);
+        console.log('The encrypted participants count', encRecipientsBytes.map(d => d.length));
+        const nbRecipient = deposits.length;
+        const encRecipientsPayload = `0x${deposits.map(d => d.encRecipient).join('')}`;
+        console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
+        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, encRecipientsPayload, taskRecordOpts);
+        deal._tx = task.transactionHash;
+        deal.status = DEAL_STATUS.EXECUTED;
     }
 }
 

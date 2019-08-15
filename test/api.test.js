@@ -118,7 +118,7 @@ contract('Mixer', () => {
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
-    }).timeout(5000);
+    }).timeout(60000); // Give enough time to execute the deal on Enigma
 
     it('should verify the deal execution', async () => {
         const deal = await dealPromise;

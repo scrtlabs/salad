@@ -53,6 +53,7 @@ class SecretContractClient {
     }
 
     async waitTaskSuccessAsync(task) {
+        console.log('Waiting for task success', task);
         do {
             await sleep(1000);
             task = await this.enigma.getTaskRecordStatus(task);
@@ -72,41 +73,43 @@ class SecretContractClient {
         });
     }
 
-    async fetchPubKeyAsync(engOpts) {
+    async fetchPubKeyAsync(opts) {
         console.log('Calling `get_pub_key`');
         const taskFn = 'get_pub_key()';
         const taskArgs = [];
-        const {taskGasLimit, taskGasPx} = engOpts;
+        const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('The completed task', task);
-        // TODO: Why are there leading zeros?
         const output = await this.fetchOutput(task);
+        // TODO: Why is this here?
         const prefix = '00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040';
         this.pubKey = output.replace(prefix, '');
         console.log('The pubKey output', this.pubKey);
         return this.pubKey;
     }
 
-    async executeDealAsync(dealId, encRecipientsPayload) {
-        console.log('Calling `execute_deal(bytes32,string[])`');
-        const taskFn = 'execute_deal(bytes32,string[])';
+    async executeDealAsync(dealId, nbRecipient, encRecipientsPayload, opts) {
+        console.log('Calling `execute_deal(bytes32,uint256,bytes)`', dealId, nbRecipient, encRecipientsPayload);
+        const taskFn = 'execute_deal(bytes32,uint256,bytes)';
         const taskArgs = [
             [dealId, 'bytes32'],
+            [nbRecipient, 'uint256'],
             [encRecipientsPayload, 'bytes'],
         ];
-        const taskGasLimit = 500000;
-        const taskGasPx = utils.toGrains(1);
-        const pendingTask = this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const {taskGasLimit, taskGasPx} = opts;
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
+        console.log('Got execute deal task', task);
         const output = await this.fetchOutput(task);
-        console.log('Deal executed', output);
+        console.log('The ordered recipients', output);
+        return task;
     }
 
-    async getPubKeyAsync(engOpts) {
+    async getPubKeyAsync(opts) {
         if (this.pubKey === null) {
             console.log('PubKey not found in cache, fetching  from Enigma...');
-            this.pubKey = await this.fetchPubKeyAsync(engOpts);
+            this.pubKey = await this.fetchPubKeyAsync(opts);
             console.log('Storing pubKey in cache', this.pubKey);
         }
         return this.pubKey;

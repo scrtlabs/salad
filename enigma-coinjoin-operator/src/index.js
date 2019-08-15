@@ -54,8 +54,8 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         async function postDeposit() {
             console.log('Evaluating deal creation in non-blocking scope');
-            const engOpts = {taskGasLimit: 500000, taskGasPx: utils.toGrains(1)};
-            const deal = await dealManager.createDealIfQuorumReachedAsync(opts, engOpts);
+            const taskRecordOpts = {taskGasLimit: 5000000, taskGasPx: utils.toGrains(1)};
+            const deal = await dealManager.createDealIfQuorumReachedAsync(opts, taskRecordOpts);
             if (deal !== null) {
                 console.log('Broadcasting new deal');
                 broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
@@ -72,8 +72,8 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         (async () => {
             // Sending public key on connection
-            const engOpts = {taskGasLimit: 5000000, taskGasPx: utils.toGrains(1)};
-            const pubKey = await sc.getPubKeyAsync(engOpts);
+            const taskRecordOpts = {taskGasLimit: 5000000, taskGasPx: utils.toGrains(1)};
+            const pubKey = await sc.getPubKeyAsync(taskRecordOpts);
             ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
         })();
 
