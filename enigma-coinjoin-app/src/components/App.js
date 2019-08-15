@@ -13,6 +13,7 @@ import DataValidation from './Mixer';
 import { initializeWeb3, initializeAccounts } from '../actions';
 
 import getWeb3 from '../utils/getWeb3';
+import Grid from "@material-ui/core/Grid";
 
 const styles = theme => ({
     root: {
@@ -38,7 +39,14 @@ class App extends Component {
             return (
                 <div className="App">
                     <Header/>
-                    <Message color="red">Please allow account authorization in your MetaMask...</Message>
+                    <br />
+                    <br />
+                    <Grid container spacing={3}>
+                        <Grid item xs={3} />
+                        <Grid item xs={6}>
+                            <Message color="grey">Please allow account authorization in your MetaMask...</Message>
+                        </Grid>
+                    </Grid>
                 </div>
             );
         }

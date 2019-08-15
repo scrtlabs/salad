@@ -10,6 +10,7 @@ import Button from '@material-ui/core/Button';
 import FormControl from '@material-ui/core/FormControl/FormControl';
 import InputLabel from '@material-ui/core/InputLabel/InputLabel';
 import Select from '@material-ui/core/Select/Select';
+import FormHelperText from '@material-ui/core/FormHelperText';
 import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
 // Imports - Components
@@ -21,8 +22,8 @@ class Mixer extends Component {
     this.state = {
       isSubmitting: false,
       isPending: false,
-      quorum: 0,
-      threshold: 0,
+      quorum: 2, // TODO set to 0
+      threshold: 4, // TODO set to 0
     };
     // TODO uncomment code below
     // this.service = new CoinjoinClient(0, undefined, web3);
@@ -65,6 +66,7 @@ class Mixer extends Component {
           >
             {children}
           </Select>
+          <FormHelperText>Current address holding tokens</FormHelperText>
         </FormControl>
       </div>
 
@@ -107,10 +109,9 @@ class Mixer extends Component {
           <Grid item xs={12}>
             <div>
               <Notifier />
-              <h3>Mix Coins</h3>
               <form onSubmit={this.props.handleSubmit(this.onSubmit)}>
                 <div>
-                  <InputLabel htmlFor="sender">Sender *</InputLabel>
+                  <InputLabel htmlFor="sender">Sender Address</InputLabel>
                   <Field
                     name="sender"
                     component={Mixer.renderAddressInput}
@@ -129,6 +130,7 @@ class Mixer extends Component {
                     component={Mixer.renderStringInput}
                     label="Recipient Address"
                     required
+                    helperText="Where you want the tokens sent, after mixing"
                   />
                 </div>
                 <div>
@@ -139,6 +141,7 @@ class Mixer extends Component {
                     min="0"
                     component={Mixer.renderStringInput}
                     label="Amount"
+                    helperText="Total tokens you're submitting to be mixed"
                     required
                   />
                 </div>

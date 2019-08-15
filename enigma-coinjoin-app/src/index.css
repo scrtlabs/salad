@@ -6,6 +6,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(to bottom, #FDEDF6, #E9EFF5) !important;
 }
 
 code {
@@ -22,6 +23,10 @@ form > div:last-child {
   margin-bottom: 0;
 }
 
-.App {
-  text-align: center;
+.MuiToolbar-root {
+  background-color: #353d46;
+}
+
+.MuiLinearProgress-barColorPrimary {
+  background-color: #414C55;
 }
