@@ -3,13 +3,14 @@ const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
 const {MemoryStore} = require("./memoryStore");
 const WebSocket = require('ws');
-const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 
 const port = process.env.WS_PORT;
 
-async function startServer(provider, contractAddr, scAddr, accountIndex = 0) {
+// TODO: Getting ugly, consider creating a class
+async function startServer(provider, contractAddr, scAddr, threshold, accountIndex = 0) {
     // const store = new Store();
     const store = new MemoryStore(); // TODO: Use db backend
     await store.initAsync();
@@ -18,8 +19,7 @@ async function startServer(provider, contractAddr, scAddr, accountIndex = 0) {
     const sc = new SecretContractClient(web3, scAddr, accountIndex);
     await sc.initAsync();
 
-    const quorum = parseInt(process.env.QUORUM);
-    const dealManager = new DealManager(web3, sc, contractAddr, store, quorum);
+    const dealManager = new DealManager(web3, sc, contractAddr, store, threshold);
 
     const opts = {
         gas: 100712388,
@@ -37,8 +37,36 @@ async function startServer(provider, contractAddr, scAddr, accountIndex = 0) {
     console.log('Starting the websocket server');
     wss.on('connection', async function connection(ws) {
         console.log('Sending encryption public key to new connected client');
+
+        function broadcast(data) {
+            wss.clients.forEach(function each(client) {
+                if (client.readyState === WebSocket.OPEN) {
+                    console.log('Broadcasting action', data);
+                    client.send(JSON.stringify(data));
+                }
+            });
+        }
+
+        async function postDeposit() {
+            console.log('Evaluating deal creation in non-blocking scope');
+            const deal = await dealManager.createDealIfQuorumReachedAsync(opts);
+            if (deal !== null) {
+                console.log('Broadcasting new deal');
+                broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
+                console.log('Broadcasting quorum value 0 after new deal');
+                const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
+                console.log('Fillable deposits after deal', fillableDeposits);
+                const quorum = fillableDeposits.length;
+                if (quorum !== 0) {
+                    throw new Error('Data corruption, the quorum should be 0 after creating a deal');
+                }
+                broadcast({action: QUORUM_UPDATE, payload: {quorum}});
+            }
+        }
+
         const pubKey = await sc.getPubKeyAsync();
         ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
+        ws.send(JSON.stringify({action: THRESHOLD_UPDATE, payload: {threshold}}));
 
         ws.on('message', async function incoming(message) {
             console.log('received: %s', message);
@@ -50,14 +78,22 @@ async function startServer(provider, contractAddr, scAddr, accountIndex = 0) {
                     break;
                 case SUBMIT_DEPOSIT_METADATA:
                     const {sender, amount, encRecipient} = payload;
-                    await dealManager.registerDepositAsync(sender, amount, encRecipient);
-                    // TODO: Not sure if it is the best place to put this
-                    await dealManager.createDealIfQuorumReachedAsync(opts);
+                    const registeredDeposit = await dealManager.registerDepositAsync(sender, amount, encRecipient);
+                    console.log('Registered deposit', registeredDeposit);
+
+                    const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
+                    const quorum = fillableDeposits.length;
                     ws.send(JSON.stringify({action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true}));
+
+                    console.log('Broadcasting quorum update', quorum);
+                    broadcast({action: QUORUM_UPDATE, payload: {quorum}});
+
+                    // Non-blocking, do not wait for the outcome of port-processing
+                    postDeposit();
                     break;
                 case FETCH_FILLABLE_DEPOSITS:
                     const {minimumAmount} = payload;
-                    const deposits = await dealManager.fetchFillableDeposits(minimumAmount);
+                    const deposits = await dealManager.fetchFillableDepositsAsync(minimumAmount);
                     ws.send(JSON.stringify({action: FETCH_FILLABLE_SUCCESS, payload: {deposits}}));
                     break;
                 default:
