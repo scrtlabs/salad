@@ -85,7 +85,7 @@ class SecretContractClient {
         console.log('The pubKey output', this.pubKey);
         return this.pubKey;
     }
-.replace(/^0+/, '')
+
     async executeDealAsync(dealId, encRecipientsPayload) {
         console.log('Calling `execute_deal(bytes32,string[])`');
         const taskFn = 'execute_deal(bytes32,string[])';
