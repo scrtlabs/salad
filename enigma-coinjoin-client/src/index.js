@@ -28,10 +28,10 @@ class CoinjoinClient {
 
     async _waitConnectAsync() {
         return new Promise((resolve) => {
-            this.ws.onopen = () => {
+            this.ws.on('open', function open() {
                 console.log('Connected to server');
                 resolve(true);
-            };
+            });
         });
     }
 
@@ -56,7 +56,7 @@ class CoinjoinClient {
     }
 
     watch() {
-        this.ws.onmessage = (msg) => {
+        this.ws.on('message', (msg) => {
             console.log('Got message', msg);
             const {action, payload} = JSON.parse(msg);
             switch (action) {
@@ -74,9 +74,9 @@ class CoinjoinClient {
                     this.quorum = quorum;
                     break;
                 default:
-                    this.ee.emit(action, payload);
             }
-        };
+            this.ee.emit(action, payload);
+        });
     }
 
     /**
