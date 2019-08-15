@@ -5,6 +5,7 @@ const EventEmitter = require('events');
 const Web3 = require('web3');
 const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
 const WebSocket = require('ws');
+const forge = require('node-forge');
 
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
@@ -146,7 +147,11 @@ class CoinjoinClient {
             });
         }
         console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKey);
-        return utils.encryptMessage(this.pubKey, recipient);
+        const random = forge.random.createInstance();
+        const privateKey = forge.util.bytesToHex(random.getBytes(32));
+        console.log('Deriving encryption from private key', privateKey);
+        const derivedKey = utils.getDerivedKey(this.pubKey, privateKey);
+        return utils.encryptMessage(derivedKey, recipient);
     }
 
     /**

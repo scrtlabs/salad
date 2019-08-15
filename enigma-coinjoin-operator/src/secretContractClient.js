@@ -81,7 +81,9 @@ class SecretContractClient {
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('The completed task', task);
         // TODO: Why are there leading zeros?
-        this.pubKey = await this.fetchOutput(task);
+        const output = await this.fetchOutput(task);
+        const prefix = '00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040';
+        this.pubKey = output.replace(prefix, '');
         console.log('The pubKey output', this.pubKey);
         return this.pubKey;
     }
