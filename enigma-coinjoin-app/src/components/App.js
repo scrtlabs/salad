@@ -5,15 +5,16 @@ import connect from 'react-redux/es/connect/connect';
 // Imports - Frameworks (Semantic-UI and Material-UI)
 import { Container, Message } from 'semantic-ui-react';
 import Paper from '@material-ui/core/Paper';
+import Grid from '@material-ui/core/Grid';
 import { withStyles } from '@material-ui/core';
 // Imports - Components
 import Header from './Header';
-import DataValidation from './Mixer';
+import Mixer from './Mixer';
+import Notifier from './Notifier';
 // Imports - Actions (Redux)
 import { initializeWeb3, initializeAccounts } from '../actions';
 
 import getWeb3 from '../utils/getWeb3';
-import Grid from "@material-ui/core/Grid";
 
 const styles = theme => ({
     root: {
@@ -54,11 +55,12 @@ class App extends Component {
             return (
                 <div className="App">
                     <Header/>
+                    <Notifier />
                     <br />
                     <br />
                     <Container>
                         <Paper style={{ padding: '30px' }}>
-                            <DataValidation />
+                            <Mixer />
                         </Paper>
                     </Container>
                 </div>
