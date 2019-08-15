@@ -22,6 +22,6 @@
   "workspaces": [
     "enigma-coinjoin-operator",
     "enigma-coinjoin-client",
-    "app"
+    "enigma-coinjoin-app"
   ]
 }

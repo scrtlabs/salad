@@ -11,6 +11,7 @@ import FormControl from '@material-ui/core/FormControl/FormControl';
 import InputLabel from '@material-ui/core/InputLabel/InputLabel';
 import Select from '@material-ui/core/Select/Select';
 import TextField from '@material-ui/core/TextField/TextField';
+import LinearProgress from '@material-ui/core/LinearProgress';
 // Imports - Components
 import Notifier, { openSnackbar } from './Notifier';
 
@@ -18,9 +19,33 @@ class Mixer extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      isPending: false
+      isSubmitting: false,
+      isPending: false,
+      quorum: 0,
+      threshold: 0,
     };
+    // TODO uncomment code below
     // this.service = new CoinjoinClient(0, undefined, web3);
+    // this.service.initAsync();
+    // this.service.onThresholdValue(({ payload }) => {
+    //   this.setState({ threshold: payload });
+    // });
+    // this.service.onQuorumValue(({ payload }) => {
+    //   this.setState({ quorum: payload });
+    // });
+    // this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
+    //   openSnackbar({ message: 'Your deposit was included in a pending deal.' });
+    //   this.setState({ isSubmitting: false, isPending: true });
+    // });
+    // this.service.onDealExecuted(() => {
+    //   if (!this.state.isPending) {
+    //     return;
+    //   }
+    //   openSnackbar({
+    //     message: 'Your deposit was included in an executed deal.'
+    //   });
+    //   this.setState({ isPending: false });
+    // });
   }
 
   // Redux form/material-ui render address select component
@@ -67,25 +92,22 @@ class Mixer extends Component {
       throw new SubmissionError({ recipient: 'Invalid address' });
     }
     console.log('hey', sender, recipient, amount);
-    // this.setState({ isPending: true });
-    // this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
-    //   openSnackbar({ message: 'Deposit has been successfully submitted!' });
-    //   this.setState({ isPending: false });
-    // });
-    // await this.service.initAsync();
+    // TODO uncomment code below
+    // this.setState({ isSubmitting: true });
     // await this.service.makeDepositAsync(sender, amount);
     // const encRecipient = await this.service.encryptRecipient(recipient);
     // await this.service.submitDepositMetadataAsync(sender, amount, encRecipient);
   };
 
   render() {
+    const { isSubmitting, quorum, threshold } = this.state;
     return (
       <div>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <div>
               <Notifier />
-              <h4>Mix Coins</h4>
+              <h3>Mix Coins</h3>
               <form onSubmit={this.props.handleSubmit(this.onSubmit)}>
                 <div>
                   <InputLabel htmlFor="sender">Sender *</InputLabel>
@@ -121,16 +143,26 @@ class Mixer extends Component {
                   />
                 </div>
                 <div>
-                  <Button
-                    variant='outlined'
-                    type='submit'
-                    disabled={this.state.isPending}
-                    color='secondary'>
-                    {this.state.isPending ? 'Pending...' : 'Submit'}
-                  </Button>
+                  <div style={{ float: 'left', fontSize: '16px', paddingTop: '10px' }}>
+                    { threshold === 0 ? 'Loading...' : (
+                      <span>Progress: <b>{ quorum } / { threshold }</b></span>
+                    )}
+                  </div>
+                  <div style={{ float: 'right' }}>
+                    <Button
+                      variant='outlined'
+                      type='submit'
+                      disabled={isSubmitting}
+                      color='secondary'>
+                      {isSubmitting ? 'Pending...' : 'Submit'}
+                    </Button>
+                  </div>
                 </div>
               </form>
             </div>
+          </Grid>
+          <Grid item xs={12}>
+            <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)} />
           </Grid>
         </Grid>
       </div>
