@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {PUB_KEY_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
+const {PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
@@ -15,6 +15,8 @@ class CoinjoinClient {
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
         this.pubKey = null;
+        this.threshold = null;
+        this.quorum = 0;
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
     }
 
@@ -49,16 +51,70 @@ class CoinjoinClient {
 
     watch() {
         this.ws.on('message', (msg) => {
+            console.log('Got message', msg);
             const {action, payload} = JSON.parse(msg);
             switch (action) {
                 case PUB_KEY_UPDATE:
-                    const pubKey = {payload};
+                    const {pubKey} = payload;
                     this.pubKey = pubKey;
                     break;
+                case THRESHOLD_UPDATE:
+                    const {threshold} = payload;
+                    this.threshold = threshold;
+                    break;
+                case QUORUM_UPDATE:
+                    const {quorum} = payload;
+                    console.log('The quorum update', quorum);
+                    this.quorum = quorum;
+                    break;
                 default:
-                    this.ee.emit(action, payload);
             }
+            this.ee.emit(action, payload);
         });
+    }
+
+    /**
+     * Subscribe to the `pubKeyUpdate` event
+     * @param {function} callback
+     */
+    onPubKey(callback) {
+        this.ee.on(PUB_KEY_UPDATE, callback);
+    }
+
+    /**
+     * Subscribe to the `thresholdUpdate` event
+     * The threshold is the minimum number of participants required to create a Deal
+     * @param {function} callback
+     */
+    onThresholdValue(callback) {
+        this.ee.on(THRESHOLD_UPDATE, callback);
+    }
+
+    /**
+     * Subscribe to the `quorumUpdate` event
+     * The quorum is the minimum number of participants who posted the deposit queued for the next Deal
+     * @param {function} callback
+     */
+    onQuorumValue(callback) {
+        this.ee.on(QUORUM_UPDATE, callback);
+    }
+
+    /**
+     * Subscribe to the `dealCreatedUpdate` event
+     * Broadcasts all deals created by the operator (regardless of the participation any specific user)
+     * @param {function} callback
+     */
+    onDealCreated(callback) {
+        this.ee.on(DEAL_CREATED_UPDATE, callback);
+    }
+
+    /**
+     * Subscribe to the `dealExecutedUpdate` event
+     * Broadcasts all deals executed by the operator (regardless of the participation any specific user)
+     * @param {function} callback
+     */
+    onDealExecuted(callback) {
+        this.ee.on(DEAL_EXECUTED_UPDATE, callback);
     }
 
     /**
@@ -124,6 +180,7 @@ class CoinjoinClient {
      * @returns {Promise<Array<Object>>}
      */
     async fetchActiveDealsAsync() {
+        // TODO: Not returning what I want
         const dealsFlat = await this.contract.methods.listDeals().call();
         // TODO: Does this work?
         if (!dealsFlat) {
@@ -134,6 +191,7 @@ class CoinjoinClient {
             deals.push({status: dealsFlat[0][i], participates: dealsFlat[1][i], organizes: dealsFlat[2][i]});
         }
         console.log('The active deals', deals);
+        return deals;
     }
 }
 
