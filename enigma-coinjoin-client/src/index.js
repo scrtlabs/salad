@@ -139,10 +139,13 @@ class CoinjoinClient {
      * @param  {string} recipient - The plaintext recipient Ethereum address
      * @returns {Promise<string>}
      */
-    async encryptRecipient(recipient) {
+    async encryptRecipientAsync(recipient) {
         if (!this.pubKey) {
-            throw new Error('Public encryption key not available');
+            await new Promise((resolve) => {
+                this.onPubKey((p) => resolve(p));
+            });
         }
+        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKey);
         return utils.encryptMessage(this.pubKey, recipient);
     }
 
@@ -179,7 +182,7 @@ class CoinjoinClient {
      * Fetch all active (registered on-chain but not executed) deals
      * @returns {Promise<Array<Object>>}
      */
-    async fetchActiveDealsAsync() {
+    async fetchExecutableDealsAsync() {
         // TODO: Not returning what I want
         const dealsFlat = await this.contract.methods.listDeals().call();
         // TODO: Does this work?

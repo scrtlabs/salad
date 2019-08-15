@@ -62,7 +62,7 @@ impl Contract {
     }
 
     fn get_pkey() -> SymmetricKey {
-        let key = read_state!(ENCRYPTION_KEY).unwrap_or_default();
+        let key = read_state!(ENCRYPTION_KEY).unwrap();
         eprint!("Got key: {:?}", key);
         key
     }
@@ -94,10 +94,12 @@ impl ContractInterface for Contract {
 
     #[no_mangle]
     fn get_pub_key() -> Vec<u8> {
-        eprint!("in get_pub_key");
+        eprint!("====> in get_pub_key");
         let key = Self::get_pkey();
         let key_pair = KeyPair::from_slice(&key).unwrap();
-        let mut pub_key = key_pair.get_pubkey();
+        let pub_key = key_pair.get_pubkey();
+        let pub_key_text = pub_key.to_hex::<String>();
+        eprint!("The pubKey hex: {}", pub_key_text);
         pub_key.to_vec()
     }
 

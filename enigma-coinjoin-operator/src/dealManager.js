@@ -75,14 +75,16 @@ class DealManager {
      * @param {string} amount - The minimum deposit amount in wei
      * @returns {Promise<Deal>}
      */
-    async createDealIfQuorumReachedAsync(opts, amount = 0) {
+    async createDealIfQuorumReachedAsync(opts, engOpts, amount = 0) {
         const deposits = await this.fetchFillableDepositsAsync(amount);
         console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
         let deal = null;
         if (deposits.length >= this.threshold) {
             console.log('Quorum reached with deposits', deposits);
-            deal = await this.createDealAsync(deposits);
+            deal = await this.createDealAsync(deposits, opts);
+            console.log('Deal created on Ethereum, executing...', deal._tx);
+            await this.executeDealAsync(deal, engOpts);
         }
         return deal;
     }
@@ -133,10 +135,15 @@ class DealManager {
      *   3- Enigma calls the `executeDeal` method of the Ethereum contract
      *   4- Ethereum contract verifies the Enigma signature and distribute the deposits
      * @param {Deal} deal - The executable deal
-     * @param opts
+     * @param {Object} taskRecordOpts
      * @returns {Promise<void>}
      */
-    async executeDealAsync(deal, opts) {
+    async executeDealAsync(deal, taskRecordOpts) {
+        const {dealId, participants} = deal;
+        const deposits = participants.map(p => this.store.getDeposit(p));
+        console.log('The encrypted participants', deposits);
+        console.log('The encrypted participants count', deposits.map(d => d.encRecipient.length));
+        // await this.scClient.executeDealAsync(dealId)
         deal.status = DEAL_STATUS.EXECUTABLE;
     }
 }

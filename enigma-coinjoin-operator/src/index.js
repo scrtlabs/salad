@@ -6,21 +6,26 @@ const WebSocket = require('ws');
 const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
+const {utils} = require('enigma-js/node');
 
 const port = process.env.WS_PORT;
 
 // TODO: Getting ugly, consider creating a class
-async function startServer(provider, contractAddr, scAddr, threshold, accountIndex = 0) {
+async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0) {
     // const store = new Store();
     const store = new MemoryStore(); // TODO: Use db backend
     await store.initAsync();
 
     const web3 = new Web3(provider);
-    const sc = new SecretContractClient(web3, scAddr, accountIndex);
-    await sc.initAsync();
+    const sc = new SecretContractClient(web3, scAddr, enigmaUrl, accountIndex);
+
+    // TODO: Default Enigma options, add to config
+    const defaultEngOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
+    await sc.initAsync(defaultEngOpts);
 
     const dealManager = new DealManager(web3, sc, contractAddr, store, threshold);
 
+    // TODO: Default Ethereum options, add to config
     const opts = {
         gas: 100712388,
         gasPrice: process.env.GAS_PRICE,
@@ -49,7 +54,8 @@ async function startServer(provider, contractAddr, scAddr, threshold, accountInd
 
         async function postDeposit() {
             console.log('Evaluating deal creation in non-blocking scope');
-            const deal = await dealManager.createDealIfQuorumReachedAsync(opts);
+            const engOpts = {taskGasLimit: 500000, taskGasPx: utils.toGrains(1)};
+            const deal = await dealManager.createDealIfQuorumReachedAsync(opts, engOpts);
             if (deal !== null) {
                 console.log('Broadcasting new deal');
                 broadcast({action: DEAL_CREATED_UPDATE, payload: {deal}});
@@ -64,9 +70,20 @@ async function startServer(provider, contractAddr, scAddr, threshold, accountInd
             }
         }
 
-        const pubKey = await sc.getPubKeyAsync();
-        ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
+        (async () => {
+            // Sending public key on connection
+            const engOpts = {taskGasLimit: 5000000, taskGasPx: utils.toGrains(1)};
+            const pubKey = await sc.getPubKeyAsync(engOpts);
+            ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
+        })();
+
+        // Sending threshold on connection
         ws.send(JSON.stringify({action: THRESHOLD_UPDATE, payload: {threshold}}));
+
+        // Sending current quorum on connection
+        const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
+        const quorum = fillableDeposits.length;
+        ws.send(JSON.stringify({action: QUORUM_UPDATE, payload: {quorum}}));
 
         ws.on('message', async function incoming(message) {
             console.log('received: %s', message);

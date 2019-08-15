@@ -4,8 +4,13 @@ const {Enigma, utils, eeConstants} = require('enigma-js/node');
 const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 class SecretContractClient {
-    constructor(web3, scAddr, accountIndex = 0) {
+    constructor(web3, scAddr, enigmaUrl, accountIndex = 0) {
+        this.enigmaUrl = enigmaUrl;
         this.scAddr = scAddr;
         this.pubKey = null;
         this.web3 = web3;
@@ -13,16 +18,17 @@ class SecretContractClient {
         this.accounts = [];
     }
 
-    async initAsync() {
+    async initAsync(engOpts) {
         const accounts = this.accounts = await this.web3.eth.getAccounts();
+        const networkId = await this.web3.eth.net.getId();
         this.enigma = new Enigma(
             this.web3,
-            EnigmaContract.networks[process.env.ETH_NETWORK_ID].address,
-            EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address,
-            `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`,
+            EnigmaContract.networks[networkId].address,
+            EnigmaTokenContract.networks[networkId].address,
+            this.enigmaUrl,
             {
-                gas: 4712388,
-                gasPrice: process.env.GAS_PRICE,
+                gas: engOpts.taskGasLimit,
+                gasPrice: engOpts.taskGasPx,
                 from: accounts[this.accountIndex],
             },
         );
@@ -39,8 +45,7 @@ class SecretContractClient {
                 .on(eeConstants.GET_TASK_RESULT_RESULT, (result) => resolve(result))
                 .on(eeConstants.ERROR, (error) => reject(error));
         });
-        // TODO: Why is the code suddenly replace by a string?
-        if (task.ethStatus !== 'SUCCESS') {
+        if (task.ethStatus !== 2) {
             throw new Error(`Illegal state to fetch results for task: ${taskWithResults.taskId}`);
         }
         const taskWithPlaintextResults = await this.enigma.decryptTaskResult(taskWithResults);
@@ -67,18 +72,20 @@ class SecretContractClient {
         });
     }
 
-    async fetchPubKeyAsync() {
+    async fetchPubKeyAsync(engOpts) {
         console.log('Calling `get_pub_key`');
         const taskFn = 'get_pub_key()';
         const taskArgs = [];
-        const taskGasLimit = 500000;
-        const taskGasPx = utils.toGrains(1);
-        const pendingTask = this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const {taskGasLimit, taskGasPx} = engOpts;
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
-        const output = await this.fetchOutput(task);
-        return this.pubKey = `0x${output}`;
+        console.log('The completed task', task);
+        // TODO: Why are there leading zeros?
+        this.pubKey = await this.fetchOutput(task);
+        console.log('The pubKey output', this.pubKey);
+        return this.pubKey;
     }
-
+.replace(/^0+/, '')
     async executeDealAsync(dealId, encRecipientsPayload) {
         console.log('Calling `execute_deal(bytes32,string[])`');
         const taskFn = 'execute_deal(bytes32,string[])';
@@ -94,11 +101,13 @@ class SecretContractClient {
         console.log('Deal executed', output);
     }
 
-    async getPubKeyAsync() {
-        // TODO: Wait if currently fetching the key
-        return new Promise((resolve) => {
-            resolve(this.pubKey);
-        });
+    async getPubKeyAsync(engOpts) {
+        if (this.pubKey === null) {
+            console.log('PubKey not found in cache, fetching  from Enigma...');
+            this.pubKey = await this.fetchPubKeyAsync(engOpts);
+            console.log('Storing pubKey in cache', this.pubKey);
+        }
+        return this.pubKey;
     }
 }
 

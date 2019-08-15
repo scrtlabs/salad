@@ -1,6 +1,10 @@
 class MemoryStore {
     constructor() {
+        /** @type Deposit[] */
         this.fillableDeposits = [];
+        /** @type Deposit[] */
+        this.deposits = [];
+        /** @type Deal[] */
         this.deals = [];
     }
 
@@ -17,6 +21,7 @@ class MemoryStore {
      */
     insertDeposit(deposit) {
         this.fillableDeposits.push(deposit);
+        this.deposits.push({...deposit});
     }
 
     /**
@@ -33,6 +38,21 @@ class MemoryStore {
 
     queryFillableDeposits(minimumAmount) {
         return this.fillableDeposits;
+    }
+
+    /**
+     * Find deposit by participant address
+     * @param {string} participantAddress
+     * @returns {Deposit|null}
+     */
+    getDeposit(participantAddress) {
+        let deposit = null;
+        for (const d of this.deposits) {
+            if (d.sender === participantAddress) {
+                deposit = d;
+            }
+        }
+        return deposit;
     }
 }
 
