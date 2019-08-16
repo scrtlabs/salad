@@ -89,12 +89,13 @@ class SecretContractClient {
         return this.pubKey;
     }
 
-    async executeDealAsync(dealId, nbRecipient, encRecipientsPayload, opts) {
-        console.log('Calling `execute_deal(bytes32,uint256,bytes)`', dealId, nbRecipient, encRecipientsPayload);
-        const taskFn = 'execute_deal(bytes32,uint256,bytes)';
+    async executeDealAsync(dealId, nbRecipient, pubKeysPayload, encRecipientsPayload, opts) {
+        console.log('Calling `execute_deal(bytes32,uint256,bytes,bytes)`', dealId, nbRecipient, pubKeysPayload, encRecipientsPayload);
+        const taskFn = 'execute_deal(bytes32,uint256,bytes,bytes)';
         const taskArgs = [
             [dealId, 'bytes32'],
             [nbRecipient, 'uint256'],
+            [pubKeysPayload, 'bytes'],
             [encRecipientsPayload, 'bytes'],
         ];
         const {taskGasLimit, taskGasPx} = opts;

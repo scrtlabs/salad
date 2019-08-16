@@ -21,6 +21,7 @@ const DEAL_STATUS = {
  * @property {string} sender - The depositor Ethereum address
  * @property {string} amount - The deposit amount in wei
  * @property {string} encRecipient - The encrypted recipient Ethereum address
+ * @property {string} pubKey - The user generated pubKey
  */
 
 /**
@@ -58,13 +59,14 @@ class DealManager {
      * Verify and store the specified deposit
      * @param {string} sender - The depositor's Ethereum address
      * @param {string} amount - The deposit amount in wei
+     * @param {string} pubKey - The user pubKey
      * @param {string} encRecipient - The recipient's encrypted Ethereum address
      * @returns {Promise<Deposit>}
      */
-    async registerDepositAsync(sender, amount, encRecipient) {
+    async registerDepositAsync(sender, amount, pubKey, encRecipient) {
         console.log('Registering deposit', sender, amount, encRecipient);
         await this.verifyDepositAmountAsync(sender, amount);
-        const deposit = {sender, amount, encRecipient};
+        const deposit = {sender, amount, pubKey, encRecipient};
         this.store.insertDeposit(deposit);
         return deposit;
     }
@@ -142,13 +144,15 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {dealId, participants} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
+        console.log('The deposits', deposits);
         const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
         console.log('The encrypted participants', encRecipientsBytes);
         console.log('The encrypted participants count', encRecipientsBytes.map(d => d.length));
         const nbRecipient = deposits.length;
+        const pubKeysPayload = `0x${deposits.map(d => d.pubKey).join('')}`;
         const encRecipientsPayload = `0x${deposits.map(d => d.encRecipient).join('')}`;
         console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
-        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, encRecipientsPayload, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, pubKeysPayload, encRecipientsPayload, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }

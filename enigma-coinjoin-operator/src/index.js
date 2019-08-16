@@ -54,7 +54,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         async function postDeposit() {
             console.log('Evaluating deal creation in non-blocking scope');
-            const taskRecordOpts = {taskGasLimit: 5000000, taskGasPx: utils.toGrains(1)};
+            const taskRecordOpts = {taskGasLimit: 50000000, taskGasPx: utils.toGrains(1)};
             const deal = await dealManager.createDealIfQuorumReachedAsync(opts, taskRecordOpts);
             if (deal !== null) {
                 console.log('Broadcasting new deal');
@@ -94,8 +94,8 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
                     ws.send(JSON.stringify({action: 'pong', payload: {}}));
                     break;
                 case SUBMIT_DEPOSIT_METADATA:
-                    const {sender, amount, encRecipient} = payload;
-                    const registeredDeposit = await dealManager.registerDepositAsync(sender, amount, encRecipient);
+                    const {sender, amount, pubKey, encRecipient} = payload;
+                    const registeredDeposit = await dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient);
                     console.log('Registered deposit', registeredDeposit);
 
                     const fillableDeposits = await dealManager.fetchFillableDepositsAsync();

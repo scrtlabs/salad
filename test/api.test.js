@@ -72,7 +72,8 @@ contract('Mixer', () => {
     it('should submit encrypted deposit', async () => {
         const recipient = cjc.accounts[6];
         const encRecipient = await cjc.encryptRecipientAsync(recipient);
-        const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient);
+        const myPubKey = cjc.keyPair.publicKey;
+        const result = await cjc.submitDepositMetadataAsync(sender, amount, myPubKey, encRecipient);
         expect(result).to.equal(true);
         // Quorum should be 1 after first deposit
         expect(cjc.quorum).to.equal(1);
@@ -95,8 +96,9 @@ contract('Mixer', () => {
     it('should submit the second encrypted deposit', async () => {
         const recipient = cjc.accounts[7];
         const encRecipient = await cjc.encryptRecipientAsync(recipient);
+        const myPubKey = cjc.keyPair.publicKey;
         // Since the threshold is 2, this will also create a deal
-        const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient);
+        const result = await cjc.submitDepositMetadataAsync(sender, amount, myPubKey, encRecipient);
         // Catching the deal created event
         dealPromise = new Promise((resolve) => {
             cjc.onDealCreated((deal) => resolve(deal));
