@@ -74,11 +74,10 @@ class DealManager {
     /**
      * Create deal on Ethereum if quorum reached or exit
      * @param {Object} opts - Ethereum transaction options
-     * @param {Object} taskRecordOpts - Enigma transaction options
      * @param {string} amount - The minimum deposit amount in wei
-     * @returns {Promise<Deal>}
+     * @returns {Promise<Deal|null>}
      */
-    async createDealIfQuorumReachedAsync(opts, taskRecordOpts, amount = 0) {
+    async createDealIfQuorumReachedAsync(opts, amount = 0) {
         const deposits = await this.fetchFillableDepositsAsync(amount);
         console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
@@ -86,8 +85,6 @@ class DealManager {
         if (deposits.length >= this.threshold) {
             console.log('Quorum reached with deposits', deposits);
             deal = await this.createDealAsync(deposits, opts);
-            console.log('Deal created on Ethereum, executing...', deal._tx);
-            await this.executeDealAsync(deal, taskRecordOpts);
         }
         return deal;
     }

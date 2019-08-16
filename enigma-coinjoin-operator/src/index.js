@@ -3,7 +3,7 @@ const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
 const {MemoryStore} = require("./memoryStore");
 const WebSocket = require('ws');
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -54,7 +54,6 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         async function postDeposit() {
             console.log('Evaluating deal creation in non-blocking scope');
-            const taskRecordOpts = {taskGasLimit: 50000000, taskGasPx: utils.toGrains(1)};
             const deal = await dealManager.createDealIfQuorumReachedAsync(opts, taskRecordOpts);
             if (deal !== null) {
                 console.log('Broadcasting new deal');
@@ -67,6 +66,12 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
                     throw new Error('Data corruption, the quorum should be 0 after creating a deal');
                 }
                 broadcast({action: QUORUM_UPDATE, payload: {quorum}});
+
+                console.log('Deal created on Ethereum, executing...', deal._tx);
+                const taskRecordOpts = {taskGasLimit: 50000000, taskGasPx: utils.toGrains(1)};
+                await dealManager.executeDealAsync(deal, taskRecordOpts);
+                console.log('Deal executed on Ethereum', deal._tx);
+                broadcast({action: DEAL_EXECUTED_UPDATE, payload: {deal}});
             }
         }
 
