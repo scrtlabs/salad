@@ -42,7 +42,6 @@ contract('Mixer', () => {
         };
         const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
-
     });
 
     it('should connect to the WS server', async () => {

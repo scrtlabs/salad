@@ -7,7 +7,7 @@ const MixerContract = require('../../build/smart_contracts/Mixer.json');
 
 (async () => {
     const operatorAccountIndex = 0;
-    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`)
+    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
     const scAddr = fs.readFileSync(`${__dirname}/../../test/coinjoin.txt`, 'utf-8');
     const threshold = 2;
     const contractAddr = MixerContract.networks[process.env.ETH_NETWORK_ID].address;
