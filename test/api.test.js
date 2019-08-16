@@ -1,9 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
-const Web3 = require('web3');
 const {startServer} = require('enigma-coinjoin-operator');
-const WebSocket = require('ws');
 const {expect} = require('chai');
 const MixerContract = artifacts.require("Mixer");
 
