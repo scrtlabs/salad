@@ -93,6 +93,7 @@ contract('Mixer', () => {
     });
 
     let dealPromise;
+    let executedDealPromise;
     it('should submit the second encrypted deposit', async () => {
         const recipient = cjc.accounts[7];
         const encRecipient = await cjc.encryptRecipientAsync(recipient);
@@ -102,6 +103,9 @@ contract('Mixer', () => {
         // Catching the deal created event
         dealPromise = new Promise((resolve) => {
             cjc.onDealCreated((deal) => resolve(deal));
+        });
+        executedDealPromise = new Promise((resolve) => {
+            cjc.onDealExecuted((deal) => resolve(deal));
         });
         expect(result).to.equal(true);
         // Quorum should be 2 after first deposit
@@ -116,18 +120,18 @@ contract('Mixer', () => {
     it('should verify that a deal was created since the threshold is reached', async () => {
         const deal = await dealPromise;
         console.log('Created deal', deal);
-        const deals = await cjc.fetchExecutableDealsAsync();
+        const deals = await cjc.findDealsAsync(1);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
     }).timeout(60000); // Give enough time to execute the deal on Enigma
 
     it('should verify the deal execution', async () => {
-        const deal = await dealPromise;
-        console.log('Created deal', deal);
-        const deals = await cjc.fetchExecutableDealsAsync();
-        expect(deals.length).to.equal(1);
+        const deal = await executedDealPromise;
+        console.log('Executed deal', deal);
+        const deals = await cjc.findDealsAsync(2);
+        // expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
-    }).timeout(5000);
+    }).timeout(120000);
 });

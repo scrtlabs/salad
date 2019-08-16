@@ -101,6 +101,7 @@ impl ContractInterface for Contract {
     #[no_mangle]
     fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160> {
         eprint!("In execute_deal({:?}, {:?}, {:?}, {:?})", deal_id, nb_recipients, pub_keys, enc_recipients);
+        eprint!("Mixing address for deal: {:?}", deal_id);
         let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
         let seed = 10;
@@ -121,7 +122,6 @@ impl ContractInterface for Contract {
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipient, &shared_key);
             let recipient = H160::from(&plaintext[0..20]);
-//            let recipient = H160::from(&enc_recipient[0..20]);
             eprint!("The decrypted recipient address: {:?}", recipient);
             recipients.push(recipient);
         }
@@ -133,11 +133,11 @@ impl ContractInterface for Contract {
             recipients[i] = recipient;
         }
         eprint!("The mixed recipients: {:?}", recipients);
-//        eprint!("Mixing address for deal: {:?}", deal_id);
-//        let mixer_eth_addr: String = Self::get_mixer_eth_addr();
-//        let eth_contract = EthContract::new(&mixer_eth_addr);
-//        let deal_id_uint = U256::from(deal_id);
-//        eth_contract.distribute(deal_id_uint, recipients.clone());
+        let mixer_eth_addr: String = Self::get_mixer_eth_addr();
+        let eth_contract = EthContract::new(&mixer_eth_addr);
+        // TODO: Converting as a workaround for lack of bytes32 support
+        let deal_id_uint = U256::from(deal_id);
+        eth_contract.distribute(deal_id_uint, recipients.clone());
         recipients
     }
 }
