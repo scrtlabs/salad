@@ -5,6 +5,8 @@ const EventEmitter = require('events');
 const Web3 = require('web3');
 const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
 const WebSocket = require('ws');
+const forge = require('node-forge');
+const EthCrypto = require('eth-crypto');
 
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
@@ -18,6 +20,13 @@ class CoinjoinClient {
         this.threshold = null;
         this.quorum = 0;
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+    }
+
+    static obtainKeyPair() {
+        const random = forge.random.createInstance();
+        const privateKey = forge.util.bytesToHex(random.getBytes(32));
+        const publicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
+        return {publicKey, privateKey};
     }
 
     async _waitConnectAsync() {
@@ -36,6 +45,7 @@ class CoinjoinClient {
      * @returns {Promise<void>}
      */
     async initAsync() {
+        this.keyPair = CoinjoinClient.obtainKeyPair();
         await this._waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
         this.watch();
@@ -139,26 +149,36 @@ class CoinjoinClient {
      * @param  {string} recipient - The plaintext recipient Ethereum address
      * @returns {Promise<string>}
      */
-    async encryptRecipient(recipient) {
+    async encryptRecipientAsync(recipient) {
         if (!this.pubKey) {
-            throw new Error('Public encryption key not available');
+            await new Promise((resolve) => {
+                this.onPubKey((p) => resolve(p));
+            });
         }
-        return utils.encryptMessage(this.pubKey, recipient);
+        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKey);
+        const {privateKey} = this.keyPair;
+        console.log('Deriving encryption from private key', privateKey);
+        const derivedKey = utils.getDerivedKey(this.pubKey, privateKey);
+        return utils.encryptMessage(derivedKey, recipient);
     }
 
     /**
      * Submit the deposit metadata to including the encrypted recipient address
      * @param {string} sender - The deposit sender's Ethereum address
      * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
+     * @param {string} pubKey - The user pubKey
      * @param {string} encRecipient - The encrypted recipient Ethereum address
      * @returns {Promise<boolean>}
      */
-    async submitDepositMetadataAsync(sender, amount, encRecipient) {
+    async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient) {
         console.log('Submitting deposit metadata to the operator', amount, encRecipient);
         const promise = new Promise((resolve) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
         });
-        this.ws.send(JSON.stringify({action: SUBMIT_DEPOSIT_METADATA, payload: {sender, amount, encRecipient}}));
+        this.ws.send(JSON.stringify({
+            action: SUBMIT_DEPOSIT_METADATA,
+            payload: {sender, amount, pubKey, encRecipient}
+        }));
         return promise;
     }
 
@@ -179,7 +199,7 @@ class CoinjoinClient {
      * Fetch all active (registered on-chain but not executed) deals
      * @returns {Promise<Array<Object>>}
      */
-    async fetchActiveDealsAsync() {
+    async fetchExecutableDealsAsync() {
         // TODO: Not returning what I want
         const dealsFlat = await this.contract.methods.listDeals().call();
         // TODO: Does this work?

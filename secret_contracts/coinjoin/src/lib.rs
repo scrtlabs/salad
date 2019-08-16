@@ -28,7 +28,7 @@ extern crate rustc_hex;
 use eng_wasm::*;
 use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
-use eng_wasm::{String, H256, H160, Vec};
+use eng_wasm::{String, H256, H160, Vec, U256};
 use rustc_hex::ToHex;
 use enigma_crypto::asymmetric::KeyPair;
 
@@ -39,13 +39,15 @@ struct EthContract;
 // State key name "mixer_eth_addr" holding eth address of Mixer contract
 static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
+const ENC_RECIPIENT_SIZE: usize = 70;
+const PUB_KEY_SIZE: usize = 64;
 
 // For contract-exposed functions, declare such functions under the following public trait:
 #[pub_interface]
 pub trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
     fn get_pub_key() -> Vec<u8>;
-    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> Vec<H160>;
+    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160>;
 }
 
 // The implementation of the exported ESC functions should be defined in the trait implementation
@@ -62,21 +64,14 @@ impl Contract {
     }
 
     fn get_pkey() -> SymmetricKey {
-        let key = read_state!(ENCRYPTION_KEY).unwrap_or_default();
+        let key = read_state!(ENCRYPTION_KEY).unwrap();
         eprint!("Got key: {:?}", key);
         key
     }
 
-    fn decrypt(enc_msg: &Vec<u8>) -> Vec<u8> {
+    fn get_keypair() -> KeyPair {
         let key = Self::get_pkey();
-        eprint!("Decrypting bytes ({:?})", enc_msg);
-        decrypt(enc_msg, &key)
-    }
-
-    fn encrypt(plaintext_msg: &Vec<u8>) -> Vec<u8> {
-        let key = Self::get_pkey();
-        eprint!("Encrypting bytes ({:?})", plaintext_msg);
-        encrypt(plaintext_msg, &key)
+        KeyPair::from_slice(&key).unwrap()
     }
 }
 
@@ -94,27 +89,55 @@ impl ContractInterface for Contract {
 
     #[no_mangle]
     fn get_pub_key() -> Vec<u8> {
-        eprint!("in get_pub_key");
+        eprint!("====> in get_pub_key");
         let key = Self::get_pkey();
-        let key_pair = KeyPair::from_slice(&key).unwrap();
-        let mut pub_key = key_pair.get_pubkey();
+        let keypair = Self::get_keypair();
+        let pub_key = keypair.get_pubkey();
+        let pub_key_text = pub_key.to_hex::<String>();
+        eprint!("The pubKey hex: {}", pub_key_text);
         pub_key.to_vec()
     }
 
     #[no_mangle]
-    fn execute_deal(deal_id: H256, enc_recipients: Vec<u8>) -> Vec<H160> {
-        eprint!("In execute_deal({:?}, {:?})", deal_id, enc_recipients);
-        let result = Self::decrypt(&enc_recipients);
-        eprint!("The decrypted addresses: {}", result.to_hex::<String>());
-
-        eprint!("Mixing address for deal: {:?}", deal_id);
-        let mixer_eth_addr: String = Self::get_mixer_eth_addr();
-        let eth_contract = EthContract::new(&mixer_eth_addr);
+    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160> {
+        eprint!("In execute_deal({:?}, {:?}, {:?}, {:?})", deal_id, nb_recipients, pub_keys, enc_recipients);
+        let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
-        let address_bytes: [u8; 20] = [0; 20];
-        recipients.push(H160::from(&address_bytes));
-        let deal_id_uint = U256::from(deal_id);
-        eth_contract.distribute(deal_id_uint, recipients.clone());
+        let seed = 10;
+        for i in 0..nb_recipients.low_u64() as usize {
+            eprint!("Decrypting recipient: {}", i);
+            let start = i * ENC_RECIPIENT_SIZE;
+            let end = (i + 1) * ENC_RECIPIENT_SIZE;
+            let mut enc_recipient = [0; ENC_RECIPIENT_SIZE];
+            enc_recipient.copy_from_slice(&enc_recipients[start..end]);
+            eprint!("The encrypted recipient: {:?}", enc_recipient.to_vec());
+
+            let pubkey_start = i * PUB_KEY_SIZE;
+            let pubkey_end = (i + 1) * PUB_KEY_SIZE;
+            let mut user_pubkey = [0; PUB_KEY_SIZE];
+            user_pubkey.copy_from_slice(&pub_keys[pubkey_start..pubkey_end]);
+            eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
+
+            let shared_key = keypair.derive_key(&user_pubkey).unwrap();
+            let plaintext = decrypt(&enc_recipient, &shared_key);
+            let recipient = H160::from(&plaintext[0..20]);
+//            let recipient = H160::from(&enc_recipient[0..20]);
+            eprint!("The decrypted recipient address: {:?}", recipient);
+            recipients.push(recipient);
+        }
+        eprint!("The ordered recipients: {:?}", recipients);
+        for i in (0..recipients.len()).rev() {
+            let j = seed % (i + 1);
+            let recipient = recipients[j];
+            recipients[j] = recipients[i];
+            recipients[i] = recipient;
+        }
+        eprint!("The mixed recipients: {:?}", recipients);
+//        eprint!("Mixing address for deal: {:?}", deal_id);
+//        let mixer_eth_addr: String = Self::get_mixer_eth_addr();
+//        let eth_contract = EthContract::new(&mixer_eth_addr);
+//        let deal_id_uint = U256::from(deal_id);
+//        eth_contract.distribute(deal_id_uint, recipients.clone());
         recipients
     }
 }
