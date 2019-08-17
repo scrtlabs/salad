@@ -24,7 +24,7 @@ class Header extends Component {
                             variant="subtitle1"
                             color="inherit"
                         >
-                            🥗 Salad
+                            <span role="img" aria-label="Salad">🥗</span> Salad
                         </Typography>
                     </Toolbar>
                 </AppBar>

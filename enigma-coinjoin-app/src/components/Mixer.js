@@ -1,10 +1,7 @@
-// Imports - React
 import React, { Component } from 'react';
-// Imports - Redux
 import { connect } from 'react-redux';
 import { Field, reduxForm, SubmissionError } from 'redux-form';
-// import { CoinjoinClient, actions } from 'enigma-coinjoin-client';
-// Imports - Frameworks (Semantic-UI and Material-UI)
+import { CoinjoinClient, actions } from 'enigma-coinjoin-client';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
@@ -14,8 +11,9 @@ import Select from '@material-ui/core/Select/Select';
 import FormHelperText from '@material-ui/core/FormHelperText';
 import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
-// Imports - Components
+
 import { openSnackbar } from './Notifier';
+import MixerContract from '../build/smart_contracts/Mixer';
 
 class Mixer extends Component {
   constructor(props) {
@@ -24,31 +22,39 @@ class Mixer extends Component {
       isSubmitting: false,
       isPending: false,
       page: 0,
-      quorum: 2, // TODO set to 0
-      threshold: 4, // TODO set to 0
+      pubKey: null,
+      quorum: 0,
+      threshold: 0,
     };
-    // TODO uncomment code below
-    // this.service = new CoinjoinClient(0, undefined, web3);
-    // this.service.initAsync();
-    // this.service.onThresholdValue(({ payload }) => {
-    //   this.setState({ threshold: payload });
-    // });
-    // this.service.onQuorumValue(({ payload }) => {
-    //   this.setState({ quorum: payload });
-    // });
-    // this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
-    //   openSnackbar({ message: 'Your deposit was included in a pending deal.' });
-    //   this.setState({ isSubmitting: false, isPending: true });
-    // });
-    // this.service.onDealExecuted(() => {
-    //   if (!this.state.isPending) {
-    //     return;
-    //   }
-    //   openSnackbar({
-    //     message: 'Your deposit was included in an executed deal.'
-    //   });
-    //   this.setState({ isPending: false });
-    // });
+    const contractAddr = MixerContract.networks[4447].address; // TODO hardcoded network id
+    this.service = new CoinjoinClient(contractAddr, undefined, this.props.web3);
+
+    this.service.onPubKey(({ payload }) => {
+      console.log('pubKey', payload);
+      this.setState({ pubKey: payload });
+    });
+    this.service.onThresholdValue(({ payload }) => {
+      this.setState({ threshold: payload });
+    });
+    this.service.onQuorumValue(({ payload }) => {
+      this.setState({ quorum: payload });
+    });
+    this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
+      openSnackbar({ message: 'Your deposit was included in a pending deal.' });
+      this.setState({ isSubmitting: false, isPending: true });
+    });
+    this.service.onDealExecuted(() => {
+      if (!this.state.isPending) {
+        return;
+      }
+      openSnackbar({
+        message: 'Your deposit was included in an executed deal.'
+      });
+      this.setState({ isPending: false });
+    });
+
+    // noinspection JSIgnoredPromiseFromCall
+    this.service.initAsync();
   }
 
   // Redux form/material-ui render address select component
@@ -95,12 +101,11 @@ class Mixer extends Component {
     if (!this.props.web3.utils.isAddress(recipient)) {
       throw new SubmissionError({ recipient: 'Invalid address' });
     }
-    console.log('hey', sender, recipient, amount);
-    // TODO uncomment code below
-    // this.setState({ isSubmitting: true });
-    // await this.service.makeDepositAsync(sender, amount);
-    // const encRecipient = await this.service.encryptRecipient(recipient);
-    // await this.service.submitDepositMetadataAsync(sender, amount, encRecipient);
+    console.log('Submitted:', sender, recipient, amount);
+    this.setState({ isSubmitting: true });
+    await this.service.makeDepositAsync(sender, amount);
+    const encRecipient = await this.service.encryptRecipientAsync(recipient);
+    await this.service.submitDepositMetadataAsync(sender, amount, this.state.pubKey, encRecipient);
   };
 
   render() {
@@ -111,10 +116,13 @@ class Mixer extends Component {
           <Grid item xs={2}/>
           <Grid item xs={8}>
             <Paper style={{ padding: '30px' }}>
-              <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
+              <p style={{ fontSize: '18px' }} align="center">
+                <span role="img" aria-label="Salad">🥗</span> Salad – It's Good for You!
+              </p>
               <p>
                 Salad is a non-interactive, non-custodial Coin Join implementation,
-                built with <a href="https://enigma.co" target="_blank">Enigma</a>.
+                built with
+                <a href="https://enigma.co" target="_blank" rel="noopener noreferrer">Enigma</a>.
               </p>
               <br />
               <p>
@@ -142,7 +150,9 @@ class Mixer extends Component {
           <Grid item xs={2}/>
           <Grid item xs={8}>
             <Paper style={{ padding: '30px' }}>
-              <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
+              <p style={{ fontSize: '18px' }} align="center">
+                <span role="img" aria-label="Salad">🥗</span> Salad – It's Good for You!
+              </p>
               <p>
                 Before you start &mdash;
               </p>

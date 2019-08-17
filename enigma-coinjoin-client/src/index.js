@@ -7,7 +7,9 @@ const forge = require('node-forge');
 const EthCrypto = require('eth-crypto');
 
 let utils;
+let isNode = false;
 if (typeof window === 'undefined') {
+    isNode = true;
     utils = require('enigma-js/node').utils;
     WebSocket = require('ws');
 } else {
@@ -18,7 +20,7 @@ if (typeof window === 'undefined') {
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, operatorUrl = 'ws://localhost:3346', provider = Web3.givenProvider) {
+    constructor(contractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -37,10 +39,15 @@ class CoinjoinClient {
 
     async _waitConnectAsync() {
         return new Promise((resolve) => {
-            this.ws.on('open', function open() {
+            const callback = () => {
                 console.log('Connected to server');
                 resolve(true);
-            });
+            };
+            if (isNode) {
+                this.ws.on('open', callback);
+                return;
+            }
+            this.ws.onopen = callback;
         });
     }
 
@@ -66,7 +73,7 @@ class CoinjoinClient {
     }
 
     watch() {
-        this.ws.on('message', (msg) => {
+        const callback = (msg) => {
             console.log('Got message', msg);
             const {action, payload} = JSON.parse(msg);
             switch (action) {
@@ -86,7 +93,12 @@ class CoinjoinClient {
                 default:
             }
             this.ee.emit(action, payload);
-        });
+        };
+        if (isNode) {
+            this.ws.on('message', callback);
+            return;
+        }
+        this.ws.onmessage = callback;
     }
 
     /**
