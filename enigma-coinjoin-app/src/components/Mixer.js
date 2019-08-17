@@ -37,7 +37,6 @@ class Mixer extends Component {
         this.service.onPubKey((payload) => {
             console.log('Got pubKey', payload);
             const {pubKey} = payload;
-            console.log('Got pubKey', pubKey);
             this.setState({pubKey});
         });
         this.service.onThresholdValue((payload) => {
@@ -128,7 +127,10 @@ class Mixer extends Component {
         this.setState({isSubmitting: true});
         await this.service.makeDepositAsync(sender, amount);
         const encRecipient = await this.service.encryptRecipientAsync(recipient);
-        await this.service.submitDepositMetadataAsync(sender, amount, this.state.pubKey, encRecipient);
+        // The public key of the user must be submitted
+        // This is DH encryption, Enigma needs the user pub key to decrypt the data
+        const myPubKey = this.service.keyPair.publicKey;
+        await this.service.submitDepositMetadataAsync(sender, amount, myPubKey, encRecipient);
     };
 
     render() {
