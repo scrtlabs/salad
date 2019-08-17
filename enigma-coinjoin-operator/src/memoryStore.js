@@ -15,6 +15,13 @@ class MemoryStore {
         });
     }
 
+    closeAsync() {
+        console.log('Shutting down in-memory store');
+        return new Promise((resolve) => {
+            resolve(true);
+        });
+    }
+
     /**
      * Insert Deposit
      * @param {Deposit} deposit

@@ -199,16 +199,23 @@ class CoinjoinClient {
      * Fetch all active (registered on-chain but not executed) deals
      * @returns {Promise<Array<Object>>}
      */
-    async fetchExecutableDealsAsync() {
-        // TODO: Not returning what I want
-        const dealsFlat = await this.contract.methods.listDeals().call();
-        // TODO: Does this work?
-        if (!dealsFlat) {
-            return [];
-        }
+    async findDealsAsync(statusFilter) {
+        const dealsFlat = await this.contract.methods.listDeals(statusFilter).call();
         const deals = [];
+        if (!dealsFlat) {
+            return deals;
+        }
         for (let i = 0; i < dealsFlat[0].length; i++) {
-            deals.push({status: dealsFlat[0][i], participates: dealsFlat[1][i], organizes: dealsFlat[2][i]});
+            const status = parseInt(dealsFlat[4][i]);
+            if (status === statusFilter) {
+                deals.push({
+                    dealId: dealsFlat[0][i],
+                    organizer: dealsFlat[1][i],
+                    depositInWei: parseInt(dealsFlat[2][i]),
+                    numParticipant: parseInt(dealsFlat[3][i]),
+                    status,
+                });
+            }
         }
         console.log('The active deals', deals);
         return deals;

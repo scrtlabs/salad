@@ -11,7 +11,7 @@ contract Mixer is IMixer {
         uint depositInWei;
         uint numParticipants;
         address[] recipients;
-        uint status; // 0: active; 1: funded; 2: executed; 3: cancelled
+        uint status; // 0: undefined; 1: executable; 2: executed; 3: cancelled
     }
 
     mapping(bytes32 => Deal) deals;
@@ -43,7 +43,7 @@ contract Mixer is IMixer {
         deals[_dealId].depositInWei = _depositInWei;
         deals[_dealId].numParticipants = _participants.length;
         deals[_dealId].recipients = new address[](_participants.length);
-        deals[_dealId].status = 0;
+        deals[_dealId].status = 1;
         emit NewDeal(msg.sender, _dealId, now, _depositInWei, _participants.length, true, "all good");
     }
 
@@ -65,38 +65,34 @@ contract Mixer is IMixer {
     onlyEnigma() {
         // Distribute the deposits to destination addresses
         bytes32 dealId = bytes32(_dealId);
-        require(deals[dealId].status == 1, "Deal is not executed.");
+        require(deals[dealId].status != 1, "Deal is not executable.");
         deals[dealId].recipients = _recipients;
-
         for (uint i = 0; i < _recipients.length; i++) {
             _recipients[i].transfer(deals[dealId].depositInWei);
         }
-
+        deals[dealId].status = 2;
         emit Distribute(dealId, deals[dealId].depositInWei, uint32(_recipients.length), true, "all good");
     }
 
-    function listDeals()
+    function listDeals(uint status)
     public
     view
-    returns (uint[] memory, uint[] memory, uint[] memory) {
+    returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory, uint[] memory) {
         // A list of deals with their key properties
+        bytes32[] memory dealId = new bytes32[](dealIds.length);
+        address[] memory organizer = new address[](dealIds.length);
+        uint[] memory depositInWei = new uint[](dealIds.length);
+        uint[] memory numParticipants = new uint[](dealIds.length);
         uint[] memory status = new uint[](dealIds.length);
-        uint[] memory participates = new uint[](dealIds.length);
-        uint[] memory organizes = new uint[](dealIds.length);
-
         for (uint i = 0; i < dealIds.length; i++) {
-            bytes32 dealId = dealIds[i];
-            status[i] = deals[dealId].status;
-
-            if (deals[dealId].deposit[msg.sender] > 0) {
-                participates[i] = 1;
-            }
-
-            if (deals[dealId].organizer == msg.sender) {
-                organizes[i] = 1;
-            }
+            bytes32 _dealId = dealIds[i];
+            dealId[i] = _dealId;
+            organizer[i] = deals[_dealId].organizer;
+            depositInWei[i] = deals[_dealId].depositInWei;
+            numParticipants[i] = deals[_dealId].numParticipants;
+            status[i] = deals[_dealId].status;
         }
-        return (status, participates, organizes);
+        return (dealId, organizer, depositInWei, numParticipants, status);
     }
 
     function dealStatus(bytes32 _dealId)
