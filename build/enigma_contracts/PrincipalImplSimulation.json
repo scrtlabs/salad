@@ -13620,9 +13620,18 @@
     "name": "solc",
     "version": "0.5.8+commit.23d335f2.Emscripten.clang"
   },
-  "networks": {},
+  "networks": {
+    "4447": {
+      "events": {},
+      "links": {
+        "WorkersImplSimulation": "0xD833215cBcc3f914bD1C9ece3EE7BF8B14f841bb"
+      },
+      "address": "0xe982E462b094850F12AF94d21D470e21bE9D0E9C",
+      "transactionHash": "0xe21658c1415932d1cd8b58119453f2712f0183a0b4df70cc88509e5e6cc1b5d9"
+    }
+  },
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-08-12T23:39:54.496Z",
+  "updatedAt": "2019-08-17T10:11:54.350Z",
   "devdoc": {
     "author": "Enigma * Library that maintains functionality associated with Principal node",
     "methods": {}

@@ -24012,9 +24012,16 @@
     "name": "solc",
     "version": "0.5.8+commit.23d335f2.Emscripten.clang"
   },
-  "networks": {},
+  "networks": {
+    "4447": {
+      "events": {},
+      "links": {},
+      "address": "0xD833215cBcc3f914bD1C9ece3EE7BF8B14f841bb",
+      "transactionHash": "0x5f9d9d505699ea5bf9e5dc639bb5ea180addb18da2dd1e07ebd5fa2322babe3e"
+    }
+  },
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-08-12T23:39:54.631Z",
+  "updatedAt": "2019-08-17T10:11:54.326Z",
   "devdoc": {
     "author": "Enigma * Library that maintains functionality associated with workers",
     "methods": {}

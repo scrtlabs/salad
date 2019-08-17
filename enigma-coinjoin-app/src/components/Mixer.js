@@ -6,6 +6,7 @@ import { Field, reduxForm, SubmissionError } from 'redux-form';
 // import { CoinjoinClient, actions } from 'enigma-coinjoin-client';
 // Imports - Frameworks (Semantic-UI and Material-UI)
 import Grid from '@material-ui/core/Grid';
+import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import FormControl from '@material-ui/core/FormControl/FormControl';
 import InputLabel from '@material-ui/core/InputLabel/InputLabel';
@@ -15,7 +16,6 @@ import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
 // Imports - Components
 import { openSnackbar } from './Notifier';
-import Typography from "@material-ui/core/Typography";
 
 class Mixer extends Component {
   constructor(props) {
@@ -108,28 +108,30 @@ class Mixer extends Component {
     if (page === 0) {
       return (
         <Grid container spacing={3}>
-          <Grid item xs={3}/>
-          <Grid item xs={6}>
-            <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
-            <p>
-              Salad is a non-interactive, non-custodial Coin Join implementation,
-              built with <a href="https://enigma.co" target="_blank">Enigma</a>.
-            </p>
-            <br />
-            <p>
-              To use Salad, you'll need:<br />
-              1. The address holding the tokens you'd like to mix.<br />
-              2. The address you'd like the mixed coins send to.
-            </p>
-            <br />
-            <p align="center">
-              <Button
-                variant='outlined'
-                onClick={() => this.setState({ page: 1 })}
-                color='secondary'>
-                OK, Got it!
-              </Button>
-            </p>
+          <Grid item xs={2}/>
+          <Grid item xs={8}>
+            <Paper style={{ padding: '30px' }}>
+              <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
+              <p>
+                Salad is a non-interactive, non-custodial Coin Join implementation,
+                built with <a href="https://enigma.co" target="_blank">Enigma</a>.
+              </p>
+              <br />
+              <p>
+                To use Salad, you'll need:<br />
+                1. The address holding the tokens you'd like to mix.<br />
+                2. The address you'd like the mixed coins send to.
+              </p>
+              <br />
+              <p align="center">
+                <Button
+                  variant='outlined'
+                  onClick={() => this.setState({ page: 1 })}
+                  color='secondary'>
+                  OK, Got it!
+                </Button>
+              </p>
+            </Paper>
           </Grid>
         </Grid>
       );
@@ -137,33 +139,35 @@ class Mixer extends Component {
     if (page === 1) {
       return (
         <Grid container spacing={3}>
-          <Grid item xs={3}/>
-          <Grid item xs={6}>
-            <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
-            <p>
-              Before you start &mdash;
-            </p>
-            <p>
-              Salad requires both a quorum (a minimum number of participants) and a time threshold.
-            </p>
-            <p>
-              When a quorum is met, and the time threshold is passed, the mix will occur.
-            </p>
-            <br />
-            <p align="center">
-              <Button
-                variant='outlined'
-                onClick={() => this.setState({ page: 2 })}
-                color='secondary'>
-                Ready to Make Salad!
-              </Button>
-            </p>
+          <Grid item xs={2}/>
+          <Grid item xs={8}>
+            <Paper style={{ padding: '30px' }}>
+              <p style={{ fontSize: '18px' }} align="center">🥗 Salad – It's Good for You!</p>
+              <p>
+                Before you start &mdash;
+              </p>
+              <p>
+                Salad requires both a quorum (a minimum number of participants) and a time threshold.
+              </p>
+              <p>
+                When a quorum is met, and the time threshold is passed, the mix will occur.
+              </p>
+              <br />
+              <p align="center">
+                <Button
+                  variant='outlined'
+                  onClick={() => this.setState({ page: 2 })}
+                  color='secondary'>
+                  Ready to Make Salad!
+                </Button>
+              </p>
+            </Paper>
           </Grid>
         </Grid>
       );
     }
     return (
-      <div>
+      <Paper style={{ padding: '30px' }}>
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <div>
@@ -226,7 +230,7 @@ class Mixer extends Component {
             <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)} />
           </Grid>
         </Grid>
-      </div>
+      </Paper>
     )
   }
 }

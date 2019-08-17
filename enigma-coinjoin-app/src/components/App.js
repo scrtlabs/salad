@@ -4,7 +4,6 @@ import React, { Component } from 'react';
 import connect from 'react-redux/es/connect/connect';
 // Imports - Frameworks (Semantic-UI and Material-UI)
 import { Container, Message } from 'semantic-ui-react';
-import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import { withStyles } from '@material-ui/core';
 // Imports - Components
@@ -59,9 +58,7 @@ class App extends Component {
                     <br />
                     <br />
                     <Container>
-                        <Paper style={{ padding: '30px' }}>
-                            <Mixer />
-                        </Paper>
+                        <Mixer />
                     </Container>
                 </div>
             );
