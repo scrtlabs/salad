@@ -58,10 +58,10 @@ class CoinjoinClient {
      * @returns {Promise<void>}
      */
     async initAsync() {
+        this.watch();
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this._waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
-        this.watch();
     }
 
     /**
@@ -74,7 +74,7 @@ class CoinjoinClient {
 
     watch() {
         const callback = (msg) => {
-            console.log('Got message', msg);
+            msg = (msg.data) ? msg.data : msg;
             const {action, payload} = JSON.parse(msg);
             switch (action) {
                 case PUB_KEY_UPDATE:
@@ -92,6 +92,7 @@ class CoinjoinClient {
                     break;
                 default:
             }
+            console.log('Emitting', action, payload);
             this.ee.emit(action, payload);
         };
         if (isNode) {
