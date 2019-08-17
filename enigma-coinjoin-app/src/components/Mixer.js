@@ -15,6 +15,7 @@ import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
 
 import { openSnackbar } from './Notifier';
+import MixerContract from '../build/smart_contracts/Mixer';
 
 class Mixer extends Component {
   constructor(props) {
@@ -27,7 +28,11 @@ class Mixer extends Component {
       quorum: 0,
       threshold: 0,
     };
-    this.service = new CoinjoinClient(props.contractAddr, undefined, this.props.web3);
+    this.service = new CoinjoinClient(
+      MixerContract.networks[this.props.web3.networkId].address,
+      undefined,
+      this.props.web3
+    );
 
     this.service.onPubKey(({ payload }) => {
       this.setState({ pubKey: payload });

@@ -31,7 +31,6 @@ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      contractAddr: null,
       isUnsupportedNetwork: null,
     };
   }
@@ -42,10 +41,8 @@ class App extends Component {
     this.props.initializeWeb3(web3);
     this.props.initializeAccounts(accounts);
 
-    try {
-      this.setState({ contractAddr: MixerContract.networks[this.props.web3.networkId].address });
-    } catch (e) {
-      this.setState({ isUnsupportedNetwork: true })
+    if (!MixerContract.networks[this.props.web3.networkId]) {
+      this.setState({ isUnsupportedNetwork: true });
     }
   }
 
@@ -93,7 +90,7 @@ class App extends Component {
         <Notifier/>
         <br/><br/><br/><br/>
         <Container>
-          <Mixer contractAddr={this.state.contractAddr} />
+          <Mixer />
         </Container>
       </div>
     );
