@@ -5,6 +5,8 @@ import { CoinjoinClient, actions } from 'enigma-coinjoin-client';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
+import Fab from '@material-ui/core/Fab';
+import ArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
 import FormControl from '@material-ui/core/FormControl/FormControl';
 import InputLabel from '@material-ui/core/InputLabel/InputLabel';
 import Select from '@material-ui/core/Select/Select';
@@ -13,7 +15,6 @@ import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
 
 import { openSnackbar } from './Notifier';
-import MixerContract from '../build/smart_contracts/Mixer';
 
 class Mixer extends Component {
   constructor(props) {
@@ -26,11 +27,9 @@ class Mixer extends Component {
       quorum: 0,
       threshold: 0,
     };
-    const contractAddr = MixerContract.networks[4447].address; // TODO hardcoded network id
-    this.service = new CoinjoinClient(contractAddr, undefined, this.props.web3);
+    this.service = new CoinjoinClient(props.contractAddr, undefined, this.props.web3);
 
     this.service.onPubKey(({ payload }) => {
-      console.log('pubKey', payload);
       this.setState({ pubKey: payload });
     });
     this.service.onThresholdValue(({ payload }) => {
@@ -121,8 +120,7 @@ class Mixer extends Component {
               </p>
               <p>
                 Salad is a non-interactive, non-custodial Coin Join implementation,
-                built with
-                <a href="https://enigma.co" target="_blank" rel="noopener noreferrer">Enigma</a>.
+                built with <a href="https://enigma.co" target="_blank" rel="noopener noreferrer">Enigma</a>.
               </p>
               <br />
               <p>
@@ -147,7 +145,12 @@ class Mixer extends Component {
     if (page === 1) {
       return (
         <Grid container spacing={3}>
-          <Grid item xs={2}/>
+          <Grid item xs={1} style={{ display: 'flex', alignItems: 'center' }}>
+            <Fab size="small" aria-label="add" onClick={() => this.setState({ page: 0 })}>
+              <ArrowLeftIcon />
+            </Fab>
+          </Grid>
+          <Grid item xs={1}/>
           <Grid item xs={8}>
             <Paper style={{ padding: '30px' }}>
               <p style={{ fontSize: '18px' }} align="center">
@@ -177,70 +180,71 @@ class Mixer extends Component {
       );
     }
     return (
-      <Paper style={{ padding: '30px' }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12}>
-            <div>
-              <form onSubmit={this.props.handleSubmit(this.onSubmit)}>
-                <div>
-                  <InputLabel htmlFor="sender">Sender Address</InputLabel>
-                  <Field
-                    name="sender"
-                    component={Mixer.renderAddressInput}
-                  >
-                    <option value="" />
-                    {this.props.accounts.map((account, i) => {
-                      return (
-                        <option key={i} value={account}>{account}</option>
-                      );
-                    })}
-                  </Field>
-                </div>
-                <div>
-                  <Field
-                    name="recipient"
-                    component={Mixer.renderStringInput}
-                    label="Recipient Address"
-                    required
-                    helperText="Where you want the tokens sent, after mixing"
-                  />
-                </div>
-                <div>
-                  <Field
-                    name="amount"
-                    type="number"
-                    step="0.0001"
-                    min="0"
-                    component={Mixer.renderStringInput}
-                    label="Amount"
-                    helperText="Total tokens you're submitting to be mixed"
-                    required
-                  />
-                </div>
-                <div>
-                  <div style={{ float: 'left', fontSize: '16px', paddingTop: '10px' }}>
-                    { threshold === 0 ? 'Loading...' : (
-                      <span>Progress: <b>{ quorum } / { threshold }</b></span>
-                    )}
-                  </div>
-                  <div style={{ float: 'right' }}>
-                    <Button
-                      variant='outlined'
-                      type='submit'
-                      disabled={isSubmitting}
-                      color='secondary'>
-                      {isSubmitting ? 'Pending...' : 'Submit'}
-                    </Button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </Grid>
-          <Grid item xs={12}>
-            <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)} />
-          </Grid>
+      <Grid container spacing={3}>
+        <Grid item xs={2} style={{ display: 'flex', alignItems: 'center' }}>
+          <Fab size="small" aria-label="back" onClick={() => this.setState({ page: 1 })}>
+            <ArrowLeftIcon />
+          </Fab>
         </Grid>
-      </Paper>
+        <Grid item xs={8}>
+          <Paper style={{ padding: '30px' }}>
+            <form onSubmit={this.props.handleSubmit(this.onSubmit)}>
+              <div>
+                <InputLabel htmlFor="sender">Sender Address</InputLabel>
+                <Field
+                  name="sender"
+                  component={Mixer.renderAddressInput}
+                >
+                  <option value="" />
+                  {this.props.accounts.map((account, i) => {
+                    return (
+                      <option key={i} value={account}>{account}</option>
+                    );
+                  })}
+                </Field>
+              </div>
+              <div>
+                <Field
+                  name="recipient"
+                  component={Mixer.renderStringInput}
+                  label="Recipient Address"
+                  required
+                  helperText="Where you want the tokens sent, after mixing"
+                />
+              </div>
+              <div>
+                <Field
+                  name="amount"
+                  type="number"
+                  step="0.0001"
+                  min="0"
+                  component={Mixer.renderStringInput}
+                  label="Amount"
+                  helperText="Total tokens you're submitting to be mixed"
+                  required
+                />
+              </div>
+              <div>
+                <div style={{ float: 'left', fontSize: '16px', paddingTop: '10px' }}>
+                  <span>Progress: <b>{ quorum } / { threshold }</b></span>
+                </div>
+                <div style={{ float: 'right' }}>
+                  <Button
+                    variant='outlined'
+                    type='submit'
+                    disabled={isSubmitting}
+                    color='secondary'>
+                    {isSubmitting ? 'Pending...' : 'Submit'}
+                  </Button>
+                </div>
+              </div>
+            </form>
+            <p>&nbsp;</p>
+            <p>&nbsp;</p>
+            <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)} />
+          </Paper>
+        </Grid>
+      </Grid>
     )
   }
 }

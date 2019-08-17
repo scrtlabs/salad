@@ -30,3 +30,18 @@ form > div:last-child {
 .MuiLinearProgress-barColorPrimary {
   background-color: #414C55 !important;
 }
+
+.MuiFab-root {
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.MuiFab-root:hover {
+  border: 1px solid rgba(245, 0, 87, 0.5) !important;
+  color: rgba(245, 0, 87, 0.5) !important;
+}
+
+.MuiFab-root svg {
+  width: 1.25em;
+  height: 1.25em;
+}

@@ -1,6 +1,6 @@
 import Web3 from 'web3';
 
-const getWeb3 = () =>
+const initWeb3 = () =>
   new Promise((resolve) => {
     // Wait for loading completion to avoid race conditions with web3 injection timing.
     window.addEventListener('load', async () => {
@@ -35,5 +35,11 @@ const getWeb3 = () =>
       }
     });
   });
+
+const getWeb3 = async () => {
+  const web3 = await initWeb3();
+  web3.networkId = await web3.eth.net.getId();
+  return web3;
+};
 
 export default getWeb3;
