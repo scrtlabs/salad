@@ -1,6 +1,6 @@
 require('dotenv').config();
 const WebSocket = require('ws');
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
+const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS} = require("enigma-coinjoin-client").actions;
 const {OperatorApi} = require('./api');
 
 const port = process.env.WS_PORT;
@@ -13,11 +13,11 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     console.log('Starting the websocket server');
     wss.on('connection', async function connection(ws) {
 
-        function broadcast(data) {
-            wss.clients.forEach(function each(client) {
+        function broadcast(actionData) {
+            wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
-                    console.log('Broadcasting action', data);
-                    client.send(JSON.stringify(data));
+                    console.log('Broadcasting action', actionData);
+                    client.send(JSON.stringify(actionData));
                 }
             });
         }
@@ -27,6 +27,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         api.onDealExecuted(broadcast);
         api.onQuorumUpdate(broadcast);
 
+        // Loading non-blocking to keep the startup sequence sane
         (async () => {
             // Sending public key on connection
             const pubKeyAction = await api.cachePublicKeyAsync();
