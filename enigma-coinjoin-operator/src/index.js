@@ -29,17 +29,18 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         (async () => {
             // Sending public key on connection
-            const pubKey = await api.cachePublicKeyAsync();
-            ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
+            const pubKeyAction = await api.cachePublicKeyAsync();
+            ws.send(JSON.stringify(pubKeyAction));
         })();
 
         // Sending threshold on connection
         console.log('Sending threshold value', threshold);
-        ws.send(JSON.stringify({action: THRESHOLD_UPDATE, payload: {threshold}}));
+        const thresholdAction = api.getThreshold();
+        ws.send(JSON.stringify(thresholdAction));
 
-        const quorum = await api.fetchQuorumAsync(0);
-        console.log('Sending quorum value', quorum);
-        ws.send(JSON.stringify({action: QUORUM_UPDATE, payload: {quorum}}));
+        const quorumAction = await api.fetchQuorumAsync(0);
+        console.log('Sending quorum value', quorumAction);
+        ws.send(JSON.stringify(quorumAction));
 
         ws.on('message', async function incoming(message) {
             console.log('received: %s', message);

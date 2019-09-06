@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {MemoryStore} = require("./memoryStore");
-const {DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -9,7 +9,7 @@ const EventEmitter = require('events');
 /**
  * @typedef {Object} OperatorAction
  * @property {string} action - The action identified
- * @property {any} payload - The serialized action payload
+ * @property {Object} payload - The serialized action payload
  */
 
 class OperatorApi {
@@ -20,6 +20,7 @@ class OperatorApi {
         this.defaultTaskRecordOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
         this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store, threshold);
         this.ee = new EventEmitter();
+        this.threshold = threshold;
 
         // TODO: Default Ethereum options, add to config
         this.txOpts = {
@@ -74,10 +75,21 @@ class OperatorApi {
     }
 
     /**
-     * Coordinate posting a new deposit
+     * Return the threshold value
+     * @returns {OperatorAction}
+     */
+    getThreshold() {
+        const threshold = this.threshold;
+        return {action: THRESHOLD_UPDATE, payload: {threshold}};
+    }
+
+    /**
+     * Post-processing after each deposit.
+     * Creates a deal if the quorum is reached.
      * @returns {Promise<void>}
      */
-    async postDeposit() {
+    async handleDealProcessingAsync() {
+        // TODO: Use a scheduler to trigger this instead post-deposit trigger
         console.log('Evaluating deal creation in non-blocking scope');
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
         if (deal !== null) {
@@ -103,12 +115,13 @@ class OperatorApi {
 
     /**
      * Fetch the encryption public key and store it in cache
-     * @returns {Promise<string>}
+     * @returns {Promise<OperatorAction>}
      */
     async cachePublicKeyAsync() {
         console.log('Sending encryption public key to new connected client');
         const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(1)};
-        return this.sc.getPubKeyAsync(taskRecordOpts);
+        const pubKey = await this.sc.getPubKeyAsync(taskRecordOpts);
+        return {action: PUB_KEY_UPDATE, payload: {pubKey}};
     }
 
     /**
@@ -131,7 +144,7 @@ class OperatorApi {
 
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
-        (async () => await this.postDeposit())();
+        (async () => await this.handleDealProcessingAsync())();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
     }
 
@@ -146,13 +159,14 @@ class OperatorApi {
 
     /**
      * Return the current Quorum value
-     * @returns {Promise<number>}
+     * @returns {Promise<OperatorAction>}
      */
     async fetchQuorumAsync(minimumAmount) {
         // Sending current quorum on connection
         const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync(minimumAmount);
-        return fillableDeposits.length;
+        const quorum = fillableDeposits.length;
+        return {action: QUORUM_UPDATE, payload: {quorum}};
     }
 }
 
-module.exports = {OperatorApi: OperatorApi};
+module.exports = {OperatorApi};
