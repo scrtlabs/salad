@@ -3906,7 +3906,7 @@
   },
   "networks": {},
   "schemaVersion": "3.0.11",
-  "updatedAt": "2019-08-13T03:51:06.644Z",
+  "updatedAt": "2019-08-12T23:39:54.474Z",
   "devdoc": {
     "author": "Enigma * Getter functions to be used by Enigma library to access state variables",
     "methods": {

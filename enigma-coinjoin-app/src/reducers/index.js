@@ -1,12 +1,12 @@
 import { combineReducers} from 'redux';
 import { reducer as formReducer } from 'redux-form';
 
-const initializeEnigmaReducer = (enigma = null, action) => {
-    if (action.type === 'ENIGMA_INITIALIZED') {
+const initializeWeb3Reducer = (web3 = null, action) => {
+    if (action.type === 'WEB3_INITIALIZED') {
         return action.payload;
     }
 
-    return enigma;
+    return web3;
 };
 
 const initializeAccountsReducer = (accounts = [], action) => {
@@ -26,7 +26,7 @@ const notifyMessageReducer = (notification = {open: false, message: ''}, action)
 };
 
 export default combineReducers({
-    enigma: initializeEnigmaReducer,
+    web3: initializeWeb3Reducer,
     accounts: initializeAccountsReducer,
     notification: notifyMessageReducer,
     form: formReducer

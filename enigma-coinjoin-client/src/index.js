@@ -3,16 +3,24 @@ const {PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEA
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
-const {utils} = require('enigma-js/node'); // TODO: Replace by browser version before bundling
-const WebSocket = require('ws');
 const forge = require('node-forge');
 const EthCrypto = require('eth-crypto');
+
+let utils;
+let isNode = false;
+if (typeof window === 'undefined') {
+    isNode = true;
+    utils = require('enigma-js/node').utils;
+    WebSocket = require('ws');
+} else {
+    utils = require('enigma-js').utils;
+}
 
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, operatorUrl = 'http://localhost:3346', provider = Web3.givenProvider) {
+    constructor(contractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -31,10 +39,15 @@ class CoinjoinClient {
 
     async _waitConnectAsync() {
         return new Promise((resolve) => {
-            this.ws.on('open', function open() {
+            const callback = () => {
                 console.log('Connected to server');
                 resolve(true);
-            });
+            };
+            if (isNode) {
+                this.ws.on('open', callback);
+                return;
+            }
+            this.ws.onopen = callback;
         });
     }
 
@@ -45,10 +58,10 @@ class CoinjoinClient {
      * @returns {Promise<void>}
      */
     async initAsync() {
+        this.watch();
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this._waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
-        this.watch();
     }
 
     /**
@@ -60,8 +73,8 @@ class CoinjoinClient {
     }
 
     watch() {
-        this.ws.on('message', (msg) => {
-            console.log('Got message', msg);
+        const callback = (msg) => {
+            msg = (msg.data) ? msg.data : msg;
             const {action, payload} = JSON.parse(msg);
             switch (action) {
                 case PUB_KEY_UPDATE:
@@ -79,8 +92,14 @@ class CoinjoinClient {
                     break;
                 default:
             }
+            console.log('Emitting', action, payload);
             this.ee.emit(action, payload);
-        });
+        };
+        if (isNode) {
+            this.ws.on('message', callback);
+            return;
+        }
+        this.ws.onmessage = callback;
     }
 
     /**

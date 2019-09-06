@@ -9,7 +9,7 @@ import Typography from '@material-ui/core/Typography';
 
 const styles = () => ({
     root: {
-        flexGrow: 1
+        flexGrow: 1,
     }
 });
 
@@ -24,7 +24,7 @@ class Header extends Component {
                             variant="subtitle1"
                             color="inherit"
                         >
-                            Enigma CoinJoin
+                            <span role="img" aria-label="Salad">🥗</span> Salad
                         </Typography>
                     </Toolbar>
                 </AppBar>

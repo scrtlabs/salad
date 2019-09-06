@@ -54,6 +54,8 @@ async function deploySecretContract(config, mixerEthAddress) {
     } while (scTask.ethStatus === 1);
     process.stdout.write('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
 
+    console.log('SC ADDRESS', scTask.scAddr);
+
     // Verify deployed contract
     var result = await enigma.admin.isDeployed(scTask.scAddr);
     if (result) {
@@ -89,19 +91,18 @@ module.exports = async function (deployer, network, accounts) {
 
     // Deploy your Smart and Secret contracts below this point:
 
-    deployer.deploy(Mixer).then(function () {
+    deployer.deploy(Mixer).then(async () => {
         console.log(`Smart Contract "Mixer.Sol" has been deployed at ETH address: ${Mixer.address}`);
-        return;
-    });
 
-    const config = {
-        filename: 'coinjoin.wasm',
-        fn: 'construct()',
-        args: [],
-        gasLimit: 1000000,
-        gasPrice: utils.toGrains(1),
-        from: accounts[0]
-    };
-    const address = await deploySecretContract(config, Mixer.address);
-    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
+        const config = {
+            filename: 'coinjoin.wasm',
+            fn: 'construct()',
+            args: [],
+            gasLimit: 1000000,
+            gasPrice: utils.toGrains(1),
+            from: accounts[0]
+        };
+        const address = await deploySecretContract(config, Mixer.address);
+        console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
+    });
 };

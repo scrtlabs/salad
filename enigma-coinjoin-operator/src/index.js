@@ -41,7 +41,6 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     const wss = new WebSocket.Server({port});
     console.log('Starting the websocket server');
     wss.on('connection', async function connection(ws) {
-        console.log('Sending encryption public key to new connected client');
 
         function broadcast(data) {
             wss.clients.forEach(function each(client) {
@@ -77,17 +76,20 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
         (async () => {
             // Sending public key on connection
+            console.log('Sending encryption public key to new connected client');
             const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(1)};
             const pubKey = await sc.getPubKeyAsync(taskRecordOpts);
             ws.send(JSON.stringify({action: PUB_KEY_UPDATE, payload: {pubKey}}));
         })();
 
         // Sending threshold on connection
+        console.log('Sending threshold value', threshold);
         ws.send(JSON.stringify({action: THRESHOLD_UPDATE, payload: {threshold}}));
 
         // Sending current quorum on connection
         const fillableDeposits = await dealManager.fetchFillableDepositsAsync();
         const quorum = fillableDeposits.length;
+        console.log('Sending quorum value', quorum);
         ws.send(JSON.stringify({action: QUORUM_UPDATE, payload: {quorum}}));
 
         ws.on('message', async function incoming(message) {
