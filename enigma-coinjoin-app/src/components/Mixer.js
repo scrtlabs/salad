@@ -21,9 +21,9 @@ class Mixer extends Component {
     constructor(props) {
         super(props);
         this.service = new CoinjoinClient(
-            MixerContract.networks[this.props.web3.networkId].address,
+            MixerContract.networks[props.web3.networkId].address,
             undefined,
-            this.props.web3
+            props.web3
         );
         this.state = {
             isSubmitting: false,
@@ -52,6 +52,7 @@ class Mixer extends Component {
         this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
             openSnackbar({message: 'Your deposit was included in a pending deal.'});
             this.setState({isSubmitting: false, isPending: true});
+            props.reset('mix');
         });
         this.service.onDealCreated((payload) => {
             if (!this.state.isPending) {
