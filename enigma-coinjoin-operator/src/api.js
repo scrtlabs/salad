@@ -157,7 +157,7 @@ class OperatorApi {
         if (!this._verifyDepositSignature(payload, signature)) {
             throw new Error(`Signature verification failed: ${signature}`);
         }
-        const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient);
+        const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         console.log('Registered deposit', registeredDeposit);
 
         const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();

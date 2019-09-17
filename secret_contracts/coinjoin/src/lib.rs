@@ -41,13 +41,15 @@ static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 const ENC_RECIPIENT_SIZE: usize = 70;
 const PUB_KEY_SIZE: usize = 64;
+const SIG_SIZE: usize = 64;
+const SENDER_SIZE: usize = 20;
 
 // For contract-exposed functions, declare such functions under the following public trait:
 #[pub_interface]
 pub trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
     fn get_pub_key() -> Vec<u8>;
-    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160>;
+    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160>;
 }
 
 // The implementation of the exported ESC functions should be defined in the trait implementation
@@ -72,6 +74,10 @@ impl Contract {
     fn get_keypair() -> KeyPair {
         let key = Self::get_pkey();
         KeyPair::from_slice(&key).unwrap()
+    }
+
+    fn verify_signature(signature: [u8; SIG_SIZE], sender: H160, amount: U256, enc_recipient: [u8; ENC_RECIPIENT_SIZE], user_pubkey: [u8; PUB_KEY_SIZE]) {
+        eprint!("Verifying signature: {:?}", signature.to_vec());
     }
 }
 
@@ -99,7 +105,7 @@ impl ContractInterface for Contract {
     }
 
     #[no_mangle]
-    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160> {
+    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160> {
         eprint!("In execute_deal({:?}, {:?}, {:?}, {:?})", deal_id, nb_recipients, pub_keys, enc_recipients);
         eprint!("Mixing address for deal: {:?}", deal_id);
         let keypair = Self::get_keypair();
@@ -119,10 +125,26 @@ impl ContractInterface for Contract {
             user_pubkey.copy_from_slice(&pub_keys[pubkey_start..pubkey_end]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
+            let sender_start = i * SENDER_SIZE;
+            let sender_end = (i + 1) * SENDER_SIZE;
+            let mut sender_raw = [0; SENDER_SIZE];
+            sender_raw.copy_from_slice(&senders[sender_start..sender_end]);
+            let sender = H160::from(&sender_raw);
+            eprint!("The sender: {:?}", sender);
+
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipient, &shared_key);
             let recipient = H160::from(&plaintext[0..20]);
             eprint!("The decrypted recipient address: {:?}", recipient);
+
+            let sig_start = i * SIG_SIZE;
+            let sig_end = (i + 1) * SIG_SIZE;
+            let mut signature = [0; SIG_SIZE];
+            signature.copy_from_slice(&signatures[sig_start..sig_end]);
+
+            Self::verify_signature(signature, sender, amount, enc_recipient, user_pubkey);
+            eprint!("Signature verified");
+
             recipients.push(recipient);
         }
         eprint!("The ordered recipients: {:?}", recipients);

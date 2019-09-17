@@ -1,5 +1,6 @@
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
+const {utils} = require('enigma-js/node');
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -22,6 +23,7 @@ const DEAL_STATUS = {
  * @property {string} amount - The deposit amount in wei
  * @property {string} encRecipient - The encrypted recipient Ethereum address
  * @property {string} pubKey - The user generated pubKey
+ * @property {string} signature - The deposit payload signature
  */
 
 /**
@@ -61,12 +63,13 @@ class DealManager {
      * @param {string} amount - The deposit amount in wei
      * @param {string} pubKey - The user pubKey
      * @param {string} encRecipient - The recipient's encrypted Ethereum address
+     * @param {string} signature - The deposit payload signature
      * @returns {Promise<Deposit>}
      */
-    async registerDepositAsync(sender, amount, pubKey, encRecipient) {
+    async registerDepositAsync(sender, amount, pubKey, encRecipient, signature) {
         console.log('Registering deposit', sender, amount, encRecipient);
         await this.verifyDepositAmountAsync(sender, amount);
-        const deposit = {sender, amount, pubKey, encRecipient};
+        const deposit = {sender, amount, pubKey, encRecipient, signature};
         this.store.insertDeposit(deposit);
         return deposit;
     }
@@ -139,7 +142,7 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {dealId, participants} = deal;
+        const {dealId, participants, depositAmount} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
         console.log('The deposits', deposits);
         const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
@@ -148,8 +151,10 @@ class DealManager {
         const nbRecipient = deposits.length;
         const pubKeysPayload = `0x${deposits.map(d => d.pubKey).join('')}`;
         const encRecipientsPayload = `0x${deposits.map(d => d.encRecipient).join('')}`;
+        const sendersPayload = `0x${deposits.map(d => utils.remove0x(d.sender)).join('')}`;
+        const signaturesPayload = `0x${deposits.map(d => utils.remove0x(d.signature)).join('')}`;
         console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
-        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, pubKeysPayload, encRecipientsPayload, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }
