@@ -52,8 +52,8 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
                     ws.send(JSON.stringify({action: 'pong', payload: {}}));
                     break;
                 case SUBMIT_DEPOSIT_METADATA:
-                    const {sender, amount, pubKey, encRecipient} = payload;
-                    const submitDepositMetadataAction = await api.submitDepositMetadataAsync(sender, amount, pubKey, encRecipient);
+                    const {sender, amount, pubKey, encRecipient, signature} = payload;
+                    const submitDepositMetadataAction = await api.submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature);
                     ws.send(JSON.stringify(submitDepositMetadataAction));
                     break;
                 case FETCH_FILLABLE_DEPOSITS:
