@@ -41,7 +41,8 @@ static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 const ENC_RECIPIENT_SIZE: usize = 70;
 const PUB_KEY_SIZE: usize = 64;
-const SIG_SIZE: usize = 64;
+const AMOUNT_SIZE: usize = 32;
+const SIG_SIZE: usize = 65;
 const SENDER_SIZE: usize = 20;
 
 // For contract-exposed functions, declare such functions under the following public trait:
@@ -76,8 +77,23 @@ impl Contract {
         KeyPair::from_slice(&key).unwrap()
     }
 
-    fn verify_signature(signature: [u8; SIG_SIZE], sender: H160, amount: U256, enc_recipient: [u8; ENC_RECIPIENT_SIZE], user_pubkey: [u8; PUB_KEY_SIZE]) {
+    fn verify_signature(signature: [u8; SIG_SIZE], sender: &H160, amount: &U256, enc_recipient: &[u8; ENC_RECIPIENT_SIZE], user_pubkey: &[u8; PUB_KEY_SIZE]) {
         eprint!("Verifying signature: {:?}", signature.to_vec());
+        let mut message: Vec<u8> = Vec::new();
+        message.extend_from_slice(&SENDER_SIZE.to_be_bytes());
+        message.extend_from_slice(sender);
+        message.extend_from_slice(&AMOUNT_SIZE.to_be_bytes());
+        message.extend_from_slice(&H256::from(amount).0.to_vec());
+        message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
+        message.extend_from_slice(enc_recipient);
+        message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
+        message.extend_from_slice(user_pubkey);
+        eprint!("The message: {:?}", message);
+        eprint!("The message length: {:?}", message.len());
+        eprint!("The signature: {:?}", signature.to_vec());
+        eprint!("The signature length: {:?}", signature.to_vec().len());
+        let recovered_sender = KeyPair::recover(&message, signature).unwrap();
+//        eprint!("Recovered sender: {:?}", recovered_sender.to_vec());
     }
 }
 
@@ -142,7 +158,7 @@ impl ContractInterface for Contract {
             let mut signature = [0; SIG_SIZE];
             signature.copy_from_slice(&signatures[sig_start..sig_end]);
 
-            Self::verify_signature(signature, sender, amount, enc_recipient, user_pubkey);
+            Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
             eprint!("Signature verified");
 
             recipients.push(recipient);

@@ -93,7 +93,7 @@ class OperatorApi {
         // TODO: Use a scheduler to trigger this instead post-deposit trigger
         console.log('Evaluating deal creation in non-blocking scope');
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
-        if (deal !== null) {
+        if (deal) {
             console.log('Broadcasting new deal');
             this.ee.emit(DEAL_CREATED_UPDATE, deal);
 
@@ -107,7 +107,7 @@ class OperatorApi {
             this.ee.emit(QUORUM_UPDATE, quorum);
 
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {taskGasLimit: 47123880, taskGasPx: utils.toGrains(1)};
+            const taskRecordOpts = {taskGasLimit: 67123880, taskGasPx: utils.toGrains(1)};
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
             console.log('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);

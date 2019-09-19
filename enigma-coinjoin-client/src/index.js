@@ -48,16 +48,17 @@ class CoinjoinClient {
     static buildDepositMessage(web3, payload) {
         const paramsInBytes = [
             web3.utils.hexToBytes(payload.sender),
-            web3.utils.hexToBytes(web3.utils.numberToHex(web3.utils.toBN(payload.amount))),
+            web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(payload.amount), 64)),
             web3.utils.hexToBytes(`0x${payload.encRecipient}`),
             web3.utils.hexToBytes(`0x${payload.pubKey}`),
         ];
         let messageBytes = [];
         for (const param of paramsInBytes) {
-            messageBytes.push(param.length);
+            const len = web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(param.length), 8));
+            messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
-        // console.log('The message bytes to sign', messageBytes);
+        console.log('The message bytes to sign', messageBytes);
         return messageBytes;
     }
 
@@ -277,10 +278,11 @@ class CoinjoinClient {
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
+        console.log('The message', messageBytes);
+        console.log('The message length', messageBytes.length);
         const message = this.web3.utils.bytesToHex(messageBytes);
         console.log('Signing message', message);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
-        console.log('The message to sign', message);
         return this.web3.eth.sign(hash, sender);
     }
 }

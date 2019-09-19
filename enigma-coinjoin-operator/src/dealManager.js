@@ -52,9 +52,8 @@ class DealManager {
         console.log('Verifying balance for deposit', sender, amount);
         const account = this.web3.utils.toChecksumAddress(sender);
         const balance = await this.contract.methods.getParticipantBalance(account).call({from: this.scClient.getOperatorAccount()});
-        const amountInWei = this.web3.utils.toWei(amount);
-        console.log('Comparing balance with amount', balance, amountInWei);
-        return (this.web3.utils.toBN(balance) >= this.web3.utils.toBN(amountInWei));
+        console.log('Comparing balance with amount', balance, amount);
+        return (this.web3.utils.toBN(balance) >= this.web3.utils.toBN(amount));
     }
 
     /**
@@ -115,7 +114,7 @@ class DealManager {
         console.log('Creating deal with deposits', dealId, deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
-        const depositAmount = this.web3.utils.toWei(deposits[0].amount);
+        const depositAmount = deposits[0].amount;
         /** @type string[] */
         const participants = deposits.map((deposit) => deposit.sender);
         const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
@@ -154,6 +153,12 @@ class DealManager {
         const sendersPayload = `0x${deposits.map(d => utils.remove0x(d.sender)).join('')}`;
         const signaturesPayload = `0x${deposits.map(d => utils.remove0x(d.signature)).join('')}`;
         console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
+        for (const deposit of deposits) {
+            const sigBytes = this.web3.utils.hexToBytes(deposit.signature);
+            if (sigBytes.length !== 65) {
+                console.error('The signature length', sigBytes.length, sigBytes);
+            }
+        }
         const task = await this.scClient.executeDealAsync(dealId, nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;

@@ -29,15 +29,13 @@ function sleep(ms) {
 
 async function deploySecretContract(config, mixerEthAddress) {
     console.log(`Deploying Secret Contract "${config.filename}"...`);
-    var scTask;
-    var preCode;
-
+    let scTask;
+    let preCode;
     try {
         preCode = fs.readFileSync(path.resolve(migrationsFolder, '../build/secret_contracts', config.filename));
     } catch (e) {
         console.log('Error:', e.stack);
     }
-
     const {args} = config;
     args.push([mixerEthAddress, 'address']);
     scTask = await new Promise((resolve, reject) => {
@@ -98,7 +96,7 @@ module.exports = async function (deployer, network, accounts) {
             filename: 'coinjoin.wasm',
             fn: 'construct()',
             args: [],
-            gasLimit: 1000000,
+            gasLimit: 2000000,
             gasPrice: utils.toGrains(1),
             from: accounts[0]
         };
