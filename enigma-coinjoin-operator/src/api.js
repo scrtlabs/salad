@@ -107,7 +107,7 @@ class OperatorApi {
             this.ee.emit(QUORUM_UPDATE, quorum);
 
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {taskGasLimit: 67123880, taskGasPx: utils.toGrains(1)};
+            const taskRecordOpts = {taskGasLimit: 87123880, taskGasPx: utils.toGrains(0.001)};
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
             console.log('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
@@ -120,7 +120,7 @@ class OperatorApi {
      */
     async cachePublicKeyAsync() {
         console.log('Sending encryption public key to new connected client');
-        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(1)};
+        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(0.001)};
         const pubKey = await this.sc.getPubKeyAsync(taskRecordOpts);
         return {action: PUB_KEY_UPDATE, payload: {pubKey}};
     }

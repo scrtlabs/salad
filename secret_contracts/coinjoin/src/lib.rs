@@ -30,7 +30,7 @@ use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
 use eng_wasm::{String, H256, H160, Vec, U256};
 use rustc_hex::ToHex;
-use enigma_crypto::asymmetric::KeyPair;
+use enigma_crypto::KeyPair;
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -92,8 +92,12 @@ impl Contract {
         eprint!("The message length: {:?}", message.len());
         eprint!("The signature: {:?}", signature.to_vec());
         eprint!("The signature length: {:?}", signature.to_vec().len());
-        let recovered_sender = KeyPair::recover(&message, signature).unwrap();
-//        eprint!("Recovered sender: {:?}", recovered_sender.to_vec());
+        let recovered_sender = match KeyPair::recover(&message, signature) {
+            Ok(sender) => sender,
+            Err(err) => panic!("Cannot recover from sig: {:?}", err),
+        };
+        eprint!("Recovered sender: {:?}", recovered_sender.to_vec());
+
     }
 }
 
@@ -158,6 +162,7 @@ impl ContractInterface for Contract {
             let mut signature = [0; SIG_SIZE];
             signature.copy_from_slice(&signatures[sig_start..sig_end]);
 
+//            Self::test_recover();
             Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
             eprint!("Signature verified");
 

@@ -97,7 +97,7 @@ module.exports = async function (deployer, network, accounts) {
             fn: 'construct()',
             args: [],
             gasLimit: 2000000,
-            gasPrice: utils.toGrains(1),
+            gasPrice: utils.toGrains(0.001),
             from: accounts[0]
         };
         const address = await deploySecretContract(config, Mixer.address);

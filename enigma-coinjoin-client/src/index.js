@@ -180,9 +180,7 @@ class CoinjoinClient {
      */
     async makeDepositAsync(sender, amount, opts) {
         console.log('Posting deposit to the smart contract', amount);
-        const amountInWei = this.web3.utils.toWei(amount, 'ether');
-
-        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amountInWei});
+        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
         // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
         // console.log('Got balance', balance);
         return receipt;
@@ -283,7 +281,11 @@ class CoinjoinClient {
         const message = this.web3.utils.bytesToHex(messageBytes);
         console.log('Signing message', message);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
-        return this.web3.eth.sign(hash, sender);
+        const sigHex = await this.web3.eth.sign(hash, sender);
+        const sigBytes = this.web3.utils.hexToBytes(sigHex);
+        // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
+        sigBytes[sigBytes.length - 1] = sigBytes[sigBytes.length - 1] + 27;
+        return this.web3.utils.bytesToHex(sigBytes);
     }
 }
 
