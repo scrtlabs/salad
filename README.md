@@ -127,7 +127,7 @@ Checked list items have been implemented, others are pending.
 - [x] Submit the Deposit Payload and Signature to the Relayer. 
 
 ### Mixer
-- [ ] To prevent spam, the Relayer verifies the Payload Signature.
+- [x] To prevent spam, the Relayer verifies the Payload Signature.
 - [x] Relayer holds the Payload until a trigger (based on time and participation threshold).
 - [x] Relayer creates a Deal on-chain by submitting the Amount and Sender Addresses. The DealId hash is computed on-chain. A record of a Pending Deal now exists on-chain.
 - [ ] Relayer submits its Ethereum Address, Ethereum Nonce, Payloads and Signatures to the secret contract.
