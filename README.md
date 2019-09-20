@@ -103,4 +103,39 @@ For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize 
 - [x] Can't use the `vec![]` macro
 - [ ] Starting the network sometimes fails, resulting in a `Division by zero` error during deployment
 
-C
+# Detailed Protocol
+Checked list items have been implemented, others are pending.
+
+## Deposit Payload
+- Sender Address
+- Amount
+- Encrypted Recipient Address
+- User Public Key
+- Nonce
+
+## Hashes
+- DealId: `H(Sender Addresses, Amount, Relayer Ethereum Address, Relayer Ethereum Nonce)`
+
+## Workflow
+### User
+- [x] Get the Public Encryption Key, and the signature of the worker who generated it, from the Relayer (previously fetched from the secret contract and stored in cache). 
+- [ ] Recover the worker's address from the signature, verify its authenticity against the Worker Registry of the Enigma contract.
+- [x] Generate a key pair for encryption of the Recipient Address.
+- [x] Make a deposit in the CoinJoin smart contract. A record of "Sender Address => Amount" now exists on-chain.
+- [x] Encrypt the Recipient Address using a key derived from the Public Encryption Key and the User Private Key. 
+- [x] Sign the payload using an Ethereum wallet (e.g. MetaMask).
+- [x] Submit the Deposit Payload and Signature to the Relayer. 
+
+### Mixer
+- [ ] To prevent spam, the Relayer verifies the Payload Signature.
+- [x] Relayer holds the Payload until a trigger (based on time and participation threshold).
+- [x] Relayer creates a Deal on-chain by submitting the Amount and Sender Addresses. The DealId hash is computed on-chain. A record of a Pending Deal now exists on-chain.
+- [ ] Relayer submits its Ethereum Address, Ethereum Nonce, Payloads and Signatures to the secret contract.
+- [ ] Secret contract verifies the signatures. We now have verified Payloads in the secret contract.
+- [ ] Relayer computes the DealId, which is a hash computed partly from verified Sender Addresses, becoming a proof to be validated on-chain. It is not possible to target a DealId hash without having verified the signatures.
+- [x] Secret contract decrypts each Recipient Address by deriving a key from the Encryption Private Key and each User Public Key.
+- [x] Secret contract generates a random seed and mixes the address using a Fisher–Yates shuffle.
+- [ ] Secret contract submits the DealId and Shuffled Plaintext Recipient Addresses on-chain.
+- [x] Smart contract finds the Deal by DealId, verifies that the status is Pending and verifies the Deposit balances.
+- [x] Smart contract transfers each deposit to the Recipients, subtracting them from the each Sender's balance.
+- [x] The Deal status is now Executed
