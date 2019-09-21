@@ -31,6 +31,7 @@ use eng_wasm_derive::eth_contract;
 use eng_wasm::{String, H256, H160, Vec, U256};
 use rustc_hex::ToHex;
 use enigma_crypto::KeyPair;
+use enigma_crypto::hash::Keccak256;
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -77,7 +78,7 @@ impl Contract {
         KeyPair::from_slice(&key).unwrap()
     }
 
-    fn verify_signature(signature: [u8; SIG_SIZE], sender: &H160, amount: &U256, enc_recipient: &[u8; ENC_RECIPIENT_SIZE], user_pubkey: &[u8; PUB_KEY_SIZE]) {
+    fn verify_signature(signature: [u8; SIG_SIZE], sender: &H160, amount: &U256, enc_recipient: &[u8; ENC_RECIPIENT_SIZE], user_pubkey: &[u8; PUB_KEY_SIZE]) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
         message.extend_from_slice(&SENDER_SIZE.to_be_bytes());
@@ -88,16 +89,24 @@ impl Contract {
         message.extend_from_slice(enc_recipient);
         message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
         message.extend_from_slice(user_pubkey);
-        eprint!("The message: {:?}", message);
-        eprint!("The message length: {:?}", message.len());
+
+        let mut prefixed_message: Vec<u8> = Vec::new();
+        // The UTF-8 decoded "\x19Ethereum Signed Message:\n" prefix
+        prefixed_message.extend_from_slice(&[25, 69, 116, 104, 101, 114, 101, 117, 109, 32, 83, 105, 103, 110, 101, 100, 32, 77, 101, 115, 115, 97, 103, 101, 58, 10, 51, 50]);
+        prefixed_message.extend_from_slice(&message.keccak256().to_vec());
+        eprint!("The message: {:?}", prefixed_message);
+        eprint!("The message length: {:?}", prefixed_message.len());
         eprint!("The signature: {:?}", signature.to_vec());
         eprint!("The signature length: {:?}", signature.to_vec().len());
-        let recovered_sender = match KeyPair::recover(&message, signature) {
+        let sender_pubkey = match KeyPair::recover(&prefixed_message, signature) {
             Ok(sender) => sender,
             Err(err) => panic!("Cannot recover from sig: {:?}", err),
         };
-        eprint!("Recovered sender: {:?}", recovered_sender.to_vec());
-
+        let mut sender_raw = [0u8; 20];
+        sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
+        let sender = H160::from(&sender_raw);
+        eprint!("Recovered sender: {:?}", sender);
+        sender
     }
 }
 
@@ -162,9 +171,8 @@ impl ContractInterface for Contract {
             let mut signature = [0; SIG_SIZE];
             signature.copy_from_slice(&signatures[sig_start..sig_end]);
 
-//            Self::test_recover();
-            Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
-            eprint!("Signature verified");
+            let sig_sender = Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
+            eprint!("Sig sender {:?} == {:?}", sig_sender, sender);
 
             recipients.push(recipient);
         }
