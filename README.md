@@ -131,7 +131,7 @@ Checked list items have been implemented, others are pending.
 - [x] Relayer holds the Payload until a trigger (based on time and participation threshold).
 - [x] Relayer creates a Deal on-chain by submitting the Amount and Sender Addresses. The DealId hash is computed on-chain. A record of a Pending Deal now exists on-chain.
 - [ ] Relayer submits its Ethereum Address, Ethereum Nonce, Payloads and Signatures to the secret contract.
-- [ ] Secret contract verifies the signatures. We now have verified Payloads in the secret contract.
+- [x] Secret contract verifies the signatures. We now have verified Payloads in the secret contract.
 - [ ] Relayer computes the DealId, which is a hash computed partly from verified Sender Addresses, becoming a proof to be validated on-chain. It is not possible to target a DealId hash without having verified the signatures.
 - [x] Secret contract decrypts each Recipient Address by deriving a key from the Encryption Private Key and each User Public Key.
 - [x] Secret contract generates a random seed and mixes the address using a Fisher–Yates shuffle.
