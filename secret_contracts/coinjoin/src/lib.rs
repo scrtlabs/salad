@@ -91,17 +91,10 @@ impl Contract {
         message.extend_from_slice(user_pubkey);
 
         let mut prefixed_message: Vec<u8> = Vec::new();
-        // The UTF-8 decoded "\x19Ethereum Signed Message:\n" prefix
+        // The UTF-8 decoded "\x19Ethereum Signed Message:\n32" prefix
         prefixed_message.extend_from_slice(&[25, 69, 116, 104, 101, 114, 101, 117, 109, 32, 83, 105, 103, 110, 101, 100, 32, 77, 101, 115, 115, 97, 103, 101, 58, 10, 51, 50]);
         prefixed_message.extend_from_slice(&message.keccak256().to_vec());
-        eprint!("The message: {:?}", prefixed_message);
-        eprint!("The message length: {:?}", prefixed_message.len());
-        eprint!("The signature: {:?}", signature.to_vec());
-        eprint!("The signature length: {:?}", signature.to_vec().len());
-        let sender_pubkey = match KeyPair::recover(&prefixed_message, signature) {
-            Ok(sender) => sender,
-            Err(err) => panic!("Cannot recover from sig: {:?}", err),
-        };
+        let sender_pubkey = KeyPair::recover(&prefixed_message, signature).unwrap();
         let mut sender_raw = [0u8; 20];
         sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
         let sender = H160::from(&sender_raw);
@@ -172,8 +165,9 @@ impl ContractInterface for Contract {
             signature.copy_from_slice(&signatures[sig_start..sig_end]);
 
             let sig_sender = Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
-            eprint!("Sig sender {:?} == {:?}", sig_sender, sender);
-
+            if sig_sender != sender {
+                panic!("Invalid sender recovered from the signature: {:?} != {:?}", sig_sender, sender);
+            }
             recipients.push(recipient);
         }
         eprint!("The ordered recipients: {:?}", recipients);

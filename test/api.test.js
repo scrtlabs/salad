@@ -154,7 +154,5 @@ contract('Mixer', () => {
         // expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
-        const prefix = web3Utils.hexToBytes(web3Utils.utf8ToHex("\x19Ethereum Signed Message:\n32"));
-        console.log('The prefix', prefix);
     }).timeout(120000);
 });
