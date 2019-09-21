@@ -16,6 +16,14 @@ if (typeof window === 'undefined') {
     utils = require('enigma-js').utils;
 }
 
+/**
+ * @typedef {Object} DepositPayload
+ * @property {string} sender - The depositor Ethereum address
+ * @property {string} amount - The deposit amount in wei
+ * @property {string} encRecipient - The encrypted recipient Ethereum address
+ * @property {string} pubKey - The user generated pubKey
+ */
+
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 
@@ -35,6 +43,23 @@ class CoinjoinClient {
         const privateKey = forge.util.bytesToHex(random.getBytes(32));
         const publicKey = EthCrypto.publicKeyByPrivateKey(privateKey);
         return {publicKey, privateKey};
+    }
+
+    static buildDepositMessage(web3, payload) {
+        const paramsInBytes = [
+            web3.utils.hexToBytes(payload.sender),
+            web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(payload.amount), 64)),
+            web3.utils.hexToBytes(`0x${payload.encRecipient}`),
+            web3.utils.hexToBytes(`0x${payload.pubKey}`),
+        ];
+        let messageBytes = [];
+        for (const param of paramsInBytes) {
+            const len = web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(param.length), 8));
+            messageBytes = messageBytes.concat(len);
+            messageBytes = messageBytes.concat(param);
+        }
+        console.log('The message bytes to sign', messageBytes);
+        return messageBytes;
     }
 
     async _waitConnectAsync() {
@@ -155,9 +180,7 @@ class CoinjoinClient {
      */
     async makeDepositAsync(sender, amount, opts) {
         console.log('Posting deposit to the smart contract', amount);
-        const amountInWei = this.web3.utils.toWei(amount, 'ether');
-
-        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amountInWei});
+        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
         // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
         // console.log('Got balance', balance);
         return receipt;
@@ -185,18 +208,19 @@ class CoinjoinClient {
      * Submit the deposit metadata to including the encrypted recipient address
      * @param {string} sender - The deposit sender's Ethereum address
      * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
-     * @param {string} pubKey - The user pubKey
      * @param {string} encRecipient - The encrypted recipient Ethereum address
+     * @param {string} pubKey - The user pubKey
+     * @param {string} signature - The deposit payload signature
      * @returns {Promise<boolean>}
      */
-    async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient) {
+    async submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature) {
         console.log('Submitting deposit metadata to the operator', amount, encRecipient);
         const promise = new Promise((resolve) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
         });
         this.ws.send(JSON.stringify({
             action: SUBMIT_DEPOSIT_METADATA,
-            payload: {sender, amount, pubKey, encRecipient}
+            payload: {sender, amount, encRecipient, pubKey, signature}
         }));
         return promise;
     }
@@ -238,6 +262,30 @@ class CoinjoinClient {
         }
         console.log('The active deals', deals);
         return deals;
+    }
+
+    /**
+     * Sign the deposit metadata
+     * @param {string} sender
+     * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
+     * @param {string} encRecipient - The encrypted recipient Ethereum address
+     * @param {string} pubKey - The user pubKey
+     * @returns {Promise<void>}
+     */
+    async signDepositMetadataAsync(sender, amount, encRecipient, pubKey) {
+        /** @type DepositPayload */
+        const payload = {sender, amount, encRecipient, pubKey};
+        const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
+        console.log('The message', messageBytes);
+        console.log('The message length', messageBytes.length);
+        const message = this.web3.utils.bytesToHex(messageBytes);
+        console.log('Signing message', message);
+        const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+        const sigHex = await this.web3.eth.sign(hash, sender);
+        const sigBytes = this.web3.utils.hexToBytes(sigHex);
+        // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
+        sigBytes[sigBytes.length - 1] = sigBytes[sigBytes.length - 1] + 27;
+        return this.web3.utils.bytesToHex(sigBytes);
     }
 }
 

@@ -5,6 +5,7 @@ const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
+const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 /**
  * @typedef {Object} OperatorAction
@@ -92,7 +93,7 @@ class OperatorApi {
         // TODO: Use a scheduler to trigger this instead post-deposit trigger
         console.log('Evaluating deal creation in non-blocking scope');
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
-        if (deal !== null) {
+        if (deal) {
             console.log('Broadcasting new deal');
             this.ee.emit(DEAL_CREATED_UPDATE, deal);
 
@@ -106,7 +107,7 @@ class OperatorApi {
             this.ee.emit(QUORUM_UPDATE, quorum);
 
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {taskGasLimit: 47123880, taskGasPx: utils.toGrains(1)};
+            const taskRecordOpts = {taskGasLimit: 87123880, taskGasPx: utils.toGrains(0.001)};
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
             console.log('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
@@ -119,9 +120,26 @@ class OperatorApi {
      */
     async cachePublicKeyAsync() {
         console.log('Sending encryption public key to new connected client');
-        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(1)};
+        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(0.001)};
         const pubKey = await this.sc.getPubKeyAsync(taskRecordOpts);
         return {action: PUB_KEY_UPDATE, payload: {pubKey}};
+    }
+
+    /**
+     * Verify the deposit signature
+     * @param {DepositPayload} payload
+     * @param {string} signature
+     * @returns {*}
+     * @private
+     */
+    _verifyDepositSignature(payload, signature) {
+        const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
+        const message = this.web3.utils.bytesToHex(messageBytes);
+        console.log('Verifying message', message, 'with signature', signature);
+        const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+        const sender = this.web3.eth.accounts.recover(hash, signature);
+        console.log('Recovered sender', sender);
+        return (sender === payload.sender);
     }
 
     /**
@@ -130,10 +148,16 @@ class OperatorApi {
      * @param amount
      * @param pubKey
      * @param encRecipient
+     * @param signature
      * @returns {Promise<OperatorAction>}
      */
-    async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient) {
-        const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient);
+    async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
+        console.log('Got deposit metadata with signature', signature);
+        const payload = {sender, amount, encRecipient, pubKey};
+        if (!this._verifyDepositSignature(payload, signature)) {
+            throw new Error(`Signature verification failed: ${signature}`);
+        }
+        const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         console.log('Registered deposit', registeredDeposit);
 
         const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();

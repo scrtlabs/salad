@@ -30,7 +30,8 @@ use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
 use eng_wasm::{String, H256, H160, Vec, U256};
 use rustc_hex::ToHex;
-use enigma_crypto::asymmetric::KeyPair;
+use enigma_crypto::KeyPair;
+use enigma_crypto::hash::Keccak256;
 
 // Mixer contract abi
 #[eth_contract("IMixer.json")]
@@ -41,13 +42,16 @@ static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 const ENC_RECIPIENT_SIZE: usize = 70;
 const PUB_KEY_SIZE: usize = 64;
+const AMOUNT_SIZE: usize = 32;
+const SIG_SIZE: usize = 65;
+const SENDER_SIZE: usize = 20;
 
 // For contract-exposed functions, declare such functions under the following public trait:
 #[pub_interface]
 pub trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
     fn get_pub_key() -> Vec<u8>;
-    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160>;
+    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160>;
 }
 
 // The implementation of the exported ESC functions should be defined in the trait implementation
@@ -72,6 +76,30 @@ impl Contract {
     fn get_keypair() -> KeyPair {
         let key = Self::get_pkey();
         KeyPair::from_slice(&key).unwrap()
+    }
+
+    fn verify_signature(signature: [u8; SIG_SIZE], sender: &H160, amount: &U256, enc_recipient: &[u8; ENC_RECIPIENT_SIZE], user_pubkey: &[u8; PUB_KEY_SIZE]) -> H160 {
+        eprint!("Verifying signature: {:?}", signature.to_vec());
+        let mut message: Vec<u8> = Vec::new();
+        message.extend_from_slice(&SENDER_SIZE.to_be_bytes());
+        message.extend_from_slice(sender);
+        message.extend_from_slice(&AMOUNT_SIZE.to_be_bytes());
+        message.extend_from_slice(&H256::from(amount).0.to_vec());
+        message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
+        message.extend_from_slice(enc_recipient);
+        message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
+        message.extend_from_slice(user_pubkey);
+
+        let mut prefixed_message: Vec<u8> = Vec::new();
+        // The UTF-8 decoded "\x19Ethereum Signed Message:\n32" prefix
+        prefixed_message.extend_from_slice(&[25, 69, 116, 104, 101, 114, 101, 117, 109, 32, 83, 105, 103, 110, 101, 100, 32, 77, 101, 115, 115, 97, 103, 101, 58, 10, 51, 50]);
+        prefixed_message.extend_from_slice(&message.keccak256().to_vec());
+        let sender_pubkey = KeyPair::recover(&prefixed_message, signature).unwrap();
+        let mut sender_raw = [0u8; 20];
+        sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
+        let sender = H160::from(&sender_raw);
+        eprint!("Recovered sender: {:?}", sender);
+        sender
     }
 }
 
@@ -99,7 +127,7 @@ impl ContractInterface for Contract {
     }
 
     #[no_mangle]
-    fn execute_deal(deal_id: H256, nb_recipients: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>) -> Vec<H160> {
+    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160> {
         eprint!("In execute_deal({:?}, {:?}, {:?}, {:?})", deal_id, nb_recipients, pub_keys, enc_recipients);
         eprint!("Mixing address for deal: {:?}", deal_id);
         let keypair = Self::get_keypair();
@@ -119,10 +147,27 @@ impl ContractInterface for Contract {
             user_pubkey.copy_from_slice(&pub_keys[pubkey_start..pubkey_end]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
+            let sender_start = i * SENDER_SIZE;
+            let sender_end = (i + 1) * SENDER_SIZE;
+            let mut sender_raw = [0; SENDER_SIZE];
+            sender_raw.copy_from_slice(&senders[sender_start..sender_end]);
+            let sender = H160::from(&sender_raw);
+            eprint!("The sender: {:?}", sender);
+
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipient, &shared_key);
             let recipient = H160::from(&plaintext[0..20]);
             eprint!("The decrypted recipient address: {:?}", recipient);
+
+            let sig_start = i * SIG_SIZE;
+            let sig_end = (i + 1) * SIG_SIZE;
+            let mut signature = [0; SIG_SIZE];
+            signature.copy_from_slice(&signatures[sig_start..sig_end]);
+
+            let sig_sender = Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
+            if sig_sender != sender {
+                panic!("Invalid sender recovered from the signature: {:?} != {:?}", sig_sender, sender);
+            }
             recipients.push(recipient);
         }
         eprint!("The ordered recipients: {:?}", recipients);
