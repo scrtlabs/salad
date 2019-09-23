@@ -124,7 +124,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "coinjoin"
+name = "constant_time_eq"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "contract"
 version = "0.1.0"
 dependencies = [
  "eng-wasm 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -132,11 +137,6 @@ dependencies = [
  "enigma-crypto 0.2.0 (git+https://github.com/enigmampc/enigma-core.git?rev=develop)",
  "rustc-hex 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
-
-[[package]]
-name = "constant_time_eq"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "crunchy"

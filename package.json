@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "@enigmampc/discovery-cli": "0.0.25",
+    "@enigmampc/discovery-cli": "https://github.com/enigmampc/discovery-cli#rust-upgrade",
     "core-js": "^3.2.1",
     "dotenv": "^8.0.0",
     "enigma-coinjoin-client": "0.1.0",
