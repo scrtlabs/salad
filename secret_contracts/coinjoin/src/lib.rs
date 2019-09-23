@@ -1,11 +1,5 @@
 #![no_std]
 
-extern crate rustc_hex;
-
-extern crate eng_wasm;
-extern crate eng_wasm_derive;
-extern crate enigma_crypto;
-
 use eng_wasm::*;
 use eng_wasm_derive::pub_interface;
 use eng_wasm_derive::eth_contract;
