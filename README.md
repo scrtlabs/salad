@@ -4,7 +4,7 @@ A CoinJoin implementation of the Enigma Discovery Network.
 ## How to Build
 ### Dependencies
 - `node == v11.15.0`
-- `rustc == 1.36.0-nightly (6afcb5628 2019-05-19`
+- `rustc == nightly-2019-08-01`
 - `yarn == 1.17.3`
 - `Docker == 18.09.8-ce, build 0dd43dd87f`
 - `docker-compose == 1.24.1, build 4667896`
