@@ -1,12 +1,12 @@
 #![no_std]
 
 use eng_wasm::*;
-use eng_wasm_derive::pub_interface;
+use eng_wasm::{String, Vec, H160, H256, U256};
 use eng_wasm_derive::eth_contract;
-use eng_wasm::{String, H256, H160, Vec, U256};
-use rustc_hex::ToHex;
-use enigma_crypto::KeyPair;
+use eng_wasm_derive::pub_interface;
 use enigma_crypto::hash::Keccak256;
+use enigma_crypto::KeyPair;
+use rustc_hex::ToHex;
 
 #[eth_contract("IMixer.json")]
 struct EthContract;
@@ -23,9 +23,18 @@ const SENDER_SIZE: usize = 20;
 
 #[pub_interface]
 trait ContractInterface {
+    /// Constructor function that takes in MIXER_ETH_ADDR ethereum contract address
     fn construct(mixer_eth_addr: H160);
     fn get_pub_key() -> Vec<u8>;
-    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160>;
+    fn execute_deal(
+        deal_id: H256,
+        nb_recipients: U256,
+        amount: U256,
+        pub_keys: Vec<u8>,
+        enc_recipients: Vec<u8>,
+        senders: Vec<u8>,
+        signatures: Vec<u8>,
+    ) -> Vec<H160>;
 }
 
 struct Contract;
@@ -47,7 +56,13 @@ impl Contract {
         KeyPair::from_slice(&key).unwrap()
     }
 
-    fn verify_signature(signature: [u8; SIG_SIZE], sender: &H160, amount: &U256, enc_recipient: &[u8; ENC_RECIPIENT_SIZE], user_pubkey: &[u8; PUB_KEY_SIZE]) -> H160 {
+    fn verify_signature(
+        signature: [u8; SIG_SIZE],
+        sender: &H160,
+        amount: &U256,
+        enc_recipient: &[u8; ENC_RECIPIENT_SIZE],
+        user_pubkey: &[u8; PUB_KEY_SIZE],
+    ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
         message.extend_from_slice(&SENDER_SIZE.to_be_bytes());
@@ -72,7 +87,6 @@ impl Contract {
 }
 
 impl ContractInterface for Contract {
-    /// Constructor function that takes in MIXER_ETH_ADDR ethereum contract address
     fn construct(mixer_eth_addr: H160) {
         let mixer_eth_addr_str: String = mixer_eth_addr.to_hex();
         write_state!(MIXER_ETH_ADDR => mixer_eth_addr_str);
@@ -91,8 +105,19 @@ impl ContractInterface for Contract {
         pub_key.to_vec()
     }
 
-    fn execute_deal(deal_id: H256, nb_recipients: U256, amount: U256, pub_keys: Vec<u8>, enc_recipients: Vec<u8>, senders: Vec<u8>, signatures: Vec<u8>) -> Vec<H160> {
-        eprint!("In execute_deal({:?}, {:?}, {:?}, {:?})", deal_id, nb_recipients, pub_keys, enc_recipients);
+    fn execute_deal(
+        deal_id: H256,
+        nb_recipients: U256,
+        amount: U256,
+        pub_keys: Vec<u8>,
+        enc_recipients: Vec<u8>,
+        senders: Vec<u8>,
+        signatures: Vec<u8>,
+    ) -> Vec<H160> {
+        eprint!(
+            "In execute_deal({:?}, {:?}, {:?}, {:?})",
+            deal_id, nb_recipients, pub_keys, enc_recipients
+        );
         eprint!("Mixing address for deal: {:?}", deal_id);
         let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
@@ -130,7 +155,10 @@ impl ContractInterface for Contract {
 
             let sig_sender = Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
             if sig_sender != sender {
-                panic!("Invalid sender recovered from the signature: {:?} != {:?}", sig_sender, sender);
+                panic!(
+                    "Invalid sender recovered from the signature: {:?} != {:?}",
+                    sig_sender, sender
+                );
             }
             recipients.push(recipient);
         }
