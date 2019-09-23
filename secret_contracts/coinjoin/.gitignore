@@ -1,0 +1,5 @@
+# created when building anything with cargo
+target/
+
+# created when generating the enclave description
+*.h
