@@ -17,9 +17,9 @@ static ENCRYPTION_KEY: &str = "encryption_key";
 
 const ENC_RECIPIENT_SIZE: usize = 70;
 const PUB_KEY_SIZE: usize = 64;
-const AMOUNT_SIZE: usize = 32;
+const UINT_SIZE: usize = 32;
 const SIG_SIZE: usize = 65;
-const SENDER_SIZE: usize = 20;
+const ADDRESS_SIZE: usize = 20;
 
 #[pub_interface]
 trait ContractInterface {
@@ -27,7 +27,8 @@ trait ContractInterface {
     fn construct(mixer_eth_addr: H160);
     fn get_pub_key() -> Vec<u8>;
     fn execute_deal(
-        deal_id: H256,
+        operator_address: H160,
+        operator_nonce: U256,
         nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<u8>,
@@ -65,10 +66,10 @@ impl Contract {
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
-        message.extend_from_slice(&SENDER_SIZE.to_be_bytes());
+        message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
         message.extend_from_slice(sender);
-        message.extend_from_slice(&AMOUNT_SIZE.to_be_bytes());
-        message.extend_from_slice(&H256::from(amount).0.to_vec());
+        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&H256::from(amount));
         message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
         message.extend_from_slice(enc_recipient);
         message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
@@ -83,6 +84,29 @@ impl Contract {
         let sender = H160::from(&sender_raw);
         eprint!("Recovered sender: {:?}", sender);
         sender
+    }
+
+    fn generate_deal_id(
+        amount: &U256,
+        participants: &Vec<H160>,
+        operator_address: &H160,
+        operator_nonce: &U256,
+    ) -> H256 {
+        let mut message: Vec<u8> = Vec::new();
+        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&H256::from(amount));
+        message.extend_from_slice(&participants.len().to_be_bytes());
+        for sender in participants.iter() {
+            message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
+            message.extend_from_slice(sender);
+        }
+        message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
+        message.extend_from_slice(operator_address);
+        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&H256::from(operator_nonce));
+        let mut hash_raw: [u8; 32] = [0; 32];
+        hash_raw.copy_from_slice(&message.keccak256().to_vec());
+        H256::from(&hash_raw)
     }
 }
 
@@ -106,7 +130,8 @@ impl ContractInterface for Contract {
     }
 
     fn execute_deal(
-        deal_id: H256,
+        operator_address: H160,
+        operator_nonce: U256,
         nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<u8>,
@@ -115,11 +140,11 @@ impl ContractInterface for Contract {
         signatures: Vec<u8>,
     ) -> Vec<H160> {
         eprint!(
-            "In execute_deal({:?}, {:?}, {:?}, {:?})",
-            deal_id, nb_recipients, pub_keys, enc_recipients
+            "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
+            operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
         );
-        eprint!("Mixing address for deal: {:?}", deal_id);
         let keypair = Self::get_keypair();
+        let mut participants: Vec<H160> = Vec::new();
         let mut recipients: Vec<H160> = Vec::new();
         let seed = 10;
         for i in 0..nb_recipients.low_u64() as usize {
@@ -136,12 +161,13 @@ impl ContractInterface for Contract {
             user_pubkey.copy_from_slice(&pub_keys[pubkey_start..pubkey_end]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
-            let sender_start = i * SENDER_SIZE;
-            let sender_end = (i + 1) * SENDER_SIZE;
-            let mut sender_raw = [0; SENDER_SIZE];
+            let sender_start = i * ADDRESS_SIZE;
+            let sender_end = (i + 1) * ADDRESS_SIZE;
+            let mut sender_raw = [0; ADDRESS_SIZE];
             sender_raw.copy_from_slice(&senders[sender_start..sender_end]);
             let sender = H160::from(&sender_raw);
             eprint!("The sender: {:?}", sender);
+            participants.push(sender);
 
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipient, &shared_key);
@@ -172,6 +198,8 @@ impl ContractInterface for Contract {
         eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let eth_contract = EthContract::new(&mixer_eth_addr);
+        let deal_id = Self::generate_deal_id(&amount, &participants, &operator_address, &operator_nonce);
+        eprint!("The DealId: {:?}", deal_id);
         // TODO: Converting as a workaround for lack of bytes32 support
         let deal_id_uint = U256::from(deal_id);
         eth_contract.distribute(deal_id_uint, recipients.clone());

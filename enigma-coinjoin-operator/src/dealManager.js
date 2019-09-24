@@ -1,6 +1,7 @@
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 const {utils} = require('enigma-js/node');
+const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -102,6 +103,24 @@ class DealManager {
         });
     }
 
+    generateDealId(amount, participants, operatorAddress, operatorNonce) {
+        const messageInBytes = [
+            CoinjoinClient.uintToHex(this.web3, 32),
+            CoinjoinClient.uintToHex(this.web3, amount),
+            CoinjoinClient.uintToHex(this.web3, participants.length),
+        ];
+        for (const participant of participants) {
+            messageInBytes.push(CoinjoinClient.uintToHex(this.web3, 20));
+            messageInBytes.push(participant);
+        }
+        messageInBytes.push(CoinjoinClient.uintToHex(this.web3, 20));
+        messageInBytes.push(operatorAddress);
+        messageInBytes.push(CoinjoinClient.uintToHex(this.web3, 32));
+        messageInBytes.push(CoinjoinClient.uintToHex(this.web3, operatorNonce));
+        const message = this.web3.utils.bytesToHex(messageInBytes);
+        return this.web3.utils.soliditySha3({t: 'bytes', v: message});
+    }
+
     /**
      * Create new Deal on Ethereum
      * @param {Array<Deposit>} deposits - The Deposits linked to the Deal
@@ -110,22 +129,29 @@ class DealManager {
      */
     async createDealAsync(deposits, opts) {
         /** @type string */
-        const dealId = this.web3.utils.keccak256(JSON.stringify(deposits)); // TODO: Add uniqueness
-        console.log('Creating deal with deposits', dealId, deposits);
+        // const dealId = this.web3.utils.keccak256(JSON.stringify(deposits)); // TODO: Add uniqueness
+        console.log('Creating deal with deposits', deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
         const depositAmount = deposits[0].amount;
         /** @type string[] */
         const participants = deposits.map((deposit) => deposit.sender);
-        const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
-        this.store.insertDeal(deal);
         const sender = this.scClient.getOperatorAccount();
         const nonce = await this.web3.eth.getTransactionCount(sender);
+        const dealId = this.generateDealId(depositAmount, participants, sender, nonce);
+        console.log('The dealId', dealId);
+        const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
+        this.store.insertDeal(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
             from: sender,
         });
+        console.log('Got deal data from receipt', receipt);
+        const receiptDealId = receipt.events.NewDeal.returnValues.Result._dealId;
+        if (receiptDealId !== dealId) {
+            new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
+        }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
         this.store.setDealExecutable(deal);
@@ -161,7 +187,7 @@ class DealManager {
                 console.error('The signature length', sigBytes.length, sigBytes);
             }
         }
-        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }

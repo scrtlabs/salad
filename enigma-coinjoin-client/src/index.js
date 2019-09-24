@@ -45,10 +45,14 @@ class CoinjoinClient {
         return {publicKey, privateKey};
     }
 
+    static uintToHex(web3, val) {
+        return web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(val), 64));
+    }
+
     static buildDepositMessage(web3, payload) {
         const paramsInBytes = [
             web3.utils.hexToBytes(payload.sender),
-            web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(payload.amount), 64)),
+            CoinjoinClient.uintToHex(web3, payload.amount),
             web3.utils.hexToBytes(`0x${payload.encRecipient}`),
             web3.utils.hexToBytes(`0x${payload.pubKey}`),
         ];
