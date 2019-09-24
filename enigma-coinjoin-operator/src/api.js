@@ -168,7 +168,15 @@ class OperatorApi {
 
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
-        (async () => await this.handleDealProcessingAsync())();
+        (async () => {
+                try {
+                    await this.handleDealProcessingAsync();
+                } catch (e) {
+                    // TODO: Log somewhere
+                    console.error('Unable to create deal', e);
+                }
+            }
+        )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
     }
 

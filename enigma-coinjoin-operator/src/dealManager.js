@@ -147,10 +147,10 @@ class DealManager {
             gas: this.gasValues.createDeal,
             from: sender,
         });
-        console.log('Got deal data from receipt', receipt);
-        const receiptDealId = receipt.events.NewDeal.returnValues.Result._dealId;
+        console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
+        const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
-            new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
+            throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
         }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
@@ -169,7 +169,7 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {dealId, participants, depositAmount} = deal;
+        const {participants, depositAmount} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
         console.log('The deposits', deposits);
         const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
