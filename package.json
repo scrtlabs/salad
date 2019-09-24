@@ -12,7 +12,8 @@
     "dotenv": "^8.0.0",
     "enigma-coinjoin-client": "0.1.0",
     "enigma-coinjoin-operator": "0.1.0",
-    "enigma-js": "0.0.8"
+    "enigma-js": "0.0.8",
+    "openzeppelin-solidity": "^2.3.0"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
