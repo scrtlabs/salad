@@ -99,7 +99,7 @@ contract Mixer is IMixer {
     * @param _amountInWei The required deposit amount (in Wei)
     * @param _participants The sender addresses of Deal participants
     */
-    function generateDealId(uint _amountInWei, address[] memory _participants, uint nonce)
+    function generateDealId(uint _amountInWei, address[] memory _participants, uint _nonce)
     public
     view
     returns (bytes32) {
@@ -111,7 +111,7 @@ contract Mixer is IMixer {
         }
         address _sender = msg.sender;
         _message = SaladCommon.appendMessage(_message, _sender.toBytes());
-        _message = SaladCommon.appendMessage(_message, nonce.toBytes());
+        _message = SaladCommon.appendMessage(_message, _nonce.toBytes());
         bytes32 _dealId = keccak256(_message);
         return _dealId;
     }

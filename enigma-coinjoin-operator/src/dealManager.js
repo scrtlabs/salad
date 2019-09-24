@@ -119,10 +119,12 @@ class DealManager {
         const participants = deposits.map((deposit) => deposit.sender);
         const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
         this.store.insertDeal(deal);
-        const receipt = await this.contract.methods.newDeal(dealId, depositAmount, participants).send({
+        const sender = this.scClient.getOperatorAccount();
+        const nonce = await this.web3.eth.getTransactionCount(sender);
+        const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
-            from: this.scClient.getOperatorAccount(),
+            from: sender,
         });
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
