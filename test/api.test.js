@@ -4,7 +4,6 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
 const {startServer} = require('enigma-coinjoin-operator');
 const {expect} = require('chai');
 const MixerContract = artifacts.require("Mixer");
-const RLP = require('rlp');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 

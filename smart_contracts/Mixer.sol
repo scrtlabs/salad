@@ -92,17 +92,9 @@ contract Mixer is IMixer {
         return balances[_account];
     }
 
-    /**
-    * Generate a DealId
-    * H(Amount, Sender Addresses, Relayer Ethereum Address, Relayer Ethereum Nonce)
-    *
-    * @param _amountInWei The required deposit amount (in Wei)
-    * @param _participants The sender addresses of Deal participants
-    */
-    function generateDealId(uint _amountInWei, address[] memory _participants, uint _nonce)
-    public
-    view
-    returns (bytes32) {
+    function _generateDealIdMessage(uint _amountInWei, address[] memory _participants, uint _nonce)
+    private
+    returns (bytes memory) {
         bytes memory _message;
         _message = SaladCommon.appendMessage(_message, _amountInWei.toBytes());
         _message = SaladCommon.appendMessageArrayLength(_participants.length, _message);
@@ -112,6 +104,22 @@ contract Mixer is IMixer {
         address _sender = msg.sender;
         _message = SaladCommon.appendMessage(_message, _sender.toBytes());
         _message = SaladCommon.appendMessage(_message, _nonce.toBytes());
+        return _message;
+    }
+
+
+    /**
+    * Generate a DealId
+    * H(Amount, Sender Addresses, Relayer Ethereum Address, Relayer Ethereum Nonce)
+    *
+    * @param _amountInWei The required deposit amount (in Wei)
+    * @param _participants The sender addresses of Deal participants
+    */
+    function generateDealId(uint _amountInWei, address[] memory _participants, uint _nonce)
+    public
+    returns (bytes32) {
+        bytes memory _message = _generateDealIdMessage(_amountInWei, _participants, _nonce);
+        //bytes memory _message = "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000008ac7230489e8000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000014ffcf8fdee72ac11b5c542428b35eef5769c409f0000000000000000000000000000000000000000000000000000000000000001422d491bde2303f2f43325b2108d26f1eaba1e32b0000000000000000000000000000000000000000000000000000000000000014ca35b7d915458ef540ade6068dfe2f44e8fa733c00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001";
         bytes32 _dealId = keccak256(_message);
         return _dealId;
     }
