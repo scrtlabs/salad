@@ -65,7 +65,7 @@ class CoinjoinClient {
         ];
         let messageBytes = [];
         for (const param of paramsInBytes) {
-            const len = CoinjoinClient.uint256ToBytes(web3, param.length);
+            const len = web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(param.length), 8));
             messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
