@@ -158,11 +158,10 @@ class DealManager {
         console.log('The encrypted participants', encRecipientsBytes);
         console.log('The encrypted participants count', encRecipientsBytes.map(d => d.length));
         const nbRecipient = deposits.length;
-        const pubKeysPayload = `0x${deposits.map(d => d.pubKey).join('')}`;
-        const encRecipientsPayload = `0x${deposits.map(d => d.encRecipient).join('')}`;
-        const sendersPayload = `0x${deposits.map(d => utils.remove0x(d.sender)).join('')}`;
-        const signaturesPayload = `0x${deposits.map(d => utils.remove0x(d.signature)).join('')}`;
-        console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
+        const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
+        const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);
+        const sendersPayload = deposits.map(d => d.sender);
+        const signaturesPayload = deposits.map(d => d.signature);
         for (const deposit of deposits) {
             const sigBytes = this.web3.utils.hexToBytes(deposit.signature);
             if (sigBytes.length !== 65) {

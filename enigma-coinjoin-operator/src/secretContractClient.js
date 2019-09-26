@@ -90,8 +90,8 @@ class SecretContractClient {
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, opts) {
-        console.log('Calling `execute_deal(uint256,uint256,bytes,bytes,bytes,bytes)`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
-        const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes,bytes,bytes,bytes)';
+        console.log('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
+        const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const operatorAddress = this.getOperatorAccount();
         const operatorNonce = await this.web3.eth.getTransactionCount(operatorAddress);
         const taskArgs = [
@@ -99,10 +99,10 @@ class SecretContractClient {
             [operatorNonce, 'uint256'],
             [nbRecipient, 'uint256'],
             [amount, 'uint256'],
-            [pubKeysPayload, 'bytes'],
-            [encRecipientsPayload, 'bytes'],
-            [sendersPayload, 'bytes'],
-            [signaturesPayload, 'bytes'],
+            [pubKeysPayload, 'bytes[]'],
+            [encRecipientsPayload, 'bytes[]'],
+            [sendersPayload, 'address[]'],
+            [signaturesPayload, 'bytes[]'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);

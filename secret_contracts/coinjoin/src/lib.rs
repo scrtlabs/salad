@@ -1,7 +1,5 @@
-#![no_std]
-
 use eng_wasm::*;
-use eng_wasm::{String, Vec, H160, H256, U256};
+use eng_wasm::{String, Vec, H160, H256, U256, eprint, decrypt, generate_key, SymmetricKey};
 use eng_wasm_derive::eth_contract;
 use eng_wasm_derive::pub_interface;
 use enigma_crypto::hash::Keccak256;
@@ -31,10 +29,10 @@ trait ContractInterface {
         operator_nonce: U256,
         nb_recipients: U256,
         amount: U256,
-        pub_keys: Vec<u8>,
-        enc_recipients: Vec<u8>,
-        senders: Vec<u8>,
-        signatures: Vec<u8>,
+        pub_keys: Vec<Vec<u8>>,
+        enc_recipients: Vec<Vec<u8>>,
+        senders: Vec<H160>,
+        signatures: Vec<Vec<u8>>,
     ) -> Vec<H160>;
 }
 
@@ -61,7 +59,7 @@ impl Contract {
         signature: [u8; SIG_SIZE],
         sender: &H160,
         amount: &U256,
-        enc_recipient: &[u8; ENC_RECIPIENT_SIZE],
+        enc_recipient: &[u8],
         user_pubkey: &[u8; PUB_KEY_SIZE],
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
@@ -134,56 +132,37 @@ impl ContractInterface for Contract {
         operator_nonce: U256,
         nb_recipients: U256,
         amount: U256,
-        pub_keys: Vec<u8>,
-        enc_recipients: Vec<u8>,
-        senders: Vec<u8>,
-        signatures: Vec<u8>,
+        pub_keys: Vec<Vec<u8>>,
+        enc_recipients: Vec<Vec<u8>>,
+        senders: Vec<H160>,
+        signatures: Vec<Vec<u8>>,
     ) -> Vec<H160> {
         eprint!(
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
         );
         let keypair = Self::get_keypair();
-        let mut participants: Vec<H160> = Vec::new();
         let mut recipients: Vec<H160> = Vec::new();
         let seed = 10;
         for i in 0..nb_recipients.low_u64() as usize {
             eprint!("Decrypting recipient: {}", i);
-            let start = i * ENC_RECIPIENT_SIZE;
-            let end = (i + 1) * ENC_RECIPIENT_SIZE;
-            let mut enc_recipient = [0; ENC_RECIPIENT_SIZE];
-            enc_recipient.copy_from_slice(&enc_recipients[start..end]);
-            eprint!("The encrypted recipient: {:?}", enc_recipient.to_vec());
-
-            let pubkey_start = i * PUB_KEY_SIZE;
-            let pubkey_end = (i + 1) * PUB_KEY_SIZE;
             let mut user_pubkey = [0; PUB_KEY_SIZE];
-            user_pubkey.copy_from_slice(&pub_keys[pubkey_start..pubkey_end]);
+            user_pubkey.copy_from_slice(&pub_keys[i]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
-            let sender_start = i * ADDRESS_SIZE;
-            let sender_end = (i + 1) * ADDRESS_SIZE;
-            let mut sender_raw = [0; ADDRESS_SIZE];
-            sender_raw.copy_from_slice(&senders[sender_start..sender_end]);
-            let sender = H160::from(&sender_raw);
-            eprint!("The sender: {:?}", sender);
-            participants.push(sender);
-
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
-            let plaintext = decrypt(&enc_recipient, &shared_key);
+            let plaintext = decrypt(&enc_recipients[i], &shared_key);
             let recipient = H160::from(&plaintext[0..20]);
             eprint!("The decrypted recipient address: {:?}", recipient);
 
-            let sig_start = i * SIG_SIZE;
-            let sig_end = (i + 1) * SIG_SIZE;
             let mut signature = [0; SIG_SIZE];
-            signature.copy_from_slice(&signatures[sig_start..sig_end]);
+            signature.copy_from_slice(&signatures[i]);
 
-            let sig_sender = Self::verify_signature(signature, &sender, &amount, &enc_recipient, &user_pubkey);
-            if sig_sender != sender {
+            let sig_sender = Self::verify_signature(signature, &senders[i], &amount, &enc_recipients[i], &user_pubkey);
+            if sig_sender != senders[i] {
                 panic!(
                     "Invalid sender recovered from the signature: {:?} != {:?}",
-                    sig_sender, sender
+                    sig_sender, senders[i]
                 );
             }
             recipients.push(recipient);
@@ -198,7 +177,7 @@ impl ContractInterface for Contract {
         eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let eth_contract = EthContract::new(&mixer_eth_addr);
-        let deal_id = Self::generate_deal_id(&amount, &participants, &operator_address, &operator_nonce);
+        let deal_id = Self::generate_deal_id(&amount, &senders, &operator_address, &operator_nonce);
         eprint!("The DealId: {:?}", deal_id);
         // TODO: Converting as a workaround for lack of bytes32 support
         let deal_id_uint = U256::from(deal_id);
