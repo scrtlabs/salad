@@ -15,7 +15,8 @@ static ENCRYPTION_KEY: &str = "encryption_key";
 
 const ENC_RECIPIENT_SIZE: usize = 70;
 const PUB_KEY_SIZE: usize = 64;
-const UINT_SIZE: usize = 32;
+const UNIT256_SIZE: usize = 32;
+const UINT32_SIZE: usize = 16;
 const SIG_SIZE: usize = 65;
 const ADDRESS_SIZE: usize = 20;
 
@@ -66,7 +67,7 @@ impl Contract {
         let mut message: Vec<u8> = Vec::new();
         message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
         message.extend_from_slice(sender);
-        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
         message.extend_from_slice(&H256::from(amount));
         message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
         message.extend_from_slice(enc_recipient);
@@ -90,18 +91,25 @@ impl Contract {
         operator_address: &H160,
         operator_nonce: &U256,
     ) -> H256 {
+        let u32_prefix: [u8; 4] = [0; 4];
         let mut message: Vec<u8> = Vec::new();
-        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&u32_prefix);
+        message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
         message.extend_from_slice(&H256::from(amount));
+        message.extend_from_slice(&u32_prefix);
         message.extend_from_slice(&participants.len().to_be_bytes());
         for sender in participants.iter() {
+            message.extend_from_slice(&u32_prefix);
             message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
             message.extend_from_slice(sender);
         }
+        message.extend_from_slice(&u32_prefix);
         message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
         message.extend_from_slice(operator_address);
-        message.extend_from_slice(&UINT_SIZE.to_be_bytes());
+        message.extend_from_slice(&u32_prefix);
+        message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
         message.extend_from_slice(&H256::from(operator_nonce));
+        eprint!("The DealId message: {:?}", message);
         let mut hash_raw: [u8; 32] = [0; 32];
         hash_raw.copy_from_slice(&message.keccak256().to_vec());
         H256::from(&hash_raw)

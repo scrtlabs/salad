@@ -14,6 +14,7 @@ const DEAL_STATUS = {
  * @property {string} dealId - The Deal Identifier
  * @property {string} depositAmount - The deposit amount in wei
  * @property {string[]} participants - A list of participants Ethereum addresses
+ * @property {string} nonce - The deal nonce (operator tx count)
  * @property {number} status - A list of participants Ethereum addresses
  * @property {string|null} _tx - The `createDeal` Ethereum transaction hash
  */
@@ -118,10 +119,15 @@ class DealManager {
         /** @type string[] */
         const participants = deposits.map((deposit) => deposit.sender);
         const sender = this.scClient.getOperatorAccount();
-        const nonce = await this.web3.eth.getTransactionCount(sender);
-        const dealId = CoinjoinClient.generateDealId(this.web3, depositAmount, participants, sender, nonce);
+        const nonce = (await this.web3.eth.getTransactionCount(sender)).toString();
+        console.log('The nonce', nonce);
+        const dealIdMessage = CoinjoinClient.generateDealIdMessage(this.web3, depositAmount, participants, sender, nonce);
+        const dealId = this.web3.utils.soliditySha3({
+            t: 'bytes',
+            v: this.web3.utils.bytesToHex(dealIdMessage),
+        });
         console.log('The dealId', dealId);
-        const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
+        const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         this.store.insertDeal(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
@@ -151,12 +157,8 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {participants, depositAmount} = deal;
+        const {participants, depositAmount, nonce} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
-        console.log('The deposits', deposits);
-        const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
-        console.log('The encrypted participants', encRecipientsBytes);
-        console.log('The encrypted participants count', encRecipientsBytes.map(d => d.length));
         const nbRecipient = deposits.length;
         const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
         const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);
@@ -168,7 +170,7 @@ class DealManager {
                 console.error('The signature length', sigBytes.length, sigBytes);
             }
         }
-        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }

@@ -89,14 +89,13 @@ class SecretContractClient {
         return this.pubKey;
     }
 
-    async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, opts) {
+    async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
         console.log('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
         const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const operatorAddress = this.getOperatorAccount();
-        const operatorNonce = await this.web3.eth.getTransactionCount(operatorAddress);
         const taskArgs = [
             [operatorAddress, 'address'],
-            [operatorNonce, 'uint256'],
+            [nonce, 'uint256'],
             [nbRecipient, 'uint256'],
             [amount, 'uint256'],
             [pubKeysPayload, 'bytes[]'],
