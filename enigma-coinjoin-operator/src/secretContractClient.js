@@ -89,17 +89,19 @@ class SecretContractClient {
         return this.pubKey;
     }
 
-    async executeDealAsync(dealId, nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, opts) {
-        console.log('Calling `execute_deal(bytes32,uint256,uint256,bytes,bytes,bytes,bytes)`', dealId, nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
-        const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes,bytes,bytes,bytes)';
+    async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
+        console.log('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
+        const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])';
+        const operatorAddress = this.getOperatorAccount();
         const taskArgs = [
-            [dealId, 'bytes32'],
+            [operatorAddress, 'address'],
+            [nonce, 'uint256'],
             [nbRecipient, 'uint256'],
             [amount, 'uint256'],
-            [pubKeysPayload, 'bytes'],
-            [encRecipientsPayload, 'bytes'],
-            [sendersPayload, 'bytes'],
-            [signaturesPayload, 'bytes'],
+            [pubKeysPayload, 'bytes[]'],
+            [encRecipientsPayload, 'bytes[]'],
+            [sendersPayload, 'address[]'],
+            [signaturesPayload, 'bytes[]'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);

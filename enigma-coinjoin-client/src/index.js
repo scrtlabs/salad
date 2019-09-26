@@ -45,12 +45,27 @@ class CoinjoinClient {
         return {publicKey, privateKey};
     }
 
+    static uint32ToBytes(web3, val) {
+        return web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(val), 16));
+    }
+
+    static uint256ToBytes(web3, val) {
+        return web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(val), 64));
+    }
+
+    static hexToBytes(web3, val) {
+        if (!val.startsWith('0x')) {
+            val = `0x${val}`;
+        }
+        return web3.utils.hexToBytes(val);
+    }
+
     static buildDepositMessage(web3, payload) {
         const paramsInBytes = [
             web3.utils.hexToBytes(payload.sender),
-            web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(payload.amount), 64)),
-            web3.utils.hexToBytes(`0x${payload.encRecipient}`),
-            web3.utils.hexToBytes(`0x${payload.pubKey}`),
+            CoinjoinClient.uint256ToBytes(web3, payload.amount),
+            CoinjoinClient.hexToBytes(web3, payload.encRecipient),
+            CoinjoinClient.hexToBytes(web3, payload.pubKey),
         ];
         let messageBytes = [];
         for (const param of paramsInBytes) {
@@ -59,6 +74,46 @@ class CoinjoinClient {
             messageBytes = messageBytes.concat(param);
         }
         console.log('The message bytes to sign', messageBytes);
+        return messageBytes;
+    }
+
+    /**
+     * Generate DealId
+     * @param web3
+     * @param {string} amount The required deposit amount (in Wei)
+     * @param {Array<string>} participants The sender addresses of Deal participants
+     * @param {string} operatorAddress The operator Ethereum address
+     * @param {string} operatorNonce The operator transaction count
+     */
+    static generateDealIdMessage(web3, amount, participants, operatorAddress, operatorNonce) {
+        console.log('generateDealId(', amount, participants, operatorAddress, operatorNonce, ')');
+        const participantArray = [CoinjoinClient.uint32ToBytes(web3, participants.length)];
+        for (const participant of participants) {
+            const participantBytes = CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(participant));
+            participantArray.push(CoinjoinClient.uint32ToBytes(web3, participantBytes.length));
+            participantArray.push(participantBytes);
+        }
+        const paramsInBytes = [
+            CoinjoinClient.uint256ToBytes(web3, amount),
+            participantArray,
+            CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(operatorAddress)),
+            CoinjoinClient.uint256ToBytes(web3, operatorNonce),
+        ];
+        console.log('Building DealId from params', paramsInBytes);
+        let messageBytes = [];
+        for (let i = 0; i < paramsInBytes.length; i++) {
+            const param = paramsInBytes[i];
+            if (i === 1) {
+                for (const paramVal of param) {
+                    messageBytes = messageBytes.concat(paramVal);
+                }
+            } else {
+                const len = CoinjoinClient.uint32ToBytes(web3, param.length);
+                messageBytes = messageBytes.concat(len);
+                messageBytes = messageBytes.concat(param);
+            }
+        }
+        console.log('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
     }
 

@@ -1,6 +1,7 @@
 // TODO: Move path to config and reference Github
 const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
 const {utils} = require('enigma-js/node');
+const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -13,6 +14,7 @@ const DEAL_STATUS = {
  * @property {string} dealId - The Deal Identifier
  * @property {string} depositAmount - The deposit amount in wei
  * @property {string[]} participants - A list of participants Ethereum addresses
+ * @property {string} nonce - The deal nonce (operator tx count)
  * @property {number} status - A list of participants Ethereum addresses
  * @property {string|null} _tx - The `createDeal` Ethereum transaction hash
  */
@@ -110,20 +112,34 @@ class DealManager {
      */
     async createDealAsync(deposits, opts) {
         /** @type string */
-        const dealId = this.web3.utils.keccak256(JSON.stringify(deposits)); // TODO: Add uniqueness
-        console.log('Creating deal with deposits', dealId, deposits);
+        console.log('Creating deal with deposits', deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
         const depositAmount = deposits[0].amount;
         /** @type string[] */
         const participants = deposits.map((deposit) => deposit.sender);
-        const deal = {dealId, depositAmount, participants, _tx: null, status: DEAL_STATUS.NEW};
+        const sender = this.scClient.getOperatorAccount();
+        const nonce = (await this.web3.eth.getTransactionCount(sender)).toString();
+        console.log('The nonce', nonce);
+        const dealIdMessage = CoinjoinClient.generateDealIdMessage(this.web3, depositAmount, participants, sender, nonce);
+        const dealId = this.web3.utils.soliditySha3({
+            t: 'bytes',
+            v: this.web3.utils.bytesToHex(dealIdMessage),
+        });
+        console.log('The dealId', dealId);
+        const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         this.store.insertDeal(deal);
-        const receipt = await this.contract.methods.newDeal(dealId, depositAmount, participants).send({
+        const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
-            from: this.scClient.getOperatorAccount(),
+            from: sender,
         });
+        console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
+        const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
+        if (receiptDealId !== dealId) {
+            // TODO: Throw error
+            // throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
+        }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
         this.store.setDealExecutable(deal);
@@ -141,25 +157,20 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {dealId, participants, depositAmount} = deal;
+        const {participants, depositAmount, nonce} = deal;
         const deposits = participants.map(p => this.store.getDeposit(p));
-        console.log('The deposits', deposits);
-        const encRecipientsBytes = deposits.map(d => this.web3.utils.hexToBytes(`0x${d.encRecipient}`));
-        console.log('The encrypted participants', encRecipientsBytes);
-        console.log('The encrypted participants count', encRecipientsBytes.map(d => d.length));
         const nbRecipient = deposits.length;
-        const pubKeysPayload = `0x${deposits.map(d => d.pubKey).join('')}`;
-        const encRecipientsPayload = `0x${deposits.map(d => d.encRecipient).join('')}`;
-        const sendersPayload = `0x${deposits.map(d => utils.remove0x(d.sender)).join('')}`;
-        const signaturesPayload = `0x${deposits.map(d => utils.remove0x(d.signature)).join('')}`;
-        console.log('The merged encrypted recipients', this.web3.utils.hexToBytes(encRecipientsPayload));
+        const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
+        const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);
+        const sendersPayload = deposits.map(d => d.sender);
+        const signaturesPayload = deposits.map(d => d.signature);
         for (const deposit of deposits) {
             const sigBytes = this.web3.utils.hexToBytes(deposit.signature);
             if (sigBytes.length !== 65) {
                 console.error('The signature length', sigBytes.length, sigBytes);
             }
         }
-        const task = await this.scClient.executeDealAsync(dealId, nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, taskRecordOpts);
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }
