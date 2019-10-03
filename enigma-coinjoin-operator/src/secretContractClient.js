@@ -12,7 +12,8 @@ class SecretContractClient {
     constructor(web3, scAddr, enigmaUrl, accountIndex = 0) {
         this.enigmaUrl = enigmaUrl;
         this.scAddr = scAddr;
-        this.pubKey = null;
+        /** @type EncryptionPubKey|null */
+        this.pubKeyData = null;
         this.web3 = web3;
         this.accountIndex = accountIndex;
         this.accounts = [];
@@ -48,8 +49,12 @@ class SecretContractClient {
         if (task.ethStatus !== 2) {
             throw new Error(`Illegal state to fetch results for task: ${taskWithResults.taskId}`);
         }
+        const encryptedOutput = taskWithResults.encryptedAbiEncodedOutputs;
         const taskWithPlaintextResults = await this.enigma.decryptTaskResult(taskWithResults);
-        return taskWithPlaintextResults.decryptedOutput;
+        return {
+            encrypted: encryptedOutput,
+            plaintext: taskWithPlaintextResults.decryptedOutput,
+        };
     }
 
     async waitTaskSuccessAsync(task) {
@@ -73,20 +78,22 @@ class SecretContractClient {
         });
     }
 
-    async fetchPubKeyAsync(opts) {
+    async setPubKeyDataAsync(opts) {
         console.log('Calling `get_pub_key`');
         const taskFn = 'get_pub_key()';
         const taskArgs = [];
         const {taskGasLimit, taskGasPx} = opts;
+        const keyPair = this.enigma.obtainTaskKeyPair();
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('The completed task', task);
         const output = await this.fetchOutput(task);
-        // TODO: Why is this here?
-        const prefix = '00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040';
-        this.pubKey = output.replace(prefix, '');
-        console.log('The pubKey output', this.pubKey);
-        return this.pubKey;
+        this.pubKeyData = {
+            taskId: task.taskId,
+            encryptedOutput: output.encrypted,
+            userPrivateKey: keyPair.privateKey,
+            workerPubKey: task.workerEncryptionKey,
+        };
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
@@ -112,13 +119,13 @@ class SecretContractClient {
         return task;
     }
 
-    async getPubKeyAsync(opts) {
-        if (this.pubKey === null) {
-            console.log('PubKey not found in cache, fetching  from Enigma...');
-            this.pubKey = await this.fetchPubKeyAsync(opts);
-            console.log('Storing pubKey in cache', this.pubKey);
+    async getPubKeyDataAsync(opts) {
+        if (!this.pubKeyData) {
+            console.log('PubKey not found in cache, fetching from Enigma...');
+            await this.setPubKeyDataAsync(opts);
+            console.log('Storing pubKey in cache', this.pubKeyData);
         }
-        return this.pubKey;
+        return this.pubKeyData;
     }
 }
 

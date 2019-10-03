@@ -29,6 +29,13 @@ const DEAL_STATUS = {
  */
 
 /**
+ * @typedef {Object} EncryptionPubKey
+ * @property {string} encryptedOutput - The encrypted output string
+ * @property {string} userPrivateKey - The private key that decrypts the output
+ * @property {string} workerPubKey - The the worker public key to decrypt the output
+ * @property {string} taskId - The TaskId of the task that fetched the public key
+ */
+/**
  * Coordinate deal execution
  */
 class DealManager {

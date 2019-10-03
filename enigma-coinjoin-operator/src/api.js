@@ -118,11 +118,11 @@ class OperatorApi {
      * Fetch the encryption public key and store it in cache
      * @returns {Promise<OperatorAction>}
      */
-    async cachePublicKeyAsync() {
+    async getEncryptionPubKeyAsync() {
         console.log('Sending encryption public key to new connected client');
         const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(0.001)};
-        const pubKey = await this.sc.getPubKeyAsync(taskRecordOpts);
-        return {action: PUB_KEY_UPDATE, payload: {pubKey}};
+        const pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
+        return {action: PUB_KEY_UPDATE, payload: {pubKeyData}};
     }
 
     /**

@@ -32,7 +32,8 @@ class CoinjoinClient {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
-        this.pubKey = null;
+        /** @type EncryptionPubKey|null */
+        this.pubKeyData = null;
         this.threshold = null;
         this.quorum = 0;
         this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
@@ -158,8 +159,8 @@ class CoinjoinClient {
             const {action, payload} = JSON.parse(msg);
             switch (action) {
                 case PUB_KEY_UPDATE:
-                    const {pubKey} = payload;
-                    this.pubKey = pubKey;
+                    const {pubKeyData} = payload;
+                    this.pubKeyData = pubKeyData;
                     break;
                 case THRESHOLD_UPDATE:
                     const {threshold} = payload;
@@ -242,20 +243,39 @@ class CoinjoinClient {
     }
 
     /**
+     * Verify the public key against the registry
+     * @returns {Promise<void>}
+     */
+    async verifyPubKeyAsync() {
+        console.log('Verifying pub key data against on-chain receipt', this.pubKeyData);
+    }
+
+    getPlaintextPubKey() {
+        console.log('Decrypting pubKey from data', this.pubKeyData);
+        const derivedKey = utils.getDerivedKey(this.pubKeyData.workerPubKey, this.pubKeyData.userPrivateKey);
+        const output = utils.decryptMessage(derivedKey, this.pubKeyData.encryptedOutput);
+        // TODO: Why is this here?
+        const prefix = '00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040';
+        return output.replace(prefix, '');
+    }
+
+    /**
      * Encrypt the user recipient address in-memory. Plaintext recipient should not leave the browser.
      * @param  {string} recipient - The plaintext recipient Ethereum address
      * @returns {Promise<string>}
      */
     async encryptRecipientAsync(recipient) {
-        if (!this.pubKey) {
+        if (!this.pubKeyData) {
             await new Promise((resolve) => {
                 this.onPubKey((p) => resolve(p));
             });
         }
-        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKey);
+        await this.verifyPubKeyAsync();
+        const pubKey = this.getPlaintextPubKey();
+        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKeyData);
         const {privateKey} = this.keyPair;
         console.log('Deriving encryption from private key', privateKey);
-        const derivedKey = utils.getDerivedKey(this.pubKey, privateKey);
+        const derivedKey = utils.getDerivedKey(pubKey, privateKey);
         return utils.encryptMessage(derivedKey, recipient);
     }
 
