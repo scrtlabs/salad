@@ -2,14 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
 const dotenv = require('dotenv');
-const Mixer = artifacts.require('Mixer.sol');
+const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-var EnigmaContract;
+let EnigmaContract;
 if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW' && process.env.SGX_MODE != 'HW')) {
     console.log(`Error reading ".env" file, aborting....`);
     process.exit();
@@ -21,7 +21,7 @@ if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW'
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const provider = new Web3.providers.HttpProvider('http://localhost:9545');
 const web3 = new Web3(provider);
-var enigma = null;
+let enigma = null;
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -55,9 +55,8 @@ async function deploySecretContract(config, mixerEthAddress) {
     console.log('SC ADDRESS', scTask.scAddr);
 
     // Verify deployed contract
-    var result = await enigma.admin.isDeployed(scTask.scAddr);
+    const result = await enigma.admin.isDeployed(scTask.scAddr);
     if (result) {
-
         fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
             if (err) {
                 return console.log(err);
@@ -89,18 +88,21 @@ module.exports = async function (deployer, network, accounts) {
 
     // Deploy your Smart and Secret contracts below this point:
 
-    deployer.deploy(Mixer).then(async () => {
-        console.log(`Smart Contract "Mixer.Sol" has been deployed at ETH address: ${Mixer.address}`);
+    const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
+    const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
+    const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
+    console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent,')');
+    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent);
+    console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
 
-        const config = {
-            filename: 'coinjoin.wasm',
-            fn: 'construct()',
-            args: [],
-            gasLimit: 2000000,
-            gasPrice: utils.toGrains(0.001),
-            from: accounts[0]
-        };
-        const address = await deploySecretContract(config, Mixer.address);
-        console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
-    });
+    const config = {
+        filename: 'salad.wasm',
+        fn: 'construct()',
+        args: [],
+        gasLimit: 2000000,
+        gasPrice: utils.toGrains(0.001),
+        from: accounts[0]
+    };
+    const address = await deploySecretContract(config, Salad.address);
+    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
 };

@@ -1,6 +1,5 @@
 // TODO: Move path to config and reference Github
-const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
-const {utils} = require('enigma-js/node');
+const SaladContract = require('../../build/smart_contracts/Salad.json');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 const DEAL_STATUS = {
@@ -47,7 +46,7 @@ class DealManager {
         this.scClient = scClient;
         this.store = store;
         this.threshold = threshold;
-        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
         this.gasValues = gasValues;
     }
 

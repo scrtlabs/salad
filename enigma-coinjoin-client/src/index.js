@@ -25,7 +25,7 @@ if (typeof window === 'undefined') {
  */
 
 // TODO: Move path to config and reference Github
-const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
+const SaladContract = require('../../build/smart_contracts/Salad.json');
 
 class CoinjoinClient {
     constructor(contractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
@@ -36,7 +36,7 @@ class CoinjoinClient {
         this.pubKeyData = null;
         this.threshold = null;
         this.quorum = 0;
-        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
     }
 
     static obtainKeyPair() {

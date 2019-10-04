@@ -1,11 +1,11 @@
 pragma solidity ^0.5.1;
 
-import "./IMixer.sol";
+import "./ISalad.sol";
 import {SaladCommon} from "./utils/SaladCommon.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
-import { Bytes } from "./utils/Bytes.sol";
+import {Bytes} from "./utils/Bytes.sol";
 
-contract Mixer is IMixer {
+contract Salad is ISalad {
     using SafeMath for uint256;
     using Bytes for address;
     using Bytes for uint256;
@@ -24,6 +24,9 @@ contract Mixer is IMixer {
     mapping(bytes32 => Deal) deals;
     mapping(address => uint) balances;
     bytes32[] dealIds;
+    uint depositLockPeriodInBlocks;
+    uint dealIntervalInBlocks;
+    uint relayerFeePercent;
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
     event Deposit(address indexed _depositor, uint _value, uint _balance, bool _success, string _err);
@@ -42,6 +45,11 @@ contract Mixer is IMixer {
         _;
     }
 
+    constructor(uint _depositLockPeriodInBlocks, uint _dealIntervalInBlocks, uint _relayerFeePercent) public {
+        depositLockPeriodInBlocks = _depositLockPeriodInBlocks;
+        dealIntervalInBlocks = _dealIntervalInBlocks;
+        relayerFeePercent = _relayerFeePercent;
+    }
 
     /**
     * Create a new Pending Deal
@@ -149,7 +157,7 @@ contract Mixer is IMixer {
     /**
     * Query Deals by status code
     */
-    function listDeals(uint status)
+    function listDeals(uint _status)
     public
     view
     returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory, uint[] memory) {

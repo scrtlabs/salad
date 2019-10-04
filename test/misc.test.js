@@ -1,6 +1,4 @@
-//generateDealId( 10000000000000000000 [ '0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0',
-//   '0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b' ]
-const MixerContract = artifacts.require("Mixer");
+const SaladContract = artifacts.require('Salad');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 contract('Mixer', (accounts) => {
@@ -19,7 +17,7 @@ contract('Mixer', (accounts) => {
         console.log('The generated DealId message bytes', messageBytes);
         const message = web3.utils.bytesToHex(messageBytes);
         console.log('Message 1:', message);
-        const instance = await MixerContract.deployed();
+        const instance = await SaladContract.deployed();
         const contractMessage = await instance.generateDealIdMessage.call(amount, participants, nonce);
         console.log('Message 2:', contractMessage);
         expect(contractMessage).to.equal(message);

@@ -3,11 +3,11 @@ const fs = require('fs');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 const {startServer} = require('enigma-coinjoin-operator');
 const {expect} = require('chai');
-const MixerContract = artifacts.require("Mixer");
+const SaladContract = artifacts.require('Salad');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 
-contract('Mixer', () => {
+contract('Salad', () => {
     let cjc;
     let opts;
     let token;
@@ -16,9 +16,9 @@ contract('Mixer', () => {
     before(async () => {
         const operatorAccountIndex = 0;
         const provider = web3._provider;
-        const scAddr = fs.readFileSync(`${__dirname}/coinjoin.txt`, 'utf-8');
+        const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
         const threshold = 2;
-        const contractAddr = web3.utils.toChecksumAddress(MixerContract.address);
+        const contractAddr = web3.utils.toChecksumAddress(SaladContract.address);
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         console.log('Contract address:', contractAddr);
         await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);

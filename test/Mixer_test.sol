@@ -1,10 +1,10 @@
 pragma solidity >=0.4.0 <0.6.0;
 import "remix_tests.sol"; // this import is automatically injected by Remix.
-import "../smart_contracts/Mixer.sol";
+import "../smart_contracts/Salad.sol";
 
 // file name has to end with '_test.sol'
 contract Mixer_test {
-    Mixer salad;
+    Salad salad;
     address[] participants;
 
     function beforeAll() public {

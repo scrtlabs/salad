@@ -84,6 +84,7 @@ class SecretContractClient {
         const taskArgs = [];
         const {taskGasLimit, taskGasPx} = opts;
         const keyPair = this.enigma.obtainTaskKeyPair();
+        // TODO: Retry on failure
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('The completed task', task);
@@ -111,7 +112,9 @@ class SecretContractClient {
             [signaturesPayload, 'bytes[]'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
+        // TODO: Retry of Task Record fails
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        // TODO: Retry of task fails
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('Got execute deal task', task);
         const output = await this.fetchOutput(task);
