@@ -91,8 +91,9 @@ module.exports = async function (deployer, network, accounts) {
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
     const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
-    console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent,')');
-    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent);
+    const participationThreshold = process.env.PARTICIPATION_THRESHOLD;
+    console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
+    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold);
     console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
 
     const config = {

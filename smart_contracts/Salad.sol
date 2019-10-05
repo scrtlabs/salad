@@ -27,6 +27,7 @@ contract Salad is ISalad {
     uint depositLockPeriodInBlocks;
     uint dealIntervalInBlocks;
     uint relayerFeePercent;
+    uint participationThreshold;
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
     event Deposit(address indexed _depositor, uint _value, uint _balance, bool _success, string _err);
@@ -45,10 +46,11 @@ contract Salad is ISalad {
         _;
     }
 
-    constructor(uint _depositLockPeriodInBlocks, uint _dealIntervalInBlocks, uint _relayerFeePercent) public {
+    constructor(uint _depositLockPeriodInBlocks, uint _dealIntervalInBlocks, uint _relayerFeePercent, uint _participationThreshold) public {
         depositLockPeriodInBlocks = _depositLockPeriodInBlocks;
         dealIntervalInBlocks = _dealIntervalInBlocks;
         relayerFeePercent = _relayerFeePercent;
+        participationThreshold = _participationThreshold;
     }
 
     /**
