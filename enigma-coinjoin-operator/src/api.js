@@ -1,5 +1,5 @@
 const {SecretContractClient} = require("./secretContractClient");
-const {MemoryStore} = require("./memoryStore");
+const {Store} = require("./store");
 const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
@@ -15,7 +15,7 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 class OperatorApi {
     constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0) {
-        this.store = new MemoryStore(); // TODO: Use db backend
+        this.store = new Store();
         this.web3 = new Web3(provider);
         this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl, accountIndex);
         this.defaultTaskRecordOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
@@ -44,6 +44,10 @@ class OperatorApi {
             await store.closeAsync();
             process.exit();
         });
+    }
+
+    async shutdownAsync() {
+        await this.store.closeAsync();
     }
 
     /**

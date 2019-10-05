@@ -2,6 +2,16 @@ version: '3'
 
 services:
 
+#  coinjoin:
+#    build:
+#      context: .
+#    volumes:
+#      - ".:/root/src"
+#    network_mode: host
+#    hostname: coinjoin
+#    stdin_open: true
+#    tty: true
+
   contract:
     image: enigmampc/enigma_contract:${DOCKER_TAG}
     stdin_open: true
@@ -58,15 +68,17 @@ services:
       - "${BUILD_CONTRACTS_PATH}:/root/enigma-contract/build/contracts"
 
   core:
-    image: enigmampc/enigma_core_sw:${DOCKER_TAG}
+    image: enigmampc/enigma_core_hw:${DOCKER_TAG}
     stdin_open: true
     tty: true
     hostname: core
     networks:
       - net
+    devices:
+      - "/dev/isgx:/dev/isgx"
 
   km:
-    image: enigmampc/enigma_km_sw:${DOCKER_TAG}
+    image: enigmampc/enigma_km_hw:${DOCKER_TAG}
     stdin_open: true
     tty: true
     hostname: km
@@ -74,9 +86,25 @@ services:
       - net
     volumes:
       - "shared:/root/.enigma"
+    devices:
+      - "/dev/isgx:/dev/isgx"
+
+  mongo:
+    container_name: mongo
+    hostname: mongo
+    image: mongo
+    ports:
+      - "27017:27017"
+    networks:
+      - net
+    volumes:
+      - "db:/data/db"
 
 networks:
   net:
 
 volumes:
   shared:
+    driver: local
+  db:
+    driver: local

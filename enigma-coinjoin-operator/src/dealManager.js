@@ -77,7 +77,7 @@ class DealManager {
         console.log('Registering deposit', sender, amount, encRecipient);
         await this.verifyDepositAmountAsync(sender, amount);
         const deposit = {sender, amount, pubKey, encRecipient, signature};
-        this.store.insertDeposit(deposit);
+        await this.store.insertDepositAsync(deposit);
         return deposit;
     }
 
@@ -105,9 +105,7 @@ class DealManager {
      * @returns {Promise<Array<Deposit>>}
      */
     async fetchFillableDepositsAsync(minimumAmount = 0) {
-        return new Promise((resolve) => {
-            resolve(this.store.queryFillableDeposits(minimumAmount));
-        });
+        return this.store.queryFillableDepositsAsync(minimumAmount);
     }
 
     /**
@@ -134,7 +132,7 @@ class DealManager {
         });
         console.log('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
-        this.store.insertDeal(deal);
+        await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
@@ -148,7 +146,7 @@ class DealManager {
         }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
-        this.store.setDealExecutable(deal);
+        await this.store.updateDealAsync(deal);
         return deal;
     }
 
@@ -164,7 +162,7 @@ class DealManager {
      */
     async executeDealAsync(deal, taskRecordOpts) {
         const {participants, depositAmount, nonce} = deal;
-        const deposits = participants.map(p => this.store.getDeposit(p));
+        const deposits = await this.store.getDepositAsync(deal.dealId);
         const nbRecipient = deposits.length;
         const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
         const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);

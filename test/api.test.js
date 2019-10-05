@@ -6,6 +6,7 @@ const {expect} = require('chai');
 const SaladContract = artifacts.require('Salad');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
+const {DEALS_COLLECTION, DEPOSITS_COLLECTION} = require('enigma-coinjoin-operator/src/store');
 
 contract('Salad', () => {
     let cjc;
@@ -21,7 +22,9 @@ contract('Salad', () => {
         const contractAddr = web3.utils.toChecksumAddress(SaladContract.address);
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         console.log('Contract address:', contractAddr);
-        await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
+        const server = await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
+        await server.store.truncate(DEPOSITS_COLLECTION);
+        await server.store.truncate(DEALS_COLLECTION);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
         cjc = new CoinjoinClient(contractAddr, operatorUrl, provider);
@@ -29,6 +32,7 @@ contract('Salad', () => {
         process.on('SIGINT', async () => {
             console.log('Caught interrupt signal, shutting down WS server');
             await cjc.shutdownAsync();
+            await server.shutdownAsync();
             process.exit();
         });
         await cjc.initAsync();

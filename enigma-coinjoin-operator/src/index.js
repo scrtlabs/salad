@@ -67,7 +67,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         });
     });
     console.log('Server started on port', port);
-    return wss;
+    return api;
 }
 
 module.exports = {startServer};
