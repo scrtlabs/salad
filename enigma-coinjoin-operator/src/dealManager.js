@@ -88,6 +88,10 @@ class DealManager {
      * @returns {Promise<Deal|null>}
      */
     async createDealIfQuorumReachedAsync(opts, amount = 0) {
+        const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
+        if (pendingDeals.length > 0) {
+            throw new Error('Cannot creating a new until current deal is executed');
+        }
         const deposits = await this.fetchFillableDepositsAsync(amount);
         console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
@@ -141,8 +145,7 @@ class DealManager {
         console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
-            // TODO: Throw error
-            // throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
+            throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
         }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;

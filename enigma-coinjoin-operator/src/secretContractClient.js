@@ -116,9 +116,8 @@ class SecretContractClient {
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
         // TODO: Retry of task fails
         const task = await this.waitTaskSuccessAsync(pendingTask);
-        console.log('Got execute deal task', task);
         const output = await this.fetchOutput(task);
-        console.log('The ordered recipients', output);
+        console.log('Got execute deal task', task.taskId, 'with results:', output);
         return task;
     }
 

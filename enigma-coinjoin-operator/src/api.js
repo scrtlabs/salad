@@ -14,7 +14,7 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
  */
 
 class OperatorApi {
-    constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0) {
+    constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0, pauseOnRetryInSeconds = 10) {
         this.store = new Store();
         this.web3 = new Web3(provider);
         this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl, accountIndex);
@@ -22,6 +22,7 @@ class OperatorApi {
         this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store, threshold);
         this.ee = new EventEmitter();
         this.threshold = threshold;
+        this.pauseOnRetryInSeconds = pauseOnRetryInSeconds;
 
         // TODO: Default Ethereum options, add to config
         this.txOpts = {
@@ -173,12 +174,18 @@ class OperatorApi {
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
         (async () => {
-                try {
-                    await this.handleDealProcessingAsync();
-                } catch (e) {
-                    // TODO: Log somewhere
-                    console.error('Unable to create deal', e);
-                }
+                let dealExecuted = false;
+                do {
+                    try {
+                        await utils.sleep(300);
+                        await this.handleDealProcessingAsync();
+                        dealExecuted = true;
+                    } catch (e) {
+                        // TODO: Log somewhere
+                        console.error('Unable to create deal', e);
+                        await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+                    }
+                } while (!dealExecuted);
             }
         )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};

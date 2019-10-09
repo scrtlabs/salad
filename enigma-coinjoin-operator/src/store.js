@@ -81,6 +81,12 @@ class Store {
         return result.toArray();
     }
 
+    async queryDealsAsync(status) {
+        const query = {status};
+        const result = await this.db.collection(DEALS_COLLECTION).find(query);
+        return result.toArray();
+    }
+
     /**
      * Find deposit by participant address
      * @returns {Deposit|null}
