@@ -33,6 +33,7 @@ contract Salad is ISalad {
     uint public dealIntervalInBlocks;
     uint public relayerFeePercent;
     uint public participationThreshold;
+    uint public lastExecutionBlockNumber;
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
     event Deposit(address indexed _depositor, uint _value, uint _balance);
@@ -67,6 +68,11 @@ contract Salad is ISalad {
     */
     function newDeal(uint _amountInWei, address[] memory _participants, uint _nonce)
     public {
+        uint newDealBlockNumber = lastExecutionBlockNumber + dealIntervalInBlocks;
+        require(newDealBlockNumber < block.number, "Deal creation interval not reached");
+        for (uint i = 0; i < _participants.length; i++) {
+            require(balances[_participants[i]].amount >= _amountInWei, "Participant balance(s) insufficient");
+        }
         // TODO: Verify balances
         bytes32 _dealId = generateDealId(_amountInWei, _participants, _nonce);
         dealIds.push(_dealId);
@@ -164,6 +170,7 @@ contract Salad is ISalad {
             _recipients[i].transfer(deals[dealId].depositInWei);
         }
         deals[dealId].status = 2;
+        lastExecutionBlockNumber = block.number;
         emit Distribute(dealId, deals[dealId].depositInWei, uint32(_recipients.length), true, "all good");
     }
 
