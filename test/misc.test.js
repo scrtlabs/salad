@@ -18,7 +18,7 @@ contract('Salad', (accounts) => {
         const message = web3.utils.bytesToHex(messageBytes);
         console.log('Message 1:', message);
         const instance = await SaladContract.deployed();
-        const contractMessage = await instance.generateDealIdMessage.call(amount, participants, nonce);
+        const contractMessage = await instance._generateDealIdMessage.call(amount, participants, nonce);
         console.log('Message 2:', contractMessage);
         expect(contractMessage).to.equal(message);
     });
