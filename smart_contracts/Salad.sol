@@ -21,16 +21,22 @@ contract Salad is ISalad {
         uint status; // 0: undefined; 1: executable; 2: executed; 3: cancelled
     }
 
+    struct Balance {
+        uint amount;
+        uint lastDepositBlockNumber;
+    }
+
     mapping(bytes32 => Deal) deals;
-    mapping(address => uint) balances;
+    mapping(address => Balance) balances;
     bytes32[] dealIds;
-    uint depositLockPeriodInBlocks;
-    uint dealIntervalInBlocks;
-    uint relayerFeePercent;
-    uint participationThreshold;
+    uint public depositLockPeriodInBlocks;
+    uint public dealIntervalInBlocks;
+    uint public relayerFeePercent;
+    uint public participationThreshold;
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
-    event Deposit(address indexed _depositor, uint _value, uint _balance, bool _success, string _err);
+    event Deposit(address indexed _depositor, uint _value, uint _balance);
+    event Withdraw(address indexed _depositor, uint _value);
     event Distribute(bytes32 indexed _dealId, uint individualAmountInWei, uint32 nbTransfers, bool _success, string _err);
 
     event TransferredToken(address indexed to, uint256 value);
@@ -81,9 +87,9 @@ contract Salad is ISalad {
     payable {
         require(msg.value > 0, "Deposit value must be positive.");
         // TODO: Use safeMath
-        // TODO: Store block number
-        balances[msg.sender] = balances[msg.sender] + msg.value;
-        emit Deposit(msg.sender, msg.value, balances[msg.sender], true, "all good");
+        balances[msg.sender].amount = balances[msg.sender].amount + msg.value;
+        balances[msg.sender].lastDepositBlockNumber = block.number;
+        emit Deposit(msg.sender, msg.value, balances[msg.sender].amount);
     }
 
     /**
@@ -92,14 +98,19 @@ contract Salad is ISalad {
     function withdraw()
     public
     payable {
-        // TODO: Allow withdraw only after N blocks (timeout) from deposit
+        uint withdrawBlockNumber = balances[msg.sender].lastDepositBlockNumber + depositLockPeriodInBlocks;
+        require(withdrawBlockNumber < block.number, "Deposit not yet available for withdrawal");
+        uint amount = balances[msg.sender].amount;
+        msg.sender.transfer(amount);
+        balances[msg.sender].amount = 0;
+        emit Withdraw(msg.sender, amount);
     }
 
     /**
     * Get own balance (in Wei)
     */
     function getParticipantBalance(address _account) public view returns (uint) {
-        return balances[_account];
+        return balances[_account].amount;
     }
 
     function generateDealIdMessage(uint _amountInWei, address[] memory _participants, uint _nonce)
