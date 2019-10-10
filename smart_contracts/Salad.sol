@@ -4,8 +4,9 @@ import "./ISalad.sol";
 import {SaladCommon} from "./utils/SaladCommon.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import {Bytes} from "./utils/Bytes.sol";
+import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
-contract Salad is ISalad {
+contract Salad is ISalad, Ownable {
     using SafeMath for uint256;
     using Bytes for address;
     using Bytes for uint256;
@@ -20,7 +21,7 @@ contract Salad is ISalad {
         address[] recipients;
         DealStatus status;
     }
-    enum DealStatus { Undefined, Executable, Executed, Cancelled }
+    enum DealStatus {Undefined, Executable, Executed, Cancelled}
 
     struct Balance {
         uint amount;
@@ -30,10 +31,10 @@ contract Salad is ISalad {
     mapping(bytes32 => Deal) public deals;
     mapping(address => Balance) public balances;
     bytes32[] public dealIds;
-    uint public depositLockPeriodInBlocks;
-    uint public dealIntervalInBlocks;
-    uint public relayerFeePercent;
-    uint public participationThreshold;
+    uint8 public depositLockPeriodInBlocks;
+    uint8 public dealIntervalInBlocks;
+    uint8 public relayerFeePercent;
+    uint8 public participationThreshold;
     uint public lastExecutionBlockNumber;
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
@@ -47,11 +48,19 @@ contract Salad is ISalad {
         _;
     }
 
-    constructor(uint _depositLockPeriodInBlocks, uint _dealIntervalInBlocks, uint _relayerFeePercent, uint _participationThreshold) public {
+    constructor(uint8 _depositLockPeriodInBlocks, uint8 _dealIntervalInBlocks, uint8 _relayerFeePercent, uint8 _participationThreshold) public {
         depositLockPeriodInBlocks = _depositLockPeriodInBlocks;
         dealIntervalInBlocks = _dealIntervalInBlocks;
         relayerFeePercent = _relayerFeePercent;
         participationThreshold = _participationThreshold;
+    }
+
+    function setDealInterval(uint8 _intervalInBlocks) public onlyOwner {
+        dealIntervalInBlocks = _intervalInBlocks;
+    }
+
+    function setParticipationThreshold(uint8 _nbParticipants) public onlyOwner {
+        participationThreshold = _nbParticipants;
     }
 
     /**
@@ -68,7 +77,6 @@ contract Salad is ISalad {
         for (uint i = 0; i < _participants.length; i++) {
             require(balances[_participants[i]].amount >= _amountInWei, "Participant balance(s) insufficient");
         }
-        // TODO: Verify balances
         bytes32 _dealId = generateDealId(_amountInWei, _participants, _nonce);
         dealIds.push(_dealId);
         deals[_dealId].organizer = msg.sender;
@@ -143,7 +151,6 @@ contract Salad is ISalad {
     public
     returns (bytes32) {
         bytes memory _message = _generateDealIdMessage(_amountInWei, _participants, _nonce);
-        //bytes memory _message = "0x00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000008ac7230489e8000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000014ffcf8fdee72ac11b5c542428b35eef5769c409f0000000000000000000000000000000000000000000000000000000000000001422d491bde2303f2f43325b2108d26f1eaba1e32b0000000000000000000000000000000000000000000000000000000000000014ca35b7d915458ef540ade6068dfe2f44e8fa733c00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000001";
         bytes32 _dealId = keccak256(_message);
         return _dealId;
     }

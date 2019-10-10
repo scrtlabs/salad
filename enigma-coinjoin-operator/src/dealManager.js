@@ -88,10 +88,6 @@ class DealManager {
      * @returns {Promise<Deal|null>}
      */
     async createDealIfQuorumReachedAsync(opts, amount = 0) {
-        const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
-        if (pendingDeals.length > 0) {
-            throw new Error('Cannot creating a new until current deal is executed');
-        }
         const deposits = await this.fetchFillableDepositsAsync(amount);
         console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
@@ -119,7 +115,11 @@ class DealManager {
      * @returns {Promise<Deal>}
      */
     async createDealAsync(deposits, opts) {
-        /** @type string */
+        const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
+        if (pendingDeals.length > 0) {
+            console.log('The executable deals', pendingDeals);
+            throw new Error('Cannot creating a new deal until current deal is executed');
+        }
         console.log('Creating deal with deposits', deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
@@ -164,7 +164,7 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {participants, depositAmount, nonce} = deal;
+        const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
         const nbRecipient = deposits.length;
         const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
