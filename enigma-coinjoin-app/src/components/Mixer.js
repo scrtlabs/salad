@@ -16,12 +16,14 @@ import LinearProgress from '@material-ui/core/LinearProgress';
 
 import {openSnackbar} from './Notifier';
 import MixerContract from '../build/smart_contracts/Mixer';
+import EnigmaContract from '../build/enigma_contracts/Enigma';
 
 class Mixer extends Component {
     constructor(props) {
         super(props);
         this.service = new CoinjoinClient(
             MixerContract.networks[props.web3.networkId].address,
+            EnigmaContract.networks[props.web3.networkId].address,
             undefined,
             props.web3
         );

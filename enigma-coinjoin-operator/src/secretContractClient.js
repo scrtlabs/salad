@@ -34,6 +34,7 @@ class SecretContractClient {
             },
         );
         this.enigma.admin();
+        this.enigma.setTaskKeyPair();
     }
 
     getOperatorAccount() {
@@ -95,6 +96,9 @@ class SecretContractClient {
             userPrivateKey: keyPair.privateKey,
             workerPubKey: task.workerEncryptionKey,
         };
+        // Setting a new key pair so that the encryption private key can be revealed without
+        // revealing subsequent deal encryption data;
+        this.enigma.setTaskKeyPair();
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {

@@ -26,9 +26,10 @@ if (typeof window === 'undefined') {
 
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
+const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
+    constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -37,6 +38,7 @@ class CoinjoinClient {
         this.threshold = null;
         this.quorum = 0;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
+        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaContractAddr);
     }
 
     static obtainKeyPair() {
@@ -248,6 +250,14 @@ class CoinjoinClient {
      */
     async verifyPubKeyAsync() {
         console.log('Verifying pub key data against on-chain receipt', this.pubKeyData);
+        const {taskId, encryptedOutput} = this.pubKeyData;
+        const taskRecord = await this.enigmaContract.methods.getTaskRecord(taskId).call();
+        console.log('The task record', taskRecord);
+        const outputHash = this.web3.utils.soliditySha3({t: 'bytes', value: encryptedOutput});
+        console.log('The output hash', outputHash);
+        if (taskRecord.outputHash !== outputHash) {
+            throw new Error(`Unable to verify encryption key, mismatching output for task: ${taskId} ${taskRecord.outputHash} !== ${outputHash}`);
+        }
     }
 
     getPlaintextPubKey() {
