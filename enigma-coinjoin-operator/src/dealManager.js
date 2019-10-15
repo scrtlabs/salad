@@ -134,7 +134,7 @@ class DealManager {
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        console.log('The dealId', dealId);
+        // console.log('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
@@ -142,7 +142,7 @@ class DealManager {
             gas: this.gasValues.createDeal,
             from: sender,
         });
-        console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
+        // console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
             throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);

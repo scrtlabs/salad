@@ -2,7 +2,7 @@ const SaladContract = artifacts.require('Salad');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 contract('Salad', (accounts) => {
-    it('should generate a matching DealId message', async () => {
+    it.skip('should generate a matching DealId message', async () => {
         const amount = '10000000000000000000';
         const participants = ["0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0", "0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b"];
         const operator = accounts[0];

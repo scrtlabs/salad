@@ -47,7 +47,11 @@ async function deploySecretContract(config, mixerEthAddress) {
     // Wait for the confirmed deploy contract task
     do {
         await sleep(1000);
-        scTask = await enigma.getTaskRecordStatus(scTask);
+        try {
+            scTask = await enigma.getTaskRecordStatus(scTask);
+        } catch (e) {
+            console.error('Unable to deploy', e);
+        }
         process.stdout.write('Waiting. Current Task Status is ' + scTask.ethStatus + '\r');
     } while (scTask.ethStatus === 1);
     process.stdout.write('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
@@ -85,6 +89,7 @@ module.exports = async function (deployer, network, accounts) {
         },
     );
     enigma.admin();
+    // enigma.setTaskKeyPair();
 
     // Deploy your Smart and Secret contracts below this point:
 

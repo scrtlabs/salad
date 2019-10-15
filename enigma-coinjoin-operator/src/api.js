@@ -13,6 +13,11 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
  * @property {Object} payload - The serialized action payload
  */
 
+const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
+const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
+const EXECUTE_DEAL_GAS_PRICE = 0.001;
+const EXECUTE_DEAL_GAS_LIMIT = 87123880;
+
 class OperatorApi {
     constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0, pauseOnRetryInSeconds = 10) {
         this.store = new Store();
@@ -112,7 +117,10 @@ class OperatorApi {
             this.ee.emit(QUORUM_UPDATE, quorum);
 
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {taskGasLimit: 87123880, taskGasPx: utils.toGrains(0.001)};
+            const taskRecordOpts = {
+                taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
+                taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
+            };
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
             console.log('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
@@ -125,8 +133,20 @@ class OperatorApi {
      */
     async getEncryptionPubKeyAsync() {
         console.log('Sending encryption public key to new connected client');
-        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(0.001)};
-        const pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
+        const taskRecordOpts = {
+            taskGasLimit: GET_ENCRYPTION_PUB_KEY_GAS_LIMIT,
+            taskGasPx: utils.toGrains(GET_ENCRYPTION_PUB_KEY_GAS_PRICE),
+        };
+        let pubKeyData = null;
+        do {
+            try {
+                await utils.sleep(300);
+                pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
+            } catch (e) {
+                console.error('Unable to fetch public encryption key', e);
+                await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+            }
+        } while (pubKeyData === null);
         return {action: PUB_KEY_UPDATE, payload: {pubKeyData}};
     }
 

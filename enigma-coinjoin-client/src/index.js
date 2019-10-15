@@ -30,6 +30,7 @@ const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
     constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
+        console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -76,7 +77,7 @@ class CoinjoinClient {
             messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
-        console.log('The message bytes to sign', messageBytes);
+        // console.log('The message bytes to sign', messageBytes);
         return messageBytes;
     }
 
@@ -102,7 +103,7 @@ class CoinjoinClient {
             CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(operatorAddress)),
             CoinjoinClient.uint256ToBytes(web3, operatorNonce),
         ];
-        console.log('Building DealId from params', paramsInBytes);
+        // console.log('Building DealId from params', paramsInBytes);
         let messageBytes = [];
         for (let i = 0; i < paramsInBytes.length; i++) {
             const param = paramsInBytes[i];
@@ -116,7 +117,7 @@ class CoinjoinClient {
                 messageBytes = messageBytes.concat(param);
             }
         }
-        console.log('The message bytes', JSON.stringify(messageBytes));
+        // console.log('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
     }
 
@@ -175,7 +176,6 @@ class CoinjoinClient {
                     break;
                 default:
             }
-            console.log('Emitting', action, payload);
             this.ee.emit(action, payload);
         };
         if (isNode) {
@@ -361,10 +361,10 @@ class CoinjoinClient {
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        console.log('The message', messageBytes);
-        console.log('The message length', messageBytes.length);
+        // console.log('The message', messageBytes);
+        // console.log('The message length', messageBytes.length);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        console.log('Signing message', message);
+        // console.log('Signing message', message);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
         const sigHex = await this.web3.eth.sign(hash, sender);
         const sigBytes = this.web3.utils.hexToBytes(sigHex);

@@ -23,9 +23,8 @@ class Store {
     }
 
     async truncate(collection) {
-        console.log('Truncating collection', collection);
         const result = await this.db.collection(collection).deleteMany({});
-        console.log('Truncated', result);
+        console.log('Truncated', collection);
     }
 
     async findAllAsync(collection) {
@@ -35,16 +34,12 @@ class Store {
 
     async insertRecordAsync(record, collection) {
         console.log('Inserting record', record);
-        const result = await this.db.collection(collection).insertOne(record);
-        // console.log('Inserted record', result);
-        return result;
+        return this.db.collection(collection).insertOne(record);
     }
 
     async insertRecordsAsync(records, collection) {
         console.log('Inserting record', records);
-        const result = await this.db.collection(collection).insertMany(records);
-        // console.log('Inserted records', result);
-        return result;
+        return this.db.collection(collection).insertMany(records);
     }
 
     /**

@@ -34,7 +34,7 @@ class SecretContractClient {
             },
         );
         this.enigma.admin();
-        this.enigma.setTaskKeyPair();
+        // this.enigma.setTaskKeyPair();
     }
 
     getOperatorAccount() {
@@ -85,8 +85,10 @@ class SecretContractClient {
         const taskArgs = [];
         const {taskGasLimit, taskGasPx} = opts;
         const keyPair = this.enigma.obtainTaskKeyPair();
-        // TODO: Retry on failure
+        console.log('The key pair', keyPair);
+        console.log('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        console.log('The pending task', pendingTask);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         console.log('The completed task', task);
         const output = await this.fetchOutput(task);
@@ -98,7 +100,7 @@ class SecretContractClient {
         };
         // Setting a new key pair so that the encryption private key can be revealed without
         // revealing subsequent deal encryption data;
-        this.enigma.setTaskKeyPair();
+        // this.enigma.setTaskKeyPair();
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
