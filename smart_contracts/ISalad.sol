@@ -1,5 +1,5 @@
 pragma solidity ^0.5.1;
 
-interface IMixer {
+interface ISalad {
     function distribute(uint256 _dealId, address payable[] calldata _recipients) external;
 }

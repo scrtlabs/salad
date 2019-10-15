@@ -3,11 +3,14 @@ const fs = require('fs');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 const {startServer} = require('enigma-coinjoin-operator');
 const {expect} = require('chai');
-const MixerContract = artifacts.require("Mixer");
+const SaladContract = artifacts.require('Salad');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
+const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
+// const EnigmaContract = artifacts.require('Enigma');
+const {DEALS_COLLECTION, DEPOSITS_COLLECTION} = require('enigma-coinjoin-operator/src/store');
 
-contract('Mixer', () => {
+contract('Salad', () => {
     let cjc;
     let opts;
     let token;
@@ -16,19 +19,22 @@ contract('Mixer', () => {
     before(async () => {
         const operatorAccountIndex = 0;
         const provider = web3._provider;
-        const scAddr = fs.readFileSync(`${__dirname}/coinjoin.txt`, 'utf-8');
+        const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
         const threshold = 2;
-        const contractAddr = web3.utils.toChecksumAddress(MixerContract.address);
+        const saladContractAddr = SaladContract.address;
+        const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
-        console.log('Contract address:', contractAddr);
-        await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
+        const server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
+        await server.store.truncate(DEPOSITS_COLLECTION);
+        await server.store.truncate(DEALS_COLLECTION);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
-        cjc = new CoinjoinClient(contractAddr, operatorUrl, provider);
+        cjc = new CoinjoinClient(saladContractAddr, enigmaContractAddr, operatorUrl, provider);
         // Always shutdown the WS server when tests end
         process.on('SIGINT', async () => {
             console.log('Caught interrupt signal, shutting down WS server');
             await cjc.shutdownAsync();
+            await server.shutdownAsync();
             process.exit();
         });
         await cjc.initAsync();
@@ -64,7 +70,7 @@ contract('Mixer', () => {
         amount = web3Utils.toWei('10');
         sender = cjc.accounts[1];
         const receipt = await cjc.makeDepositAsync(sender, amount, opts);
-        console.log('Made deposit', receipt);
+        expect(receipt.status).to.equal(true);
     });
 
     let encRecipient;

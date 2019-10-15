@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
-const {MemoryStore} = require("./memoryStore");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, FETCH_FILLABLE_ERROR} = require("enigma-coinjoin-client").actions;
+const {Store} = require("./store");
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -13,15 +13,21 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
  * @property {Object} payload - The serialized action payload
  */
 
+const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
+const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
+const EXECUTE_DEAL_GAS_PRICE = 0.001;
+const EXECUTE_DEAL_GAS_LIMIT = 87123880;
+
 class OperatorApi {
-    constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0) {
-        this.store = new MemoryStore(); // TODO: Use db backend
+    constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0, pauseOnRetryInSeconds = 10) {
+        this.store = new Store();
         this.web3 = new Web3(provider);
         this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl, accountIndex);
         this.defaultTaskRecordOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
         this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store, threshold);
         this.ee = new EventEmitter();
         this.threshold = threshold;
+        this.pauseOnRetryInSeconds = pauseOnRetryInSeconds;
 
         // TODO: Default Ethereum options, add to config
         this.txOpts = {
@@ -44,6 +50,10 @@ class OperatorApi {
             await store.closeAsync();
             process.exit();
         });
+    }
+
+    async shutdownAsync() {
+        await this.store.closeAsync();
     }
 
     /**
@@ -107,7 +117,10 @@ class OperatorApi {
             this.ee.emit(QUORUM_UPDATE, quorum);
 
             console.log('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {taskGasLimit: 87123880, taskGasPx: utils.toGrains(0.001)};
+            const taskRecordOpts = {
+                taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
+                taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
+            };
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
             console.log('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
@@ -118,11 +131,23 @@ class OperatorApi {
      * Fetch the encryption public key and store it in cache
      * @returns {Promise<OperatorAction>}
      */
-    async cachePublicKeyAsync() {
+    async getEncryptionPubKeyAsync() {
         console.log('Sending encryption public key to new connected client');
-        const taskRecordOpts = {taskGasLimit: 4712388, taskGasPx: utils.toGrains(0.001)};
-        const pubKey = await this.sc.getPubKeyAsync(taskRecordOpts);
-        return {action: PUB_KEY_UPDATE, payload: {pubKey}};
+        const taskRecordOpts = {
+            taskGasLimit: GET_ENCRYPTION_PUB_KEY_GAS_LIMIT,
+            taskGasPx: utils.toGrains(GET_ENCRYPTION_PUB_KEY_GAS_PRICE),
+        };
+        let pubKeyData = null;
+        do {
+            try {
+                await utils.sleep(300);
+                pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
+            } catch (e) {
+                console.error('Unable to fetch public encryption key', e);
+                await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+            }
+        } while (pubKeyData === null);
+        return {action: PUB_KEY_UPDATE, payload: {pubKeyData}};
     }
 
     /**
@@ -169,12 +194,18 @@ class OperatorApi {
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
         (async () => {
-                try {
-                    await this.handleDealProcessingAsync();
-                } catch (e) {
-                    // TODO: Log somewhere
-                    console.error('Unable to create deal', e);
-                }
+                let dealExecuted = false;
+                do {
+                    try {
+                        await utils.sleep(300);
+                        await this.handleDealProcessingAsync();
+                        dealExecuted = true;
+                    } catch (e) {
+                        // TODO: Log somewhere
+                        console.error('Unable to create deal', e);
+                        await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+                    }
+                } while (!dealExecuted);
             }
         )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};

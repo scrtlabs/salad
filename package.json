@@ -7,12 +7,12 @@
     "test": "test"
   },
   "dependencies": {
-    "@enigmampc/discovery-cli": "https://github.com/enigmampc/discovery-cli#rust-upgrade",
+    "@enigmampc/discovery-cli": "0.1.0",
     "core-js": "^3.2.1",
     "dotenv": "^8.0.0",
     "enigma-coinjoin-client": "0.1.0",
     "enigma-coinjoin-operator": "0.1.0",
-    "enigma-js": "0.0.8",
+    "enigma-js": "0.0.9-develop",
     "openzeppelin-solidity": "^2.3.0"
   },
   "scripts": {

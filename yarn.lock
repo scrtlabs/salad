@@ -966,9 +966,10 @@
   resolved "https://registry.yarnpkg.com/@emotion/hash/-/hash-0.7.2.tgz#53211e564604beb9befa7a4400ebf8147473eeef"
   integrity sha512-RMtr1i6E8MXaBWwhXL3yeOU8JXRnz8GNxHvaUfVvwxokvayUY0zoBeWbKw1S9XkufmGEEdQd228pSZXFkAln8Q==
 
-"@enigmampc/discovery-cli@https://github.com/enigmampc/discovery-cli#rust-upgrade":
-  version "0.0.28"
-  resolved "https://github.com/enigmampc/discovery-cli#bd628438e0320ebf897dc60c64cd5c9460ddbe20"
+"@enigmampc/discovery-cli@0.1.0":
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.1.0.tgz#815962984bd97a332f219dda576136c5bd96149f"
+  integrity sha512-TC8Bf/2AWZv0Q+AwXCxvnfUX//rfKFOQhDq0pqqCptKsaXCOzfmvowhXAYTsKQrXrd7LRwdHasYtUM13Przc2w==
   dependencies:
     "@truffle/artifactor" "^4.0.31"
     "@truffle/compile-solidity" "^4.2.3"
@@ -5358,16 +5359,17 @@ enhanced-resolve@^4.1.0:
     memory-fs "^0.4.0"
     tapable "^1.0.0"
 
-enigma-js@0.0.6:
-  version "0.0.6"
-  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.6.tgz#9fbe24a17729d534fcde81cc7ba0e67d2cdd042d"
-  integrity sha512-fSEPk1/smA+UX+CsL2ZzOSuEYGLTBbTsGUwmLciuUX8Oaw7gTo2o85YwlzQwO9L5fTxnYmQalXD4qktY7hm7wQ==
+enigma-js@0.0.9-develop:
+  version "0.0.9-develop"
+  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.9-develop.tgz#657605a19e07134f0d1f9c4e5b3612d1627b36d0"
+  integrity sha512-8HE1Y6BzHMGakLkLkkwfoFJIDA5mw0fwik8jpVRG5VYQ8QYYSlgCgAUyfgpC8iX2A4wlUeQ5O6hVAco+b0714w==
   dependencies:
     any-promise "^1.3.0"
     axios "0.18.1"
     body-parser "^1.18.3"
     buffer "^5.1.0"
     connect "^3.6.6"
+    core-js "^3.1.4"
     create-file-webpack "^1.0.2"
     elliptic "6.4.0"
     eth-crypto "^1.2.2"
@@ -5381,6 +5383,8 @@ enigma-js@0.0.6:
     node-fetch "^2.3.0"
     node-forge "^0.7.6"
     openzeppelin-solidity "2.1"
+    regenerator-runtime "^0.13.3"
+    retry "^0.12.0"
     rlp "2.1.0"
     source-map-support "^0.5.9"
     tls "0.0.1"
@@ -5390,7 +5394,7 @@ enigma-js@0.0.6:
     webpack-node-externals "^1.7.2"
     whatwg-fetch "^3.0.0"
 
-enigma-js@0.0.8, enigma-js@^0.0.8:
+enigma-js@^0.0.8:
   version "0.0.8"
   resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.8.tgz#7d7d984bdeb6c695b1bdb84fc7e6824f30a40c1e"
   integrity sha512-oVXfAPIbJwenQdj9+CQV+JobZGlcmmuLd5bul+E/nR4OS7Y9OPbSyapeD45CrPYXK31TdNjwSglqdiTZpTX9OA==
@@ -13479,6 +13483,11 @@ ret@~0.1.10:
   version "0.1.15"
   resolved "https://registry.yarnpkg.com/ret/-/ret-0.1.15.tgz#b8a4825d5bdb1fc3f6f53c2bc33f81388681c7bc"
   integrity sha512-TTlYpa+OL+vMMNG24xSlQGEJ3B/RzEfUlLct7b5G/ytav+wPrplCpVMFuwzXbkecJrb6IYo1iFb0S9v37754mg==
+
+retry@^0.12.0:
+  version "0.12.0"
+  resolved "https://registry.yarnpkg.com/retry/-/retry-0.12.0.tgz#1b42a6266a21f07421d1b0b54b7dc167b01c013b"
+  integrity sha1-G0KmJmoh8HQh0bC1S33BZ7AcATs=
 
 rgb-regex@^1.0.1:
   version "1.0.1"

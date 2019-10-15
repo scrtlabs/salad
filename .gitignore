@@ -1,4 +1,4 @@
 .env
 .idea
-docker-compose.yml
 node_modules
+etc

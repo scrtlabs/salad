@@ -25,17 +25,21 @@ if (typeof window === 'undefined') {
  */
 
 // TODO: Move path to config and reference Github
-const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
+const SaladContract = require('../../build/smart_contracts/Salad.json');
+const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
+    constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
+        console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
-        this.pubKey = null;
+        /** @type EncryptionPubKey|null */
+        this.pubKeyData = null;
         this.threshold = null;
         this.quorum = 0;
-        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
+        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaContractAddr);
     }
 
     static obtainKeyPair() {
@@ -73,7 +77,7 @@ class CoinjoinClient {
             messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
-        console.log('The message bytes to sign', messageBytes);
+        // console.log('The message bytes to sign', messageBytes);
         return messageBytes;
     }
 
@@ -99,7 +103,7 @@ class CoinjoinClient {
             CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(operatorAddress)),
             CoinjoinClient.uint256ToBytes(web3, operatorNonce),
         ];
-        console.log('Building DealId from params', paramsInBytes);
+        // console.log('Building DealId from params', paramsInBytes);
         let messageBytes = [];
         for (let i = 0; i < paramsInBytes.length; i++) {
             const param = paramsInBytes[i];
@@ -113,7 +117,7 @@ class CoinjoinClient {
                 messageBytes = messageBytes.concat(param);
             }
         }
-        console.log('The message bytes', JSON.stringify(messageBytes));
+        // console.log('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
     }
 
@@ -158,8 +162,8 @@ class CoinjoinClient {
             const {action, payload} = JSON.parse(msg);
             switch (action) {
                 case PUB_KEY_UPDATE:
-                    const {pubKey} = payload;
-                    this.pubKey = pubKey;
+                    const {pubKeyData} = payload;
+                    this.pubKeyData = pubKeyData;
                     break;
                 case THRESHOLD_UPDATE:
                     const {threshold} = payload;
@@ -172,7 +176,6 @@ class CoinjoinClient {
                     break;
                 default:
             }
-            console.log('Emitting', action, payload);
             this.ee.emit(action, payload);
         };
         if (isNode) {
@@ -242,20 +245,47 @@ class CoinjoinClient {
     }
 
     /**
+     * Verify the public key against the registry
+     * @returns {Promise<void>}
+     */
+    async verifyPubKeyAsync() {
+        console.log('Verifying pub key data against on-chain receipt', this.pubKeyData);
+        const {taskId, encryptedOutput} = this.pubKeyData;
+        const taskRecord = await this.enigmaContract.methods.getTaskRecord(taskId).call();
+        console.log('The task record', taskRecord);
+        const outputHash = this.web3.utils.soliditySha3({t: 'bytes', value: encryptedOutput});
+        console.log('The output hash', outputHash);
+        if (taskRecord.outputHash !== outputHash) {
+            throw new Error(`Unable to verify encryption key, mismatching output for task: ${taskId} ${taskRecord.outputHash} !== ${outputHash}`);
+        }
+    }
+
+    getPlaintextPubKey() {
+        console.log('Decrypting pubKey from data', this.pubKeyData);
+        const derivedKey = utils.getDerivedKey(this.pubKeyData.workerPubKey, this.pubKeyData.userPrivateKey);
+        const output = utils.decryptMessage(derivedKey, this.pubKeyData.encryptedOutput);
+        // TODO: Why is this here?
+        const prefix = '00000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040';
+        return output.replace(prefix, '');
+    }
+
+    /**
      * Encrypt the user recipient address in-memory. Plaintext recipient should not leave the browser.
      * @param  {string} recipient - The plaintext recipient Ethereum address
      * @returns {Promise<string>}
      */
     async encryptRecipientAsync(recipient) {
-        if (!this.pubKey) {
+        if (!this.pubKeyData) {
             await new Promise((resolve) => {
                 this.onPubKey((p) => resolve(p));
             });
         }
-        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKey);
+        await this.verifyPubKeyAsync();
+        const pubKey = this.getPlaintextPubKey();
+        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKeyData);
         const {privateKey} = this.keyPair;
         console.log('Deriving encryption from private key', privateKey);
-        const derivedKey = utils.getDerivedKey(this.pubKey, privateKey);
+        const derivedKey = utils.getDerivedKey(pubKey, privateKey);
         return utils.encryptMessage(derivedKey, recipient);
     }
 
@@ -331,10 +361,10 @@ class CoinjoinClient {
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        console.log('The message', messageBytes);
-        console.log('The message length', messageBytes.length);
+        // console.log('The message', messageBytes);
+        // console.log('The message length', messageBytes.length);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        console.log('Signing message', message);
+        // console.log('Signing message', message);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
         const sigHex = await this.web3.eth.sign(hash, sender);
         const sigBytes = this.web3.utils.hexToBytes(sigHex);

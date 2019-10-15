@@ -30,7 +30,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         // Loading non-blocking to keep the startup sequence sane
         (async () => {
             // Sending public key on connection
-            const pubKeyAction = await api.cachePublicKeyAsync();
+            const pubKeyAction = await api.getEncryptionPubKeyAsync();
             ws.send(JSON.stringify(pubKeyAction));
         })();
 
@@ -67,7 +67,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         });
     });
     console.log('Server started on port', port);
-    return wss;
+    return api;
 }
 
 module.exports = {startServer};

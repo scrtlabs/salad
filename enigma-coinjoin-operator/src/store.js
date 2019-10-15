@@ -1,5 +1,8 @@
 const {Db, MongoClient} = require('mongodb');
 
+const DEPOSITS_COLLECTION = 'deposits';
+const DEALS_COLLECTION = 'deals';
+
 class Store {
     constructor() {
         this._url = `mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}`;
@@ -20,9 +23,8 @@ class Store {
     }
 
     async truncate(collection) {
-        console.log('Truncating collection', collection);
         const result = await this.db.collection(collection).deleteMany({});
-        console.log('Truncated', result);
+        console.log('Truncated', collection);
     }
 
     async findAllAsync(collection) {
@@ -32,26 +34,63 @@ class Store {
 
     async insertRecordAsync(record, collection) {
         console.log('Inserting record', record);
-        const result = await this.db.collection(collection).insertOne(record);
-        // console.log('Inserted record', result);
-        return result;
+        return this.db.collection(collection).insertOne(record);
     }
 
     async insertRecordsAsync(records, collection) {
         console.log('Inserting record', records);
-        const result = await this.db.collection(collection).insertMany(records);
-        // console.log('Inserted records', result);
-        return result;
+        return this.db.collection(collection).insertMany(records);
     }
 
-    async updateTaskRecordAsync(taskRecord) {
-        const query = {_id: taskRecord._id};
-        delete taskRecord._id;
-        const record = {$set: {...taskRecord}};
-        const result = await this.db.collection('tasks').updateOne(query, record);
-        // console.log('Updated Task record', result);
-        return result;
+    /**
+     * Insert Deposit
+     * @param {Deposit} deposit
+     */
+    async insertDepositAsync(deposit) {
+        deposit.dealId = null;
+        await this.insertRecordAsync(deposit, DEPOSITS_COLLECTION);
+    }
+
+    /**
+     * Insert Deal
+     * @param {Deal} deal
+     */
+    async insertDealAsync(deal) {
+        const {dealId} = deal;
+        deal._id = dealId;
+        await this.insertRecordAsync(deal, DEALS_COLLECTION);
+        const query = {dealId: null};
+        const newValues = {$set: {dealId}};
+        await this.db.collection(DEPOSITS_COLLECTION).updateMany(query, newValues);
+    }
+
+    async updateDealAsync(deal) {
+        const query = {_id: deal.dealId};
+        const record = {$set: {...deal}};
+        await this.db.collection(DEALS_COLLECTION).updateOne(query, record);
+    }
+
+    async queryFillableDepositsAsync(minimumAmount) {
+        const query = {dealId: null};
+        const result = await this.db.collection(DEPOSITS_COLLECTION).find(query);
+        return result.toArray();
+    }
+
+    async queryDealsAsync(status) {
+        const query = {status};
+        const result = await this.db.collection(DEALS_COLLECTION).find(query);
+        return result.toArray();
+    }
+
+    /**
+     * Find deposit by participant address
+     * @returns {Deposit|null}
+     */
+    async getDepositAsync(dealId) {
+        const query = {dealId};
+        const result = await this.db.collection(DEPOSITS_COLLECTION).find(query);
+        return result.toArray();
     }
 }
 
-module.exports = {Store};
+module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION};

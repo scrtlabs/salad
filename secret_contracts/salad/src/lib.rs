@@ -151,6 +151,7 @@ impl ContractInterface for Contract {
         );
         let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
+        // TODO: Use the rand service
         let seed = 10;
         for i in 0..nb_recipients.low_u64() as usize {
             eprint!("Decrypting recipient: {}", i);

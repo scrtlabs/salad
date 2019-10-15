@@ -1,6 +1,5 @@
 // TODO: Move path to config and reference Github
-const EnigmaCoinjoinContract = require('../../build/smart_contracts/Mixer.json');
-const {utils} = require('enigma-js/node');
+const SaladContract = require('../../build/smart_contracts/Salad.json');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
 
 const DEAL_STATUS = {
@@ -29,6 +28,13 @@ const DEAL_STATUS = {
  */
 
 /**
+ * @typedef {Object} EncryptionPubKey
+ * @property {string} encryptedOutput - The encrypted output string
+ * @property {string} userPrivateKey - The private key that decrypts the output
+ * @property {string} workerPubKey - The the worker public key to decrypt the output
+ * @property {string} taskId - The TaskId of the task that fetched the public key
+ */
+/**
  * Coordinate deal execution
  */
 class DealManager {
@@ -40,7 +46,7 @@ class DealManager {
         this.scClient = scClient;
         this.store = store;
         this.threshold = threshold;
-        this.contract = new this.web3.eth.Contract(EnigmaCoinjoinContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
         this.gasValues = gasValues;
     }
 
@@ -71,7 +77,7 @@ class DealManager {
         console.log('Registering deposit', sender, amount, encRecipient);
         await this.verifyDepositAmountAsync(sender, amount);
         const deposit = {sender, amount, pubKey, encRecipient, signature};
-        this.store.insertDeposit(deposit);
+        await this.store.insertDepositAsync(deposit);
         return deposit;
     }
 
@@ -99,9 +105,7 @@ class DealManager {
      * @returns {Promise<Array<Deposit>>}
      */
     async fetchFillableDepositsAsync(minimumAmount = 0) {
-        return new Promise((resolve) => {
-            resolve(this.store.queryFillableDeposits(minimumAmount));
-        });
+        return this.store.queryFillableDepositsAsync(minimumAmount);
     }
 
     /**
@@ -111,7 +115,11 @@ class DealManager {
      * @returns {Promise<Deal>}
      */
     async createDealAsync(deposits, opts) {
-        /** @type string */
+        const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
+        if (pendingDeals.length > 0) {
+            console.log('The executable deals', pendingDeals);
+            throw new Error('Cannot creating a new deal until current deal is executed');
+        }
         console.log('Creating deal with deposits', deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
@@ -126,23 +134,22 @@ class DealManager {
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        console.log('The dealId', dealId);
+        // console.log('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
-        this.store.insertDeal(deal);
+        await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
             from: sender,
         });
-        console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
+        // console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
-            // TODO: Throw error
-            // throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
+            throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
         }
         deal._tx = receipt.transactionHash;
         deal.status = DEAL_STATUS.EXECUTABLE;
-        this.store.setDealExecutable(deal);
+        await this.store.updateDealAsync(deal);
         return deal;
     }
 
@@ -157,8 +164,8 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-        const {participants, depositAmount, nonce} = deal;
-        const deposits = participants.map(p => this.store.getDeposit(p));
+        const {depositAmount, nonce} = deal;
+        const deposits = await this.store.getDepositAsync(deal.dealId);
         const nbRecipient = deposits.length;
         const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
         const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);
