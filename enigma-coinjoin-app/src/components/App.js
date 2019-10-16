@@ -14,7 +14,7 @@ import Notifier from './Notifier';
 import {initializeWeb3, initializeAccounts} from '../actions';
 
 import getWeb3 from '../utils/getWeb3';
-import MixerContract from '../build/smart_contracts/Mixer';
+import SaladContract from '../build/smart_contracts/Salad';
 
 const styles = theme => ({
   root: {
@@ -41,7 +41,7 @@ class App extends Component {
     this.props.initializeWeb3(web3);
     this.props.initializeAccounts(accounts);
 
-    if (!MixerContract.networks[this.props.web3.networkId]) {
+    if (!SaladContract.networks[this.props.web3.networkId]) {
       this.setState({ isUnsupportedNetwork: true });
     }
   }

@@ -15,14 +15,16 @@ import TextField from '@material-ui/core/TextField/TextField';
 import LinearProgress from '@material-ui/core/LinearProgress';
 
 import {openSnackbar} from './Notifier';
-import MixerContract from '../build/smart_contracts/Mixer';
+import SaladContract from '../build/smart_contracts/Salad';
 import EnigmaContract from '../build/enigma_contracts/Enigma';
+
+const DEPOSIT_AMOUNT = 0.01;
 
 class Mixer extends Component {
     constructor(props) {
         super(props);
         this.service = new CoinjoinClient(
-            MixerContract.networks[props.web3.networkId].address,
+            SaladContract.networks[props.web3.networkId].address,
             EnigmaContract.networks[props.web3.networkId].address,
             undefined,
             props.web3
@@ -108,6 +110,7 @@ class Mixer extends Component {
 
     // Redux form/material-ui render text field component
     static renderStringInput({label, input, meta: {touched, invalid, error}, ...custom}) {
+        console.log('The input', input);
         return (
             <TextField
                 label={label}
@@ -128,12 +131,13 @@ class Mixer extends Component {
         }
         console.log('Submitted:', sender, recipient, amount);
         this.setState({isSubmitting: true});
-        await this.service.makeDepositAsync(sender, amount);
+        const amountInWei = this.props.web3.utils.toWei(amount);
+        await this.service.makeDepositAsync(sender, amountInWei);
         const encRecipient = await this.service.encryptRecipientAsync(recipient);
         // The public key of the user must be submitted
         // This is DH encryption, Enigma needs the user pub key to decrypt the data
         const myPubKey = this.service.keyPair.publicKey;
-        await this.service.submitDepositMetadataAsync(sender, amount, myPubKey, encRecipient);
+        await this.service.submitDepositMetadataAsync(sender, amountInWei, myPubKey, encRecipient);
     };
 
     render() {
@@ -252,6 +256,7 @@ class Mixer extends Component {
                                     label="Amount"
                                     helperText="Total tokens you're submitting to be mixed"
                                     required
+                                    disabled
                                 />
                             </div>
                             <div>
@@ -281,6 +286,9 @@ class Mixer extends Component {
 
 const mapStateToProps = (state) => {
     return {
+        initialValues: {
+            amount: DEPOSIT_AMOUNT.toString(),
+        },
         web3: state.web3,
         accounts: state.accounts,
     }
