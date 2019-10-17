@@ -23,16 +23,11 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         }
 
         // Subscribe to events to broadcast
+        api.onPubKey(broadcast);
         api.onDealCreated(broadcast);
         api.onDealExecuted(broadcast);
         api.onQuorumUpdate(broadcast);
-
-        // Loading non-blocking to keep the startup sequence sane
-        (async () => {
-            // Sending public key on connection
-            const pubKeyAction = await api.getEncryptionPubKeyAsync();
-            ws.send(JSON.stringify(pubKeyAction));
-        })();
+        api.onBlock(broadcast);
 
         // Sending threshold on connection
         console.log('Sending threshold value', threshold);

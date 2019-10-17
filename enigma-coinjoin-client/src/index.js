@@ -30,12 +30,13 @@ const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
     constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
-        console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
+        // console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
         /** @type EncryptionPubKey|null */
         this.pubKeyData = null;
+        this.keyPair = null;
         this.threshold = null;
         this.quorum = 0;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);

@@ -6,7 +6,7 @@ use enigma_crypto::hash::Keccak256;
 use enigma_crypto::KeyPair;
 use rustc_hex::ToHex;
 
-#[eth_contract("IMixer.json")]
+#[eth_contract("ISalad.json")]
 struct EthContract;
 
 // State key name "mixer_eth_addr" holding eth address of Mixer contract

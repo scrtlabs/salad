@@ -277,6 +277,9 @@ class Mixer extends Component {
                         <p>&nbsp;</p>
                         <p>&nbsp;</p>
                         <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)}/>
+                        <div style={{fontSize: '16px', paddingTop: '20px'}}>
+                            <span>Dealing in <b>{quorum} / {threshold}</b> blocks</span>
+                        </div>
                     </Paper>
                 </Grid>
             </Grid>
