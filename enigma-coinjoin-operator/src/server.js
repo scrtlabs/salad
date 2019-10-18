@@ -14,4 +14,5 @@ const SaladContract = require('../../build/smart_contracts/Salad');
     const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
     const server = await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
     await server.loadEncryptionPubKeyAsync();
+    await server.watchBlocksUntilDeal();
 })();

@@ -29,6 +29,7 @@ class OperatorApi {
         this.ee = new EventEmitter();
         this.threshold = threshold;
         this.pauseOnRetryInSeconds = pauseOnRetryInSeconds;
+        this.active = false;
 
         // TODO: Default Ethereum options, add to config
         this.txOpts = {
@@ -44,26 +45,33 @@ class OperatorApi {
     async initAsync() {
         await this.store.initAsync();
         await this.sc.initAsync(this.defaultTaskRecordOpts);
+        this.active = true;
 
         process.on('SIGINT', async () => {
-            try {
-                await this.store.closeAsync();
-            } catch (e) {
-                console.error('Unable to close the db connection', e);
-            }
+            await this.shutdownAsync();
             process.exit();
         });
     }
 
-    async watchBlock() {
-        while (true) {
-            await this.web3.eth.getBlock();
+    async watchBlocksUntilDeal() {
+        while (this.active === true) {
+            await this.refreshBlocksUntilDeal();
             await utils.sleep(10000);
         }
     }
 
+    async refreshBlocksUntilDeal() {
+        const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
+        this.ee.emit(BLOCK_UPDATE, blockCountdown);
+    }
+
     async shutdownAsync() {
-        await this.store.closeAsync();
+        this.active = false;
+        try {
+            await this.store.closeAsync();
+        } catch (e) {
+            console.error('Unable to close the db connection', e);
+        }
     }
 
     /**

@@ -33,11 +33,17 @@ class Mixer extends Component {
             isSubmitting: false,
             isPending: false,
             page: 0,
+            blockCountdown: this.service.blockCountdown,
             pubKey: this.service.pubKey,
             quorum: this.service.quorum,
             threshold: this.service.threshold,
         };
 
+        this.service.onBlock((payload) => {
+            console.log('Got block countdown update', payload);
+            const {blockCountdown} = payload;
+            this.setState({blockCountdown});
+        });
         this.service.onPubKey((payload) => {
             console.log('Got pubKey', payload);
             const {pubKey} = payload;
@@ -140,8 +146,14 @@ class Mixer extends Component {
         await this.service.submitDepositMetadataAsync(sender, amountInWei, myPubKey, encRecipient);
     };
 
+    async componentDidMount() {
+        fetch('https://api.mydomain.com')
+            .then(response => response.json())
+            .then(data => this.setState({ data }));
+    }
+
     render() {
-        const {isSubmitting, quorum, threshold, page} = this.state;
+        const {isSubmitting, quorum, threshold, page, blockCountdown} = this.state;
         if (page === 0) {
             return (
                 <Grid container spacing={3}>
@@ -278,7 +290,7 @@ class Mixer extends Component {
                         <p>&nbsp;</p>
                         <LinearProgress variant="determinate" value={Math.ceil(quorum / threshold * 100)}/>
                         <div style={{fontSize: '16px', paddingTop: '20px'}}>
-                            <span>Dealing in <b>{quorum} / {threshold}</b> blocks</span>
+                            <span>Dealing in <b>{blockCountdown}</b> blocks</span>
                         </div>
                     </Paper>
                 </Grid>

@@ -14,9 +14,9 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     wss.on('connection', async function connection(ws) {
 
         function broadcast(actionData) {
+            console.log('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
-                    console.log('Broadcasting action', actionData);
                     client.send(JSON.stringify(actionData));
                 }
             });

@@ -78,6 +78,13 @@ contract('Salad', () => {
         pubKey = cjc.keyPair.publicKey;
     }).timeout(60000); // Giving more time because fetching the pubKey
 
+    it('should have a valid block countdown', async () => {
+        await server.refreshBlocksUntilDeal();
+        await utils.sleep(300);
+        console.log('The block countdown', cjc.blockCountdown);
+        expect(cjc.blockCountdown).to.equal(parseInt(process.env.DEAL_INTERVAL_IN_BLOCKS));
+    });
+
     let amount;
     let sender;
     it('should make deposit on Ethereum', async () => {

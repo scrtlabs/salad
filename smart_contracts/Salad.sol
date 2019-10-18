@@ -36,6 +36,7 @@ contract Salad is ISalad, Ownable {
     uint8 public relayerFeePercent;
     uint8 public participationThreshold;
     uint public lastExecutionBlockNumber;
+    // TODO: Should the contract validate a fix deposit amount for all deals?
 
     event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants, bool _success, string _err);
     event Deposit(address indexed _depositor, uint _value, uint _balance);
