@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS} = require("enigma-coinjoin-client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS} = require("enigma-coinjoin-client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -13,6 +13,7 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
  * @property {Object} payload - The serialized action payload
  */
 
+// TODO: Consider moving to config
 const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
 const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
 const EXECUTE_DEAL_GAS_PRICE = 0.001;
@@ -28,6 +29,7 @@ class OperatorApi {
         this.ee = new EventEmitter();
         this.threshold = threshold;
         this.pauseOnRetryInSeconds = pauseOnRetryInSeconds;
+        this.active = false;
 
         // TODO: Default Ethereum options, add to config
         this.txOpts = {
@@ -43,17 +45,43 @@ class OperatorApi {
     async initAsync() {
         await this.store.initAsync();
         await this.sc.initAsync(this.defaultTaskRecordOpts);
+        this.active = true;
 
         process.on('SIGINT', async () => {
-            console.log('Caught interrupt signal');
-
-            await store.closeAsync();
+            await this.shutdownAsync();
             process.exit();
         });
     }
 
+    async watchBlocksUntilDeal() {
+        while (this.active === true) {
+            await this.refreshBlocksUntilDeal();
+            await utils.sleep(10000);
+        }
+    }
+
+    async refreshBlocksUntilDeal() {
+        const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
+        this.ee.emit(BLOCK_UPDATE, blockCountdown);
+    }
+
     async shutdownAsync() {
-        await this.store.closeAsync();
+        this.active = false;
+        try {
+            await this.store.closeAsync();
+        } catch (e) {
+            console.error('Unable to close the db connection', e);
+        }
+    }
+
+    /**
+     * Call broadcast fn on pub key
+     * @param broadcastCallback
+     */
+    onPubKey(broadcastCallback) {
+        this.ee.on(PUB_KEY_UPDATE, (pubKeyData) => {
+            broadcastCallback({action: PUB_KEY_UPDATE, payload: {pubKeyData}})
+        });
     }
 
     /**
@@ -62,7 +90,6 @@ class OperatorApi {
      */
     onDealCreated(broadcastCallback) {
         this.ee.on(DEAL_CREATED_UPDATE, (deal) => {
-            console.log('EMIT_DEAL_CREATED');
             broadcastCallback({action: DEAL_CREATED_UPDATE, payload: {deal}})
         });
     }
@@ -72,7 +99,6 @@ class OperatorApi {
      * @param broadcastCallback
      */
     onDealExecuted(broadcastCallback) {
-        console.log('EMIT_DEAL_EXECUTED');
         this.ee.on(DEAL_EXECUTED_UPDATE, (deal) => broadcastCallback({action: DEAL_EXECUTED_UPDATE, payload: {deal}}));
     }
 
@@ -81,8 +107,14 @@ class OperatorApi {
      * @param broadcastCallback
      */
     onQuorumUpdate(broadcastCallback) {
-        console.log('EMIT_QUORUM');
         this.ee.on(QUORUM_UPDATE, (quorum) => broadcastCallback({action: QUORUM_UPDATE, payload: {quorum}}));
+    }
+
+    onBlock(broadcastCallback) {
+        this.ee.on(BLOCK_UPDATE, (blockCountdown) => broadcastCallback({
+            action: BLOCK_UPDATE,
+            payload: {blockCountdown}
+        }));
     }
 
     /**
@@ -131,23 +163,30 @@ class OperatorApi {
      * Fetch the encryption public key and store it in cache
      * @returns {Promise<OperatorAction>}
      */
-    async getEncryptionPubKeyAsync() {
+    async loadEncryptionPubKeyAsync() {
         console.log('Sending encryption public key to new connected client');
         const taskRecordOpts = {
             taskGasLimit: GET_ENCRYPTION_PUB_KEY_GAS_LIMIT,
             taskGasPx: utils.toGrains(GET_ENCRYPTION_PUB_KEY_GAS_PRICE),
         };
-        let pubKeyData = null;
-        do {
+        /** @type EncryptionPubKey|null */
+        let pubKeyData = await this.store.fetchPubKeyData();
+        console.log('Pub key data from cache', pubKeyData);
+        while (pubKeyData === null) {
             try {
                 await utils.sleep(300);
+                console.log('This is the first start, fetching the encryption key from Enigma');
                 pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
+                if (pubKeyData !== null) {
+                    await this.store.insertPubKeyDataInCache(pubKeyData);
+                }
             } catch (e) {
                 console.error('Unable to fetch public encryption key', e);
+                // TODO: Consider cancelling and creating new task when the epoch changes
                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
             }
-        } while (pubKeyData === null);
-        return {action: PUB_KEY_UPDATE, payload: {pubKeyData}};
+        }
+        this.ee.emit(PUB_KEY_UPDATE, pubKeyData);
     }
 
     /**

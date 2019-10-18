@@ -2,6 +2,7 @@ const {Db, MongoClient} = require('mongodb');
 
 const DEPOSITS_COLLECTION = 'deposits';
 const DEALS_COLLECTION = 'deals';
+const CACHE_COLLECTION = 'cache';
 
 class Store {
     constructor() {
@@ -27,19 +28,39 @@ class Store {
         console.log('Truncated', collection);
     }
 
-    async findAllAsync(collection) {
+    async _findAllAsync(collection) {
         const result = await this.db.collection(collection).find({});
         return result.toArray();
     }
 
-    async insertRecordAsync(record, collection) {
+    async _insertRecordAsync(record, collection) {
         console.log('Inserting record', record);
         return this.db.collection(collection).insertOne(record);
     }
 
-    async insertRecordsAsync(records, collection) {
+    async _insertRecordsAsync(records, collection) {
         console.log('Inserting record', records);
         return this.db.collection(collection).insertMany(records);
+    }
+
+    /**
+     * Insert encryption public key data in cache
+     * @param pubKeyData
+     * @returns {Promise<void>}
+     */
+    async insertPubKeyDataInCache(pubKeyData) {
+        pubKeyData._id = 'pubKeyData';
+        await this._insertRecordAsync(pubKeyData, CACHE_COLLECTION);
+    }
+
+    /**
+     * Fetch the pub key data from cache
+     * @returns {Promise<EncryptionPubKey|null>}
+     */
+    async fetchPubKeyData() {
+        const query = {_id: 'pubKeyData'};
+        const pubKeyData = await this.db.collection(CACHE_COLLECTION).findOne(query);
+        return (pubKeyData) ? pubKeyData : null;
     }
 
     /**
@@ -48,7 +69,7 @@ class Store {
      */
     async insertDepositAsync(deposit) {
         deposit.dealId = null;
-        await this.insertRecordAsync(deposit, DEPOSITS_COLLECTION);
+        await this._insertRecordAsync(deposit, DEPOSITS_COLLECTION);
     }
 
     /**
@@ -58,7 +79,7 @@ class Store {
     async insertDealAsync(deal) {
         const {dealId} = deal;
         deal._id = dealId;
-        await this.insertRecordAsync(deal, DEALS_COLLECTION);
+        await this._insertRecordAsync(deal, DEALS_COLLECTION);
         const query = {dealId: null};
         const newValues = {$set: {dealId}};
         await this.db.collection(DEPOSITS_COLLECTION).updateMany(query, newValues);
@@ -93,4 +114,4 @@ class Store {
     }
 }
 
-module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION};
+module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION};

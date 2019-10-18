@@ -4,13 +4,15 @@ const {CoinjoinClient} = require('enigma-coinjoin-client');
 const {startServer} = require('enigma-coinjoin-operator');
 const {expect} = require('chai');
 const SaladContract = artifacts.require('Salad');
+const {utils} = require('enigma-js/node');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
 // const EnigmaContract = artifacts.require('Enigma');
-const {DEALS_COLLECTION, DEPOSITS_COLLECTION} = require('enigma-coinjoin-operator/src/store');
+const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('enigma-coinjoin-operator/src/store');
 
 contract('Salad', () => {
+    let server;
     let cjc;
     let opts;
     let token;
@@ -24,9 +26,12 @@ contract('Salad', () => {
         const saladContractAddr = SaladContract.address;
         const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
-        const server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
+        server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
+
+        // Truncating the database
         await server.store.truncate(DEPOSITS_COLLECTION);
         await server.store.truncate(DEALS_COLLECTION);
+        await server.store.truncate(CACHE_COLLECTION);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
         cjc = new CoinjoinClient(saladContractAddr, enigmaContractAddr, operatorUrl, provider);
@@ -64,6 +69,22 @@ contract('Salad', () => {
         await action;
     });
 
+    let pubKey;
+    it('should fetch and cache the encryption pub key', async () => {
+        await server.loadEncryptionPubKeyAsync();
+        await utils.sleep(300);
+        expect(cjc.pubKeyData).to.not.be.null;
+        expect(cjc.keyPair).to.not.be.null;
+        pubKey = cjc.keyPair.publicKey;
+    }).timeout(60000); // Giving more time because fetching the pubKey
+
+    it('should have a valid block countdown', async () => {
+        await server.refreshBlocksUntilDeal();
+        await utils.sleep(300);
+        console.log('The block countdown', cjc.blockCountdown);
+        expect(cjc.blockCountdown).to.equal(parseInt(process.env.DEAL_INTERVAL_IN_BLOCKS));
+    });
+
     let amount;
     let sender;
     it('should make deposit on Ethereum', async () => {
@@ -74,12 +95,10 @@ contract('Salad', () => {
     });
 
     let encRecipient;
-    let pubKey;
     it('should encrypt deposit', async () => {
         const recipient = cjc.accounts[6];
         encRecipient = await cjc.encryptRecipientAsync(recipient);
-        pubKey = cjc.keyPair.publicKey;
-    }).timeout(60000); // Giving more time because fetching the pubKey
+    });
 
     let signature;
     it('should make sign the deposit payload', async () => {

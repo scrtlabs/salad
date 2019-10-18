@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
+const {BLOCK_UPDATE,PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
@@ -30,12 +30,14 @@ const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
     constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
-        console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
+        // console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
         /** @type EncryptionPubKey|null */
         this.pubKeyData = null;
+        this.blockCountdown = null;
+        this.keyPair = null;
         this.threshold = null;
         this.quorum = 0;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
@@ -161,6 +163,10 @@ class CoinjoinClient {
             msg = (msg.data) ? msg.data : msg;
             const {action, payload} = JSON.parse(msg);
             switch (action) {
+                case BLOCK_UPDATE:
+                    const {blockCountdown} = payload;
+                    this.blockCountdown = blockCountdown;
+                    break;
                 case PUB_KEY_UPDATE:
                     const {pubKeyData} = payload;
                     this.pubKeyData = pubKeyData;
@@ -183,6 +189,14 @@ class CoinjoinClient {
             return;
         }
         this.ws.onmessage = callback;
+    }
+
+    /**
+     * Subscribe to block countdown until the next deal
+     * @param {function} callback
+     */
+    onBlock(callback) {
+        this.ee.on(BLOCK_UPDATE, callback);
     }
 
     /**

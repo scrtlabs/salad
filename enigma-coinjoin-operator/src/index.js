@@ -14,25 +14,20 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     wss.on('connection', async function connection(ws) {
 
         function broadcast(actionData) {
+            console.log('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
-                    console.log('Broadcasting action', actionData);
                     client.send(JSON.stringify(actionData));
                 }
             });
         }
 
         // Subscribe to events to broadcast
+        api.onPubKey(broadcast);
         api.onDealCreated(broadcast);
         api.onDealExecuted(broadcast);
         api.onQuorumUpdate(broadcast);
-
-        // Loading non-blocking to keep the startup sequence sane
-        (async () => {
-            // Sending public key on connection
-            const pubKeyAction = await api.getEncryptionPubKeyAsync();
-            ws.send(JSON.stringify(pubKeyAction));
-        })();
+        api.onBlock(broadcast);
 
         // Sending threshold on connection
         console.log('Sending threshold value', threshold);

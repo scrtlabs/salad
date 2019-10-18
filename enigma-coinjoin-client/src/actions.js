@@ -4,6 +4,7 @@ exports.SUBMIT_DEPOSIT_METADATA_ERROR = 'submitDepositMetadataError';
 exports.PUB_KEY_UPDATE = 'pubKeyUpdate';
 exports.THRESHOLD_UPDATE = 'thresholdUpdate';
 exports.QUORUM_UPDATE = 'quorumUpdate';
+exports.BLOCK_UPDATE = 'blockUpdate';
 exports.DEAL_CREATED_UPDATE = 'dealCreatedUpdate';
 exports.DEAL_EXECUTED_UPDATE = 'dealExecutedUpdate';
 exports.FETCH_FILLABLE_DEPOSITS = 'fetchFillableDeposits';

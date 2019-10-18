@@ -181,6 +181,15 @@ class DealManager {
         deal._tx = task.transactionHash;
         deal.status = DEAL_STATUS.EXECUTED;
     }
+
+    async getBlocksUntilDealAsync() {
+        const blockNumber = (await this.web3.eth.getBlock()).number;
+        const lastExecutionBlockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
+        const dealIntervalInBlocks = await this.contract.methods.dealIntervalInBlocks().call();
+        const countdown = lastExecutionBlockNumber + dealIntervalInBlocks - blockNumber;
+        console.log(lastExecutionBlockNumber, '+', dealIntervalInBlocks, '-', blockNumber, '=', countdown);
+        return countdown;
+    }
 }
 
 module.exports = {DealManager, DEAL_STATUS};
