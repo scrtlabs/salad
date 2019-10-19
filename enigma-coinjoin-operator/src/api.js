@@ -56,7 +56,10 @@ class OperatorApi {
 
     async watchBlocksUntilDeal() {
         while (this.active === true) {
-            await this.refreshBlocksUntilDeal();
+            const countdown = await this.refreshBlocksUntilDeal();
+            if (countdown === 0) {
+                await this.handleDealProcessingAsync();
+            }
             await utils.sleep(10000);
         }
     }
@@ -64,6 +67,7 @@ class OperatorApi {
     async refreshBlocksUntilDeal() {
         const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
         this.ee.emit(BLOCK_UPDATE, blockCountdown);
+        return blockCountdown;
     }
 
     async shutdownAsync() {
@@ -133,7 +137,6 @@ class OperatorApi {
      * @returns {Promise<void>}
      */
     async handleDealProcessingAsync() {
-        // TODO: Use a scheduler to trigger this instead post-deposit trigger
         debug('Evaluating deal creation in non-blocking scope');
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
         if (deal) {
@@ -233,21 +236,21 @@ class OperatorApi {
 
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
-        (async () => {
-                let dealExecuted = false;
-                do {
-                    try {
-                        await utils.sleep(300);
-                        await this.handleDealProcessingAsync();
-                        dealExecuted = true;
-                    } catch (e) {
-                        // TODO: Log somewhere
-                        console.error('Unable to create deal', e);
-                        await utils.sleep(this.pauseOnRetryInSeconds * 1000);
-                    }
-                } while (!dealExecuted);
-            }
-        )();
+        // (async () => {
+        //         let dealExecuted = false;
+        //         do {
+        //             try {
+        //                 await utils.sleep(300);
+        //                 await this.handleDealProcessingAsync();
+        //                 dealExecuted = true;
+        //             } catch (e) {
+        //                 // TODO: Log somewhere
+        //                 console.error('Unable to create deal', e);
+        //                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+        //             }
+        //         } while (!dealExecuted);
+        //     }
+        // )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
     }
 

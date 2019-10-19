@@ -5,7 +5,7 @@ const {startServer} = require('enigma-coinjoin-operator');
 const {expect} = require('chai');
 const SaladContract = artifacts.require('Salad');
 const {utils} = require('enigma-js/node');
-const debug = require('debug')('api-test');
+const debug = require('debug')('test');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
@@ -79,109 +79,103 @@ contract('Salad', () => {
         pubKey = cjc.keyPair.publicKey;
     }).timeout(60000); // Giving more time because fetching the pubKey
 
+    let amount;
     it('should have a valid block countdown', async () => {
         await server.refreshBlocksUntilDeal();
         await utils.sleep(300);
         debug('The block countdown', cjc.blockCountdown);
-        expect(cjc.blockCountdown).to.equal(parseInt(process.env.DEAL_INTERVAL_IN_BLOCKS));
+        expect(cjc.blockCountdown).to.be.above(0);
+        amount = web3Utils.toWei('10');
     });
 
-    let amount;
-    let sender;
-    let encRecipient;
-    let signature;
-    describe('deal 1', async () => {
-        it('should make deposit on Ethereum', async () => {
-            amount = web3Utils.toWei('10');
-            sender = cjc.accounts[1];
-            const receipt = await cjc.makeDepositAsync(sender, amount, opts);
-            expect(receipt.status).to.equal(true);
-        });
+    const quorumReached = new Promise((resolve) => {
+        const nbDeposits = parseInt(process.env.PARTICIPATION_THRESHOLD);
+        let sender;
+        let encRecipient;
+        let signature;
+        for (let i = 0; i < nbDeposits; i++) {
+            const depositIndex = i + 1;
+            it(`should make deposit ${depositIndex} on Ethereum`, async () => {
+                sender = cjc.accounts[depositIndex];
+                const receipt = await cjc.makeDepositAsync(sender, amount, opts);
+                expect(receipt.status).to.equal(true);
+            });
 
-        it('should encrypt deposit', async () => {
-            const recipient = cjc.accounts[6];
-            encRecipient = await cjc.encryptRecipientAsync(recipient);
-        });
+            it(`should encrypt deposit ${depositIndex}`, async () => {
+                const recipient = cjc.accounts[depositIndex + 1];
+                encRecipient = await cjc.encryptRecipientAsync(recipient);
+            });
 
-        it('should make sign the deposit payload', async () => {
-            signature = await cjc.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
-            debug('The signature', signature);
-            const sigBytes = web3Utils.hexToBytes(signature);
-            debug('The signature length', sigBytes.length, sigBytes);
-            expect(sigBytes.length).to.equal(65);
-        });
+            it(`should sign deposit ${depositIndex} payload`, async () => {
+                signature = await cjc.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
+                debug('The signature', signature);
+                const sigBytes = web3Utils.hexToBytes(signature);
+                debug('The signature length', sigBytes.length, sigBytes);
+                expect(sigBytes.length).to.equal(65);
+            });
 
-        it('should submit signed deposit payload', async () => {
-            debug('Testing despost submit with signature', signature);
-            const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
-            expect(result).to.equal(true);
-            // Quorum should be 1 after first deposit
-            expect(cjc.quorum).to.equal(1);
-        }).timeout(5000);
+            it(`should submit signed deposit ${depositIndex} payload`, async () => {
+                debug('Testing deposit submit with signature', signature);
+                const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
+                expect(result).to.equal(true);
+            }).timeout(5000);
+        }
 
-        it('should verify that the submitted deposit is fillable', async () => {
+        it('should verify that the submitted deposits are fillable', async () => {
+            // Quorum should be N after deposits
+            expect(cjc.quorum).to.equal(nbDeposits);
             const {deposits} = await cjc.fetchFillableDepositsAsync();
-            expect(deposits.length).to.equal(1);
+            expect(deposits.length).to.equal(nbDeposits);
+            resolve(true);
         }).timeout(5000);
     });
 
     let dealPromise;
     let executedDealPromise;
-    describe('deal 2', async () => {
-        it.skip('should make second deposit on Ethereum', async () => {
-            sender = cjc.accounts[2];
-            const receipt = await cjc.makeDepositAsync(sender, amount, opts);
-            debug('Made deposit', receipt);
-            expect(cjc.quorum).to.equal(1);
-        });
-
-        it.skip('should encrypt second deposit', async () => {
-            const recipient = cjc.accounts[7];
-            encRecipient = await cjc.encryptRecipientAsync(recipient);
-            pubKey = cjc.keyPair.publicKey;
-        }).timeout(60000); // Giving more time because fetching the pubKey
-
-        it.skip('should sign the second deposit payload', async () => {
-            signature = await cjc.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
-            debug('Got signature', signature);
-        });
-
-        it.skip('should submit signed second deposit payload', async () => {
-            debug('Testing despost submit with signature', signature);
-            const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
-            // Catching the deal created event
-            dealPromise = new Promise((resolve) => {
-                cjc.onDealCreated((deal) => resolve(deal));
+    it('should mine blocks until the deal interval', async () => {
+        await quorumReached;
+        let countdown;
+        do {
+            const result = await new Promise((resolve, reject) => {
+                web3.currentProvider.send({
+                    jsonrpc: '2.0',
+                    method: 'evm_mine',
+                    id: new Date().getTime()
+                }, (err, result) => {
+                    if (err) {
+                        return reject(err)
+                    }
+                    return resolve(result)
+                });
             });
-            executedDealPromise = new Promise((resolve) => {
-                cjc.onDealExecuted((deal) => resolve(deal));
-            });
-            expect(result).to.equal(true);
-            // Quorum should be 2 after first deposit
-            expect(cjc.quorum).to.equal(2);
-        }).timeout(5000);
-    });
+            debug('Mined block', result);
+            countdown = await server.refreshBlocksUntilDeal();
+        } while (countdown > 0);
+        // Catching the deal created event
+        dealPromise = new Promise((resolve) => {
+            cjc.onDealCreated((deal) => resolve(deal));
+        });
+        executedDealPromise = new Promise((resolve) => {
+            cjc.onDealExecuted((deal) => resolve(deal));
+        });
+        await server.handleDealProcessingAsync();
+    }).timeout(60000);
 
-    it.skip('should verify that both submitted deposits are fillable', async () => {
-        const {deposits} = await cjc.fetchFillableDepositsAsync();
-        expect(deposits.length).to.equal(2);
-    }).timeout(5000);
-
-    it.skip('should verify that a deal was created since the threshold is reached', async () => {
+    it('should verify that a deal was created since the threshold is reached', async () => {
         const deal = await dealPromise;
         debug('Created deal', deal);
         const deals = await cjc.findDealsAsync(1);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
-    }).timeout(60000); // Give enough time to execute the deal on Enigma
+    }).timeout(120000); // Give enough time to execute the deal on Enigma
 
-    it.skip('should verify the deal execution', async () => {
+    it('should verify the deal execution', async () => {
         const deal = await executedDealPromise;
         debug('Executed deal', deal);
         const deals = await cjc.findDealsAsync(2);
         // expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(cjc.quorum).to.equal(0);
-    }).timeout(120000);
+    }).timeout(180000);
 });

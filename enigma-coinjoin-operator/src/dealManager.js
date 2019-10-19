@@ -184,10 +184,11 @@ class DealManager {
     }
 
     async getBlocksUntilDealAsync() {
-        const blockNumber = (await this.web3.eth.getBlock()).number;
+        const blockNumber = await this.web3.eth.getBlockNumber();
+        debug('The block', blockNumber);
         const lastExecutionBlockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
         const dealIntervalInBlocks = await this.contract.methods.dealIntervalInBlocks().call();
-        const countdown = lastExecutionBlockNumber + dealIntervalInBlocks - blockNumber;
+        const countdown = (parseInt(lastExecutionBlockNumber) + parseInt(dealIntervalInBlocks)) - parseInt(blockNumber);
         debug(lastExecutionBlockNumber, '+', dealIntervalInBlocks, '-', blockNumber, '=', countdown);
         return countdown;
     }

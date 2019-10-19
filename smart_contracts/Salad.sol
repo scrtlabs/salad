@@ -54,6 +54,7 @@ contract Salad is ISalad, Ownable {
         dealIntervalInBlocks = _dealIntervalInBlocks;
         relayerFeePercent = _relayerFeePercent;
         participationThreshold = _participationThreshold;
+        lastExecutionBlockNumber = block.number;
     }
 
     function setDealInterval(uint8 _intervalInBlocks) public onlyOwner {
