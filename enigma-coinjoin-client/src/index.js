@@ -1,5 +1,6 @@
 const actions = require('./actions');
 const {BLOCK_UPDATE,PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
+const debug = require('debug')('client');
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
@@ -30,7 +31,7 @@ const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
     constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
-        // console.log('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
+        // debug('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.ee = new EventEmitter();
@@ -79,7 +80,7 @@ class CoinjoinClient {
             messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
-        // console.log('The message bytes to sign', messageBytes);
+        // debug('The message bytes to sign', messageBytes);
         return messageBytes;
     }
 
@@ -92,7 +93,7 @@ class CoinjoinClient {
      * @param {string} operatorNonce The operator transaction count
      */
     static generateDealIdMessage(web3, amount, participants, operatorAddress, operatorNonce) {
-        console.log('generateDealId(', amount, participants, operatorAddress, operatorNonce, ')');
+        debug('generateDealId(', amount, participants, operatorAddress, operatorNonce, ')');
         const participantArray = [CoinjoinClient.uint32ToBytes(web3, participants.length)];
         for (const participant of participants) {
             const participantBytes = CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(participant));
@@ -105,7 +106,7 @@ class CoinjoinClient {
             CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(operatorAddress)),
             CoinjoinClient.uint256ToBytes(web3, operatorNonce),
         ];
-        // console.log('Building DealId from params', paramsInBytes);
+        // debug('Building DealId from params', paramsInBytes);
         let messageBytes = [];
         for (let i = 0; i < paramsInBytes.length; i++) {
             const param = paramsInBytes[i];
@@ -119,14 +120,14 @@ class CoinjoinClient {
                 messageBytes = messageBytes.concat(param);
             }
         }
-        // console.log('The message bytes', JSON.stringify(messageBytes));
+        // debug('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
     }
 
     async _waitConnectAsync() {
         return new Promise((resolve) => {
             const callback = () => {
-                console.log('Connected to server');
+                debug('Connected to server');
                 resolve(true);
             };
             if (isNode) {
@@ -177,7 +178,7 @@ class CoinjoinClient {
                     break;
                 case QUORUM_UPDATE:
                     const {quorum} = payload;
-                    console.log('The quorum update', quorum);
+                    debug('The quorum update', quorum);
                     this.quorum = quorum;
                     break;
                 default:
@@ -251,10 +252,10 @@ class CoinjoinClient {
      * @returns {Promise<Receipt>}
      */
     async makeDepositAsync(sender, amount, opts) {
-        console.log('Posting deposit to the smart contract', amount);
+        debug('Posting deposit to the smart contract', amount);
         const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
         // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
-        // console.log('Got balance', balance);
+        // debug('Got balance', balance);
         return receipt;
     }
 
@@ -263,19 +264,19 @@ class CoinjoinClient {
      * @returns {Promise<void>}
      */
     async verifyPubKeyAsync() {
-        console.log('Verifying pub key data against on-chain receipt', this.pubKeyData);
+        debug('Verifying pub key data against on-chain receipt', this.pubKeyData);
         const {taskId, encryptedOutput} = this.pubKeyData;
         const taskRecord = await this.enigmaContract.methods.getTaskRecord(taskId).call();
-        console.log('The task record', taskRecord);
+        debug('The task record', taskRecord);
         const outputHash = this.web3.utils.soliditySha3({t: 'bytes', value: encryptedOutput});
-        console.log('The output hash', outputHash);
+        debug('The output hash', outputHash);
         if (taskRecord.outputHash !== outputHash) {
             throw new Error(`Unable to verify encryption key, mismatching output for task: ${taskId} ${taskRecord.outputHash} !== ${outputHash}`);
         }
     }
 
     getPlaintextPubKey() {
-        console.log('Decrypting pubKey from data', this.pubKeyData);
+        debug('Decrypting pubKey from data', this.pubKeyData);
         const derivedKey = utils.getDerivedKey(this.pubKeyData.workerPubKey, this.pubKeyData.userPrivateKey);
         const output = utils.decryptMessage(derivedKey, this.pubKeyData.encryptedOutput);
         // TODO: Why is this here?
@@ -296,9 +297,9 @@ class CoinjoinClient {
         }
         await this.verifyPubKeyAsync();
         const pubKey = this.getPlaintextPubKey();
-        console.log('Encrypting recipient', recipient, 'with pubKey', this.pubKeyData);
+        debug('Encrypting recipient', recipient, 'with pubKey', this.pubKeyData);
         const {privateKey} = this.keyPair;
-        console.log('Deriving encryption from private key', privateKey);
+        debug('Deriving encryption from private key', privateKey);
         const derivedKey = utils.getDerivedKey(pubKey, privateKey);
         return utils.encryptMessage(derivedKey, recipient);
     }
@@ -313,7 +314,7 @@ class CoinjoinClient {
      * @returns {Promise<boolean>}
      */
     async submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature) {
-        console.log('Submitting deposit metadata to the operator', amount, encRecipient);
+        debug('Submitting deposit metadata to the operator', amount, encRecipient);
         const promise = new Promise((resolve) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
         });
@@ -359,7 +360,7 @@ class CoinjoinClient {
                 });
             }
         }
-        console.log('The active deals', deals);
+        debug('The active deals', deals);
         return deals;
     }
 
@@ -375,10 +376,10 @@ class CoinjoinClient {
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        // console.log('The message', messageBytes);
-        // console.log('The message length', messageBytes.length);
+        // debug('The message', messageBytes);
+        // debug('The message length', messageBytes.length);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        // console.log('Signing message', message);
+        // debug('Signing message', message);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
         const sigHex = await this.web3.eth.sign(hash, sender);
         const sigBytes = this.web3.utils.hexToBytes(sigHex);
