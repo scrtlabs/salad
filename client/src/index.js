@@ -252,6 +252,12 @@ class CoinjoinClient {
      * @returns {Promise<Receipt>}
      */
     async makeDepositAsync(sender, amount, opts) {
+        if (!this.web3.utils.isAddress(sender)) {
+            throw new Error(`Invalid sender ${sender}`);
+        }
+        if (isNaN(parseInt(amount))) {
+            throw new Error(`Invalid amount ${amount}`);
+        }
         debug('Posting deposit to the smart contract', amount);
         const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
         // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
@@ -290,6 +296,9 @@ class CoinjoinClient {
      * @returns {Promise<string>}
      */
     async encryptRecipientAsync(recipient) {
+        if (!this.web3.utils.isAddress(recipient)) {
+            throw new Error(`Invalid recipient address ${recipient}`);
+        }
         if (!this.pubKeyData) {
             await new Promise((resolve) => {
                 this.onPubKey((p) => resolve(p));
@@ -314,6 +323,21 @@ class CoinjoinClient {
      * @returns {Promise<boolean>}
      */
     async submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature) {
+        if (!this.web3.utils.isAddress(sender)) {
+            throw new Error(`Invalid sender address ${sender}`);
+        }
+        if (isNaN(parseInt(amount))) {
+            throw new Error(`Invalid amount ${amount}`);
+        }
+        if (!this.web3.utils.isHex(encRecipient)) {
+            throw new Error(`Invalid encrypted recipient ${encRecipient}`);
+        }
+        if (!this.web3.utils.isHex(pubKey)) {
+            throw new Error(`Invalid pub key ${pubKey}`);
+        }
+        if (!this.web3.utils.isHex(signature)) {
+            throw new Error(`Invalid signature ${signature}`);
+        }
         debug('Submitting deposit metadata to the operator', amount, encRecipient);
         const promise = new Promise((resolve) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
@@ -331,6 +355,9 @@ class CoinjoinClient {
      * @returns {Promise<Object>}
      */
     async fetchFillableDepositsAsync(minAmount = 0) {
+        if (isNaN(minAmount)) {
+            throw new Error(`Invalid amount ${minAmount}`);
+        }
         const promise = new Promise((resolve) => {
             this.ee.once(FETCH_FILLABLE_SUCCESS, (result) => resolve(result));
         });
@@ -373,6 +400,18 @@ class CoinjoinClient {
      * @returns {Promise<void>}
      */
     async signDepositMetadataAsync(sender, amount, encRecipient, pubKey) {
+        if (!this.web3.utils.isAddress(sender)) {
+            throw new Error(`Invalid sender address ${sender}`);
+        }
+        if (isNaN(parseInt(amount))) {
+            throw new Error(`Invalid amount ${amount}`);
+        }
+        if (!this.web3.utils.isHex(encRecipient)) {
+            throw new Error(`Invalid encrypted recipient ${encRecipient}`);
+        }
+        if (!this.web3.utils.isHex(pubKey)) {
+            throw new Error(`Invalid pub key ${pubKey}`);
+        }
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
