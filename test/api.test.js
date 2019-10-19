@@ -158,7 +158,7 @@ contract('Salad', () => {
         executedDealPromise = new Promise((resolve) => {
             cjc.onDealExecuted((deal) => resolve(deal));
         });
-        await server.handleDealProcessingAsync();
+        await server.handleDealExecutionAsync();
     }).timeout(60000);
 
     it('should verify that a deal was created since the threshold is reached', async () => {

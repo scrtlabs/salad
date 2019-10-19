@@ -54,22 +54,34 @@ class OperatorApi {
         });
     }
 
+    /**
+     * Watch block countdown and trigger deal execution when reached
+     * @returns {Promise<void>}
+     */
     async watchBlocksUntilDeal() {
         while (this.active === true) {
             const countdown = await this.refreshBlocksUntilDeal();
             if (countdown === 0) {
-                await this.handleDealProcessingAsync();
+                await this.handleDealExecutionAsync();
             }
             await utils.sleep(10000);
         }
     }
 
+    /**
+     * Refresh block countdown until deal execution event
+     * @returns {Promise<number>}
+     */
     async refreshBlocksUntilDeal() {
         const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
         this.ee.emit(BLOCK_UPDATE, blockCountdown);
         return blockCountdown;
     }
 
+    /**
+     * Shutdown the server
+     * @returns {Promise<void>}
+     */
     async shutdownAsync() {
         this.active = false;
         try {
@@ -136,31 +148,33 @@ class OperatorApi {
      * Creates a deal if the quorum is reached.
      * @returns {Promise<void>}
      */
-    async handleDealProcessingAsync() {
+    async handleDealExecutionAsync() {
         debug('Evaluating deal creation in non-blocking scope');
+        // TODO: Do accounting of deposit amounts on-chain and delete if not enough
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
-        if (deal) {
-            debug('Broadcasting new deal');
-            this.ee.emit(DEAL_CREATED_UPDATE, deal);
-
-            debug('Broadcasting quorum value 0 after new deal');
-            const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
-            debug('Fillable deposits after deal', fillableDeposits);
-            const quorum = fillableDeposits.length;
-            if (quorum !== 0) {
-                throw new Error('Data corruption, the quorum should be 0 after creating a deal');
-            }
-            this.ee.emit(QUORUM_UPDATE, quorum);
-
-            debug('Deal created on Ethereum, executing...', deal._tx);
-            const taskRecordOpts = {
-                taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
-                taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
-            };
-            await this.dealManager.executeDealAsync(deal, taskRecordOpts);
-            debug('Deal executed on Ethereum', deal._tx);
-            this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
+        if (!deal) {
+            debug('Quorum not reached skipping deal execution');
+            return;
         }
+        debug('Broadcasting new deal');
+        this.ee.emit(DEAL_CREATED_UPDATE, deal);
+
+        debug('Broadcasting quorum value 0 after new deal');
+        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
+        debug('Fillable deposits after deal', fillableDeposits);
+        if (fillableDeposits.length !== 0) {
+            throw new Error('Data corruption, the quorum should be 0 after creating a deal');
+        }
+        // Resetting quorum
+        this.ee.emit(QUORUM_UPDATE, 0);
+        debug('Deal created on Ethereum, executing...', deal._tx);
+        const taskRecordOpts = {
+            taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
+            taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
+        };
+        await this.dealManager.executeDealAsync(deal, taskRecordOpts);
+        debug('Deal executed on Ethereum', deal._tx);
+        this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
     }
 
     /**
@@ -234,23 +248,6 @@ class OperatorApi {
         debug('Broadcasting quorum update', quorum);
         this.ee.emit(QUORUM_UPDATE, quorum);
 
-        // TODO: Is this readable enough?
-        // Non-blocking, do not wait for the outcome of port-processing
-        // (async () => {
-        //         let dealExecuted = false;
-        //         do {
-        //             try {
-        //                 await utils.sleep(300);
-        //                 await this.handleDealProcessingAsync();
-        //                 dealExecuted = true;
-        //             } catch (e) {
-        //                 // TODO: Log somewhere
-        //                 console.error('Unable to create deal', e);
-        //                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
-        //             }
-        //         } while (!dealExecuted);
-        //     }
-        // )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
     }
 
