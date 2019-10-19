@@ -6,6 +6,7 @@ const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
+const debug = require('debug')('operator');
 
 /**
  * @typedef {Object} OperatorAction
@@ -55,7 +56,10 @@ class OperatorApi {
 
     async watchBlocksUntilDeal() {
         while (this.active === true) {
-            await this.refreshBlocksUntilDeal();
+            const countdown = await this.refreshBlocksUntilDeal();
+            if (countdown === 0) {
+                await this.handleDealProcessingAsync();
+            }
             await utils.sleep(10000);
         }
     }
@@ -63,6 +67,7 @@ class OperatorApi {
     async refreshBlocksUntilDeal() {
         const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
         this.ee.emit(BLOCK_UPDATE, blockCountdown);
+        return blockCountdown;
     }
 
     async shutdownAsync() {
@@ -132,29 +137,28 @@ class OperatorApi {
      * @returns {Promise<void>}
      */
     async handleDealProcessingAsync() {
-        // TODO: Use a scheduler to trigger this instead post-deposit trigger
-        console.log('Evaluating deal creation in non-blocking scope');
+        debug('Evaluating deal creation in non-blocking scope');
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
         if (deal) {
-            console.log('Broadcasting new deal');
+            debug('Broadcasting new deal');
             this.ee.emit(DEAL_CREATED_UPDATE, deal);
 
-            console.log('Broadcasting quorum value 0 after new deal');
+            debug('Broadcasting quorum value 0 after new deal');
             const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
-            console.log('Fillable deposits after deal', fillableDeposits);
+            debug('Fillable deposits after deal', fillableDeposits);
             const quorum = fillableDeposits.length;
             if (quorum !== 0) {
                 throw new Error('Data corruption, the quorum should be 0 after creating a deal');
             }
             this.ee.emit(QUORUM_UPDATE, quorum);
 
-            console.log('Deal created on Ethereum, executing...', deal._tx);
+            debug('Deal created on Ethereum, executing...', deal._tx);
             const taskRecordOpts = {
                 taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
                 taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
             };
             await this.dealManager.executeDealAsync(deal, taskRecordOpts);
-            console.log('Deal executed on Ethereum', deal._tx);
+            debug('Deal executed on Ethereum', deal._tx);
             this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
         }
     }
@@ -164,18 +168,18 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async loadEncryptionPubKeyAsync() {
-        console.log('Sending encryption public key to new connected client');
+        debug('Sending encryption public key to new connected client');
         const taskRecordOpts = {
             taskGasLimit: GET_ENCRYPTION_PUB_KEY_GAS_LIMIT,
             taskGasPx: utils.toGrains(GET_ENCRYPTION_PUB_KEY_GAS_PRICE),
         };
         /** @type EncryptionPubKey|null */
         let pubKeyData = await this.store.fetchPubKeyData();
-        console.log('Pub key data from cache', pubKeyData);
+        debug('Pub key data from cache', pubKeyData);
         while (pubKeyData === null) {
             try {
                 await utils.sleep(300);
-                console.log('This is the first start, fetching the encryption key from Enigma');
+                debug('This is the first start, fetching the encryption key from Enigma');
                 pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
                 if (pubKeyData !== null) {
                     await this.store.insertPubKeyDataInCache(pubKeyData);
@@ -199,10 +203,10 @@ class OperatorApi {
     _verifyDepositSignature(payload, signature) {
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        console.log('Verifying message', message, 'with signature', signature);
+        debug('Verifying message', message, 'with signature', signature);
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
         const sender = this.web3.eth.accounts.recover(hash, signature);
-        console.log('Recovered sender', sender);
+        debug('Recovered sender', sender);
         return (sender === payload.sender);
     }
 
@@ -216,37 +220,37 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
-        console.log('Got deposit metadata with signature', signature);
+        debug('Got deposit metadata with signature', signature);
         const payload = {sender, amount, encRecipient, pubKey};
         if (!this._verifyDepositSignature(payload, signature)) {
             throw new Error(`Signature verification failed: ${signature}`);
         }
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
-        console.log('Registered deposit', registeredDeposit);
+        debug('Registered deposit', registeredDeposit);
 
         const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
         const quorum = fillableDeposits.length;
 
-        console.log('Broadcasting quorum update', quorum);
+        debug('Broadcasting quorum update', quorum);
         this.ee.emit(QUORUM_UPDATE, quorum);
 
         // TODO: Is this readable enough?
         // Non-blocking, do not wait for the outcome of port-processing
-        (async () => {
-                let dealExecuted = false;
-                do {
-                    try {
-                        await utils.sleep(300);
-                        await this.handleDealProcessingAsync();
-                        dealExecuted = true;
-                    } catch (e) {
-                        // TODO: Log somewhere
-                        console.error('Unable to create deal', e);
-                        await utils.sleep(this.pauseOnRetryInSeconds * 1000);
-                    }
-                } while (!dealExecuted);
-            }
-        )();
+        // (async () => {
+        //         let dealExecuted = false;
+        //         do {
+        //             try {
+        //                 await utils.sleep(300);
+        //                 await this.handleDealProcessingAsync();
+        //                 dealExecuted = true;
+        //             } catch (e) {
+        //                 // TODO: Log somewhere
+        //                 console.error('Unable to create deal', e);
+        //                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
+        //             }
+        //         } while (!dealExecuted);
+        //     }
+        // )();
         return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
     }
 

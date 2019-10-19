@@ -5,6 +5,7 @@
   "main": "src/index.js",
   "dependencies": {
     "core-js": "^3.2.1",
+    "debug": "^4.1.1",
     "dotenv": "^8.0.0",
     "enigma-js": "0.0.9-develop",
     "eth-crypto": "^1.2.2",

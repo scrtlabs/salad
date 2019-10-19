@@ -1,6 +1,7 @@
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
 const {CoinjoinClient} = require('enigma-coinjoin-client');
+const debug = require('debug')('operator');
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -57,10 +58,10 @@ class DealManager {
      * @returns {Promise<boolean>}
      */
     async verifyDepositAmountAsync(sender, amount) {
-        console.log('Verifying balance for deposit', sender, amount);
+        debug('Verifying balance for deposit', sender, amount);
         const account = this.web3.utils.toChecksumAddress(sender);
         const balance = await this.contract.methods.getParticipantBalance(account).call({from: this.scClient.getOperatorAccount()});
-        console.log('Comparing balance with amount', balance, amount);
+        debug('Comparing balance with amount', balance, amount);
         return (this.web3.utils.toBN(balance) >= this.web3.utils.toBN(amount));
     }
 
@@ -74,7 +75,7 @@ class DealManager {
      * @returns {Promise<Deposit>}
      */
     async registerDepositAsync(sender, amount, pubKey, encRecipient, signature) {
-        console.log('Registering deposit', sender, amount, encRecipient);
+        debug('Registering deposit', sender, amount, encRecipient);
         await this.verifyDepositAmountAsync(sender, amount);
         const deposit = {sender, amount, pubKey, encRecipient, signature};
         await this.store.insertDepositAsync(deposit);
@@ -89,11 +90,11 @@ class DealManager {
      */
     async createDealIfQuorumReachedAsync(opts, amount = 0) {
         const deposits = await this.fetchFillableDepositsAsync(amount);
-        console.log('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
+        debug('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
         /** @type Deal | null */
         let deal = null;
         if (deposits.length >= this.threshold) {
-            console.log('Quorum reached with deposits', deposits);
+            debug('Quorum reached with deposits', deposits);
             deal = await this.createDealAsync(deposits, opts);
         }
         return deal;
@@ -117,10 +118,10 @@ class DealManager {
     async createDealAsync(deposits, opts) {
         const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
         if (pendingDeals.length > 0) {
-            console.log('The executable deals', pendingDeals);
+            debug('The executable deals', pendingDeals);
             throw new Error('Cannot creating a new deal until current deal is executed');
         }
-        console.log('Creating deal with deposits', deposits);
+        debug('Creating deal with deposits', deposits);
         // TODO: Assuming that all deposits are equal for now
         /** @type string */
         const depositAmount = deposits[0].amount;
@@ -128,13 +129,13 @@ class DealManager {
         const participants = deposits.map((deposit) => deposit.sender);
         const sender = this.scClient.getOperatorAccount();
         const nonce = (await this.web3.eth.getTransactionCount(sender)).toString();
-        console.log('The nonce', nonce);
+        debug('The nonce', nonce);
         const dealIdMessage = CoinjoinClient.generateDealIdMessage(this.web3, depositAmount, participants, sender, nonce);
         const dealId = this.web3.utils.soliditySha3({
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        // console.log('The dealId', dealId);
+        // debug('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
@@ -142,7 +143,7 @@ class DealManager {
             gas: this.gasValues.createDeal,
             from: sender,
         });
-        // console.log('Got deal data from receipt', receipt.events.NewDeal.returnValues);
+        // debug('Got deal data from receipt', receipt.events.NewDeal.returnValues);
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
             throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);
@@ -183,11 +184,12 @@ class DealManager {
     }
 
     async getBlocksUntilDealAsync() {
-        const blockNumber = (await this.web3.eth.getBlock()).number;
+        const blockNumber = await this.web3.eth.getBlockNumber();
+        debug('The block', blockNumber);
         const lastExecutionBlockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
         const dealIntervalInBlocks = await this.contract.methods.dealIntervalInBlocks().call();
-        const countdown = lastExecutionBlockNumber + dealIntervalInBlocks - blockNumber;
-        console.log(lastExecutionBlockNumber, '+', dealIntervalInBlocks, '-', blockNumber, '=', countdown);
+        const countdown = (parseInt(lastExecutionBlockNumber) + parseInt(dealIntervalInBlocks)) - parseInt(blockNumber);
+        debug(lastExecutionBlockNumber, '+', dealIntervalInBlocks, '-', blockNumber, '=', countdown);
         return countdown;
     }
 }

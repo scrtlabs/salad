@@ -4,6 +4,7 @@
   "private": true,
   "main": "src/index.js",
   "dependencies": {
+    "debug": "^4.1.1",
     "dotenv": "^8.0.0",
     "enigma-coinjoin-client": "0.1.0",
     "enigma-js": "0.0.9-develop",

@@ -2,6 +2,7 @@ require('dotenv').config();
 const WebSocket = require('ws');
 const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS} = require("enigma-coinjoin-client").actions;
 const {OperatorApi} = require('./api');
+const debug = require('debug')('operator');
 
 const port = process.env.WS_PORT;
 
@@ -10,11 +11,11 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     await api.initAsync();
 
     const wss = new WebSocket.Server({port});
-    console.log('Starting the websocket server');
+    debug('Starting the websocket server');
     wss.on('connection', async function connection(ws) {
 
         function broadcast(actionData) {
-            console.log('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
+            debug('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
             wss.clients.forEach(client => {
                 if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(actionData));
@@ -30,20 +31,20 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         api.onBlock(broadcast);
 
         // Sending threshold on connection
-        console.log('Sending threshold value', threshold);
+        debug('Sending threshold value', threshold);
         const thresholdAction = api.getThreshold();
         ws.send(JSON.stringify(thresholdAction));
 
         const quorumAction = await api.fetchQuorumAsync(0);
-        console.log('Sending quorum value', quorumAction);
+        debug('Sending quorum value', quorumAction);
         ws.send(JSON.stringify(quorumAction));
 
         ws.on('message', async function incoming(message) {
-            console.log('received: %s', message);
+            debug('received: %s', message);
             const {action, payload} = JSON.parse(message);
             switch (action) {
                 case 'ping':
-                    console.log('Sending pong');
+                    debug('Sending pong');
                     ws.send(JSON.stringify({action: 'pong', payload: {}}));
                     break;
                 case SUBMIT_DEPOSIT_METADATA:
@@ -61,7 +62,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
             }
         });
     });
-    console.log('Server started on port', port);
+    debug('Server started on port', port);
     return api;
 }
 

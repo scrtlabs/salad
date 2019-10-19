@@ -1,4 +1,5 @@
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
+const debug = require('debug')('operator');
 
 // TODO: Move path to config and reference Github
 const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
@@ -59,11 +60,11 @@ class SecretContractClient {
     }
 
     async waitTaskSuccessAsync(task) {
-        console.log('Waiting for task success', task);
+        debug('Waiting for task success', task);
         do {
             await sleep(1000);
             task = await this.enigma.getTaskRecordStatus(task);
-            console.log('Waiting. Current Task Status is ' + task.ethStatus + '\r');
+            debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
         } while (task.ethStatus === 1);
         if (task.ethStatus === 3) {
             throw new Error(`Enigma network error with task: ${task.taskId}`);
@@ -80,17 +81,17 @@ class SecretContractClient {
     }
 
     async setPubKeyDataAsync(opts) {
-        console.log('Calling `get_pub_key`');
+        debug('Calling `get_pub_key`');
         const taskFn = 'get_pub_key()';
         const taskArgs = [];
         const {taskGasLimit, taskGasPx} = opts;
         const keyPair = this.enigma.obtainTaskKeyPair();
-        console.log('The key pair', keyPair);
-        console.log('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
+        debug('The key pair', keyPair);
+        debug('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
-        console.log('The pending task', pendingTask);
+        debug('The pending task', pendingTask);
         const task = await this.waitTaskSuccessAsync(pendingTask);
-        console.log('The completed task', task);
+        debug('The completed task', task);
         const output = await this.fetchOutput(task);
         this.pubKeyData = {
             taskId: task.taskId,
@@ -104,7 +105,7 @@ class SecretContractClient {
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
-        console.log('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
+        debug('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
         const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const operatorAddress = this.getOperatorAccount();
         const taskArgs = [
@@ -123,15 +124,15 @@ class SecretContractClient {
         // TODO: Retry of task fails
         const task = await this.waitTaskSuccessAsync(pendingTask);
         const output = await this.fetchOutput(task);
-        console.log('Got execute deal task', task.taskId, 'with results:', output);
+        debug('Got execute deal task', task.taskId, 'with results:', output);
         return task;
     }
 
     async getPubKeyDataAsync(opts) {
         if (!this.pubKeyData) {
-            console.log('PubKey not found in cache, fetching from Enigma...');
+            debug('PubKey not found in cache, fetching from Enigma...');
             await this.setPubKeyDataAsync(opts);
-            console.log('Storing pubKey in cache', this.pubKeyData);
+            debug('Storing pubKey in cache', this.pubKeyData);
         }
         return this.pubKeyData;
     }

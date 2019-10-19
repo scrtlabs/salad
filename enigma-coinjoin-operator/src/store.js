@@ -1,4 +1,5 @@
 const {Db, MongoClient} = require('mongodb');
+const debug = require('debug')('operator');
 
 const DEPOSITS_COLLECTION = 'deposits';
 const DEALS_COLLECTION = 'deals';
@@ -19,13 +20,13 @@ class Store {
         if (!this.client) {
             throw new Error('No Mongo client, accountant not initialized');
         }
-        console.log('Closing db connection');
+        debug('Closing db connection');
         return this.client.close();
     }
 
     async truncate(collection) {
         const result = await this.db.collection(collection).deleteMany({});
-        console.log('Truncated', collection);
+        debug('Truncated', collection);
     }
 
     async _findAllAsync(collection) {
@@ -34,12 +35,12 @@ class Store {
     }
 
     async _insertRecordAsync(record, collection) {
-        console.log('Inserting record', record);
+        debug('Inserting record', record);
         return this.db.collection(collection).insertOne(record);
     }
 
     async _insertRecordsAsync(records, collection) {
-        console.log('Inserting record', records);
+        debug('Inserting record', records);
         return this.db.collection(collection).insertMany(records);
     }
 
