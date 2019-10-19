@@ -1,14 +1,13 @@
 {
-  "name": "enigma-coinjoin-client",
+  "name": "@salad/operator",
   "version": "0.1.0",
   "private": true,
   "main": "src/index.js",
   "dependencies": {
-    "core-js": "^3.2.1",
     "debug": "^4.1.1",
     "dotenv": "^8.0.0",
+    "@salad/client": "0.1.0",
     "enigma-js": "0.0.9-develop",
-    "eth-crypto": "^1.2.2",
     "mongodb": "^3.3.0-beta2",
     "node-forge": "^0.8.5",
     "web3": "^1.0.0-beta.37",

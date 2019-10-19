@@ -1,5 +1,5 @@
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
-const debug = require('debug')('operator');
+const debug = require('debug')('operator-secret-contract');
 
 // TODO: Move path to config and reference Github
 const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
@@ -35,6 +35,7 @@ class SecretContractClient {
             },
         );
         this.enigma.admin();
+        // TODO: Store key secrets in cache
         // this.enigma.setTaskKeyPair();
     }
 
@@ -99,6 +100,8 @@ class SecretContractClient {
             userPrivateKey: keyPair.privateKey,
             workerPubKey: task.workerEncryptionKey,
         };
+        // TODO: Store key secrets in cache
+        // TODO: Not supported by current enigma-js
         // Setting a new key pair so that the encryption private key can be revealed without
         // revealing subsequent deal encryption data;
         // this.enigma.setTaskKeyPair();

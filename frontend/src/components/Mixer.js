@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {Field, reduxForm, SubmissionError} from 'redux-form';
-import {CoinjoinClient, actions} from 'enigma-coinjoin-client';
+import {CoinjoinClient, actions} from '@salad/client';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
@@ -143,14 +143,15 @@ class Mixer extends Component {
         // The public key of the user must be submitted
         // This is DH encryption, Enigma needs the user pub key to decrypt the data
         const myPubKey = this.service.keyPair.publicKey;
-        await this.service.submitDepositMetadataAsync(sender, amountInWei, myPubKey, encRecipient);
+        // TODO: Add signature
+        await this.service.submitDepositMetadataAsync(sender, amountInWei, encRecipient, myPubKey);
     };
 
-    async componentDidMount() {
-        fetch('https://api.mydomain.com')
-            .then(response => response.json())
-            .then(data => this.setState({ data }));
-    }
+    // async componentDidMount() {
+    //     fetch('https://api.mydomain.com')
+    //         .then(response => response.json())
+    //         .then(data => this.setState({ data }));
+    // }
 
     render() {
         const {isSubmitting, quorum, threshold, page, blockCountdown} = this.state;

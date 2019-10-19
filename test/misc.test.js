@@ -1,5 +1,5 @@
 const SaladContract = artifacts.require('Salad');
-const {CoinjoinClient} = require('enigma-coinjoin-client');
+const {CoinjoinClient} = require('@salad/client');
 
 contract('Salad', (accounts) => {
     it.skip('should generate a matching DealId message', async () => {

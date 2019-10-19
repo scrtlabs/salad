@@ -1,7 +1,7 @@
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
-const {CoinjoinClient} = require('enigma-coinjoin-client');
-const debug = require('debug')('operator');
+const {CoinjoinClient} = require('@salad/client');
+const debug = require('debug')('operator-deal-manager');
 
 const DEAL_STATUS = {
     NEW: 0,
