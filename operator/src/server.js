@@ -1,9 +1,9 @@
 require('dotenv').config();
 const fs = require('fs');
-const {startServer} = require('enigma-coinjoin-operator');
+const {startServer} = require('@salad/operator');
 const Web3 = require('web3');
 const SaladContract = require('../../build/smart_contracts/Salad');
-const debug = require('debug')('operator');
+const debug = require('debug')('operator-server');
 
 (async () => {
     const operatorAccountIndex = 0;

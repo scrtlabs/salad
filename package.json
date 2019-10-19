@@ -1,5 +1,5 @@
 {
-  "name": "enigma-coinjoin",
+  "name": "@salad/project",
   "version": "0.1.0",
   "description": "",
   "private": true,
@@ -11,8 +11,8 @@
     "core-js": "^3.2.1",
     "debug": "^4.1.1",
     "dotenv": "^8.0.0",
-    "enigma-coinjoin-client": "0.1.0",
-    "enigma-coinjoin-operator": "0.1.0",
+    "@salad/client": "0.1.0",
+    "@salad/operator": "0.1.0",
     "enigma-js": "0.0.9-develop",
     "openzeppelin-solidity": "^2.3.0"
   },
@@ -23,8 +23,8 @@
   "author": "",
   "license": "ISC",
   "workspaces": [
-    "enigma-coinjoin-operator",
-    "enigma-coinjoin-client",
-    "enigma-coinjoin-app"
+    "operator",
+    "client",
+    "frontend"
   ]
 }

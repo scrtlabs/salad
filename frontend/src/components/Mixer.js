@@ -1,7 +1,7 @@
 import React, {Component} from 'react';
 import {connect} from 'react-redux';
 import {Field, reduxForm, SubmissionError} from 'redux-form';
-import {CoinjoinClient, actions} from 'enigma-coinjoin-client';
+import {CoinjoinClient, actions} from '@salad/client';
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';

@@ -1,6 +1,6 @@
 require('dotenv').config();
 const WebSocket = require('ws');
-const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS} = require("enigma-coinjoin-client").actions;
+const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS} = require("@salad/client").actions;
 const {OperatorApi} = require('./api');
 const debug = require('debug')('operator');
 

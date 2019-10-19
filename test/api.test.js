@@ -1,7 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
-const {CoinjoinClient} = require('enigma-coinjoin-client');
-const {startServer} = require('enigma-coinjoin-operator');
+const {CoinjoinClient} = require('@salad/client');
+const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
 const SaladContract = artifacts.require('Salad');
 const {utils} = require('enigma-js/node');
@@ -10,11 +10,11 @@ const debug = require('debug')('test');
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
 // const EnigmaContract = artifacts.require('Enigma');
-const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('enigma-coinjoin-operator/src/store');
+const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
 contract('Salad', () => {
     let server;
-    let cjc;
+    let salad;
     let opts;
     let token;
     let web3Utils;
@@ -35,18 +35,18 @@ contract('Salad', () => {
         await server.store.truncate(CACHE_COLLECTION);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
-        cjc = new CoinjoinClient(saladContractAddr, enigmaContractAddr, operatorUrl, provider);
+        salad = new CoinjoinClient(saladContractAddr, enigmaContractAddr, operatorUrl, provider);
         // Always shutdown the WS server when tests end
         process.on('SIGINT', async () => {
             debug('Caught interrupt signal, shutting down WS server');
-            await cjc.shutdownAsync();
+            await salad.shutdownAsync();
             await server.shutdownAsync();
             process.exit();
         });
-        await cjc.initAsync();
+        await salad.initAsync();
         // Convenience shortcuts
         web3Utils = web3.utils;
-        accounts = cjc.accounts;
+        accounts = salad.accounts;
         // Default options of client-side transactions
         opts = {
             gas: 4712388,
@@ -59,14 +59,14 @@ contract('Salad', () => {
     it('should connect to the WS server', async () => {
         debug('Testing connection');
         const action = new Promise((resolve) => {
-            cjc.ws.once('message', (msg) => {
+            salad.ws.once('message', (msg) => {
                 const {action} = JSON.parse(msg);
                 if (action === 'pong') {
                     resolve(action);
                 }
             });
         });
-        cjc.ws.send(JSON.stringify({action: 'ping', payload: {}}));
+        salad.ws.send(JSON.stringify({action: 'ping', payload: {}}));
         await action;
     });
 
@@ -74,17 +74,17 @@ contract('Salad', () => {
     it('should fetch and cache the encryption pub key', async () => {
         await server.loadEncryptionPubKeyAsync();
         await utils.sleep(300);
-        expect(cjc.pubKeyData).to.not.be.null;
-        expect(cjc.keyPair).to.not.be.null;
-        pubKey = cjc.keyPair.publicKey;
+        expect(salad.pubKeyData).to.not.be.null;
+        expect(salad.keyPair).to.not.be.null;
+        pubKey = salad.keyPair.publicKey;
     }).timeout(60000); // Giving more time because fetching the pubKey
 
     let amount;
     it('should have a valid block countdown', async () => {
         await server.refreshBlocksUntilDeal();
         await utils.sleep(300);
-        debug('The block countdown', cjc.blockCountdown);
-        expect(cjc.blockCountdown).to.be.above(0);
+        debug('The block countdown', salad.blockCountdown);
+        expect(salad.blockCountdown).to.be.above(0);
         amount = web3Utils.toWei('10');
     });
 
@@ -96,18 +96,18 @@ contract('Salad', () => {
         for (let i = 0; i < nbDeposits; i++) {
             const depositIndex = i + 1;
             it(`should make deposit ${depositIndex} on Ethereum`, async () => {
-                sender = cjc.accounts[depositIndex];
-                const receipt = await cjc.makeDepositAsync(sender, amount, opts);
+                sender = salad.accounts[depositIndex];
+                const receipt = await salad.makeDepositAsync(sender, amount, opts);
                 expect(receipt.status).to.equal(true);
             });
 
             it(`should encrypt deposit ${depositIndex}`, async () => {
-                const recipient = cjc.accounts[depositIndex + 1];
-                encRecipient = await cjc.encryptRecipientAsync(recipient);
+                const recipient = salad.accounts[depositIndex + 1];
+                encRecipient = await salad.encryptRecipientAsync(recipient);
             });
 
             it(`should sign deposit ${depositIndex} payload`, async () => {
-                signature = await cjc.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
+                signature = await salad.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
                 debug('The signature', signature);
                 const sigBytes = web3Utils.hexToBytes(signature);
                 debug('The signature length', sigBytes.length, sigBytes);
@@ -116,15 +116,15 @@ contract('Salad', () => {
 
             it(`should submit signed deposit ${depositIndex} payload`, async () => {
                 debug('Testing deposit submit with signature', signature);
-                const result = await cjc.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
+                const result = await salad.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
                 expect(result).to.equal(true);
             }).timeout(5000);
         }
 
         it('should verify that the submitted deposits are fillable', async () => {
             // Quorum should be N after deposits
-            expect(cjc.quorum).to.equal(nbDeposits);
-            const {deposits} = await cjc.fetchFillableDepositsAsync();
+            expect(salad.quorum).to.equal(nbDeposits);
+            const {deposits} = await salad.fetchFillableDepositsAsync();
             expect(deposits.length).to.equal(nbDeposits);
             resolve(true);
         }).timeout(5000);
@@ -153,29 +153,29 @@ contract('Salad', () => {
         } while (countdown > 0);
         // Catching the deal created event
         dealPromise = new Promise((resolve) => {
-            cjc.onDealCreated((deal) => resolve(deal));
+            salad.onDealCreated((deal) => resolve(deal));
         });
         executedDealPromise = new Promise((resolve) => {
-            cjc.onDealExecuted((deal) => resolve(deal));
+            salad.onDealExecuted((deal) => resolve(deal));
         });
         await server.handleDealExecutionAsync();
-    }).timeout(60000);
+    }).timeout(120000); // Give enough time to execute the deal on Enigma
 
     it('should verify that a deal was created since the threshold is reached', async () => {
         const deal = await dealPromise;
         debug('Created deal', deal);
-        const deals = await cjc.findDealsAsync(1);
+        const deals = await salad.findDealsAsync(1);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
-        expect(cjc.quorum).to.equal(0);
-    }).timeout(120000); // Give enough time to execute the deal on Enigma
+        expect(salad.quorum).to.equal(0);
+    });
 
     it('should verify the deal execution', async () => {
         const deal = await executedDealPromise;
         debug('Executed deal', deal);
-        const deals = await cjc.findDealsAsync(2);
+        const deals = await salad.findDealsAsync(2);
         // expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
-        expect(cjc.quorum).to.equal(0);
-    }).timeout(180000);
+        expect(salad.quorum).to.equal(0);
+    });
 });
