@@ -36,7 +36,7 @@ class SecretContractClient {
         );
         this.enigma.admin();
         // TODO: Store key secrets in cache
-        // this.enigma.setTaskKeyPair();
+        this.enigma.setTaskKeyPair();
     }
 
     getOperatorAccount() {
@@ -101,10 +101,9 @@ class SecretContractClient {
             workerPubKey: task.workerEncryptionKey,
         };
         // TODO: Store key secrets in cache
-        // TODO: Not supported by current enigma-js
         // Setting a new key pair so that the encryption private key can be revealed without
         // revealing subsequent deal encryption data;
-        // this.enigma.setTaskKeyPair();
+        this.enigma.setTaskKeyPair();
     }
 
     async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
