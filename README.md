@@ -12,8 +12,8 @@ A CoinJoin implementation of the Enigma Discovery Network.
 ### Instructions
 This project uses Yarn Workplaces so using yarn over npm is recommended.
 
-- `git clone https://github.com/enigmampc/coinjoin-poc`
-- `cd coinjoin-poc`
+- `git clone https://github.com/enigmampc/salad`
+- `cd salad`
 - Create `.env` from `.env.template` after review or edit
 - `cd enigma-coinjoin-operator`
 - Create `.env` from `.env.template` after review or edit
