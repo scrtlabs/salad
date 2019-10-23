@@ -77,11 +77,15 @@ async function deploySecretContract(config, mixerEthAddress) {
 
 module.exports = async function (deployer, network, accounts) {
 
+    let ethNetworkID = (typeof process.env.ETH_NETWORK_ID === 'undefined') ? '4447' : process.env.ETH_NETWORK_ID;
+    let enigmaHost = (typeof process.env.ENIGMA_HOST === 'undefined') ? 'localhost' : process.env.ENIGMA_HOST;
+    let enigmaPort = (typeof process.env.ENIGMA_PORT === 'undefined') ? '3333' : process.env.ENIGMA_PORT;
+
     enigma = new Enigma(
         web3,
-        EnigmaContract.networks['4447'].address,
-        EnigmaTokenContract.networks['4447'].address,
-        'http://localhost:3346',
+        EnigmaContract.networks[ethNetworkID].address,
+        EnigmaTokenContract.networks[ethNetworkID].address,
+        'http://'+enigmaHost+':'+enigmaPort,
         {
             gas: 4712388,
             gasPrice: 100000000000,

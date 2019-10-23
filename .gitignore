@@ -2,3 +2,5 @@
 .idea
 node_modules
 etc
+build/
+docker-compose.yml
