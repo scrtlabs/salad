@@ -8,7 +8,7 @@ const {utils} = require('enigma-js/node');
 const debug = require('debug')('test');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
+const {EnigmaContract} = require('@salad/client/src/enigmaSmartContract');
 // const EnigmaContract = artifacts.require('Enigma');
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 

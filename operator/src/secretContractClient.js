@@ -1,8 +1,9 @@
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
 const debug = require('debug')('operator-secret-contract');
 
+const {EnigmaContract} = require('@salad/client/src/enigmaSmartContract');
+
 // TODO: Move path to config and reference Github
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 
 function sleep(ms) {

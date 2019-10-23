@@ -17,6 +17,8 @@ if (typeof window === 'undefined') {
     utils = require('enigma-js').utils;
 }
 
+const {EnigmaContract} = require('@salad/client/src/enigmaSmartContract');
+
 /**
  * @typedef {Object} DepositPayload
  * @property {string} sender - The depositor Ethereum address
@@ -27,7 +29,6 @@ if (typeof window === 'undefined') {
 
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
     constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {

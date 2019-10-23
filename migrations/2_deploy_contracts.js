@@ -9,15 +9,7 @@ dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-let EnigmaContract;
-if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW' && process.env.SGX_MODE != 'HW')) {
-    console.log(`Error reading ".env" file, aborting....`);
-    process.exit();
-} else if (process.env.SGX_MODE == 'SW') {
-    EnigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
-} else {
-    EnigmaContract = require('../build/enigma_contracts/Enigma.json');
-}
+const {EnigmaContract} = require('@salad/client/src/enigmaSmartContract');
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const provider = new Web3.providers.HttpProvider('http://localhost:9545');
 const web3 = new Web3(provider);
