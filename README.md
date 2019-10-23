@@ -12,19 +12,15 @@ A CoinJoin implementation of the Enigma Discovery Network.
 ### Instructions
 This project uses Yarn Workplaces so using yarn over npm is recommended.
 
-- `git clone https://github.com/enigmampc/salad`
-- `cd salad`
-- Create `.env` from `.env.template` after review or edit
-- `cd enigma-coinjoin-operator`
-- Create `.env` from `.env.template` after review or edit
-- `cd ..`
-- Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
-- `yarn install`
-- `yarn dc pull`
-- `yarn dc start` <- In background or separate terminal
-- `yarn dc compile`
-- `yarn dc migrate`
-- `yarn dc test`
+- `git clone https://github.com/enigmampc/coinjoin-poc`
+- `make configure` or `make configure SGX_MODE=SW` for Simulation Mode
+- In another console, run: `make start`
+
+after closing it, you can run `make stop` to shut down the docker containers.
+
+In your first console now you can:
+- `make migrate`, or
+- `make test`
 
 ## Architecture
 ### Definitions
