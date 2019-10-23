@@ -89,7 +89,7 @@ module.exports = async function (deployer, network, accounts) {
         },
     );
     enigma.admin();
-    // enigma.setTaskKeyPair();
+    enigma.setTaskKeyPair();
 
     // Deploy your Smart and Secret contracts below this point:
 

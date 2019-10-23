@@ -966,10 +966,10 @@
   resolved "https://registry.yarnpkg.com/@emotion/hash/-/hash-0.7.2.tgz#53211e564604beb9befa7a4400ebf8147473eeef"
   integrity sha512-RMtr1i6E8MXaBWwhXL3yeOU8JXRnz8GNxHvaUfVvwxokvayUY0zoBeWbKw1S9XkufmGEEdQd228pSZXFkAln8Q==
 
-"@enigmampc/discovery-cli@0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.1.0.tgz#815962984bd97a332f219dda576136c5bd96149f"
-  integrity sha512-TC8Bf/2AWZv0Q+AwXCxvnfUX//rfKFOQhDq0pqqCptKsaXCOzfmvowhXAYTsKQrXrd7LRwdHasYtUM13Przc2w==
+"@enigmampc/discovery-cli@0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.1.3.tgz#767358132d49f6a396d4ce8f224585c6bdf7cfeb"
+  integrity sha512-SyqxOjIzvMUrSHb4uDXQRHi3HMd6He3ZypfZFj5s9IAZEeY4MHFQp6DCv08WXxkSUb0ZN6VOu9N3g8zkxpxwsg==
   dependencies:
     "@truffle/artifactor" "^4.0.31"
     "@truffle/compile-solidity" "^4.2.3"
@@ -984,7 +984,7 @@
     clui "^0.3.6"
     docker-compose "^0.17.4"
     dotenv "^8.0.0"
-    enigma-js "^0.0.8"
+    enigma-js "^0.3.0"
     get-cursor-position "^1.0.5"
     hasbin "^1.2.3"
     inquirer "^6.4.1"
@@ -5359,10 +5359,10 @@ enhanced-resolve@^4.1.0:
     memory-fs "^0.4.0"
     tapable "^1.0.0"
 
-enigma-js@0.0.9-develop:
-  version "0.0.9-develop"
-  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.9-develop.tgz#657605a19e07134f0d1f9c4e5b3612d1627b36d0"
-  integrity sha512-8HE1Y6BzHMGakLkLkkwfoFJIDA5mw0fwik8jpVRG5VYQ8QYYSlgCgAUyfgpC8iX2A4wlUeQ5O6hVAco+b0714w==
+enigma-js@0.3.0, enigma-js@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.3.0.tgz#cfedc1517c73b83b1ffbca2f98b61c85bc02f98e"
+  integrity sha512-Qg0slG2ZX60aZ/eqyDkIuq8XrlMq+NVZY8rOd/wvsUoYoUzWCf+ApAZtY4A62HFR52CH0z2JqWx+bs51tWkdjg==
   dependencies:
     any-promise "^1.3.0"
     axios "0.18.1"
@@ -5385,40 +5385,6 @@ enigma-js@0.0.9-develop:
     openzeppelin-solidity "2.1"
     regenerator-runtime "^0.13.3"
     retry "^0.12.0"
-    rlp "2.1.0"
-    source-map-support "^0.5.9"
-    tls "0.0.1"
-    truffle-contract "^4.0.0"
-    uuid "^3.3.2"
-    web3-utils "1.0.0-beta.37"
-    webpack-node-externals "^1.7.2"
-    whatwg-fetch "^3.0.0"
-
-enigma-js@^0.0.8:
-  version "0.0.8"
-  resolved "https://registry.yarnpkg.com/enigma-js/-/enigma-js-0.0.8.tgz#7d7d984bdeb6c695b1bdb84fc7e6824f30a40c1e"
-  integrity sha512-oVXfAPIbJwenQdj9+CQV+JobZGlcmmuLd5bul+E/nR4OS7Y9OPbSyapeD45CrPYXK31TdNjwSglqdiTZpTX9OA==
-  dependencies:
-    any-promise "^1.3.0"
-    axios "0.18.1"
-    body-parser "^1.18.3"
-    buffer "^5.1.0"
-    connect "^3.6.6"
-    core-js "^3.1.4"
-    create-file-webpack "^1.0.2"
-    elliptic "6.4.0"
-    eth-crypto "^1.2.2"
-    ethereumjs-abi "^0.6.5"
-    ethereumjs-util "^6.0.0"
-    eventemitter3 "^3.1.0"
-    filereader "^0.10.3"
-    jayson "^3.0.1"
-    jsbi "^2.0.5"
-    net "^1.0.2"
-    node-fetch "^2.3.0"
-    node-forge "^0.7.6"
-    openzeppelin-solidity "2.1"
-    regenerator-runtime "^0.13.3"
     rlp "2.1.0"
     source-map-support "^0.5.9"
     tls "0.0.1"
@@ -6031,15 +5997,7 @@ ethereumjs-abi@0.6.7:
     bn.js "^4.11.8"
     ethereumjs-util "^6.0.0"
 
-ethereumjs-abi@^0.6.5:
-  version "0.6.8"
-  resolved "https://registry.yarnpkg.com/ethereumjs-abi/-/ethereumjs-abi-0.6.8.tgz#71bc152db099f70e62f108b7cdfca1b362c6fcae"
-  integrity sha512-Tx0r/iXI6r+lRsdvkFDlut0N08jWMnKRZ6Gkq+Nmw75lZe4e6o3EkSnkaBP5NF6+m5PTGAr9JP43N3LyeoglsA==
-  dependencies:
-    bn.js "^4.11.8"
-    ethereumjs-util "^6.0.0"
-
-"ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
+ethereumjs-abi@^0.6.5, "ethereumjs-abi@git+https://github.com/ethereumjs/ethereumjs-abi.git":
   version "0.6.8"
   resolved "git+https://github.com/ethereumjs/ethereumjs-abi.git#1cfbb13862f90f0b391d8a699544d5fe4dfb8c7b"
   dependencies:
