@@ -15,7 +15,7 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `git clone https://github.com/enigmampc/salad`
 - `cd salad`
 - Create `.env` from `.env.template` after review or edit
-- `cd enigma-coinjoin-operator`
+- `cd operator`
 - Create `.env` from `.env.template` after review or edit
 - `cd ..`
 - Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
