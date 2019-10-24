@@ -1,5 +1,6 @@
 const {Db, MongoClient} = require('mongodb');
-const debug = require('debug')('operator-store');
+const debug = require('debug')('operator:store');
+debug.enabled = true;
 
 const DEPOSITS_COLLECTION = 'deposits';
 const DEALS_COLLECTION = 'deals';

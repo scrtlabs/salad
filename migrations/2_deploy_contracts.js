@@ -6,6 +6,7 @@ const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
+const debug = require('debug')('operator:server');
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
@@ -28,7 +29,7 @@ function sleep(ms) {
 }
 
 async function deploySecretContract(config, mixerEthAddress) {
-    console.log(`Deploying Secret Contract "${config.filename}"...`);
+    debug(`Deploying Secret Contract "${config.filename}"...`);
     let scTask;
     let preCode;
     try {

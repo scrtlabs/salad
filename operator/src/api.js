@@ -1,12 +1,13 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS} = require("@salad/client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
-const debug = require('debug')('operator-api');
+const debug = require('debug')('operator:api');
+debug.enabled = true;
 
 /**
  * @typedef {Object} OperatorAction
@@ -120,6 +121,17 @@ class OperatorApi {
     }
 
     /**
+     * Call broadcast fn on Deal execution
+     * @param broadcastCallback
+     */
+    onQuorumNotReached(broadcastCallback) {
+        this.ee.on(QUORUM_NOT_REACHED_UPDATE, () => broadcastCallback({
+            action: QUORUM_NOT_REACHED_UPDATE,
+            payload: {}
+        }));
+    }
+
+    /**
      * Call broadcast fn on Quorum update
      * @param broadcastCallback
      */
@@ -154,6 +166,7 @@ class OperatorApi {
         const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
         if (!deal) {
             debug('Quorum not reached skipping deal execution');
+            this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
             return;
         }
         debug('Broadcasting new deal');

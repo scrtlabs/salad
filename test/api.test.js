@@ -5,6 +5,7 @@ const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
 const SaladContract = artifacts.require('Salad');
 const {utils} = require('enigma-js/node');
+const {mineUntilDeal} = require('./test-utils');
 const debug = require('debug')('test');
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
@@ -20,6 +21,9 @@ contract('Salad', () => {
     let web3Utils;
     let accounts;
     before(async () => {
+        console.log('The debug object', debug);
+        debug.enabled = true;
+        debug('Testing log');
         const operatorAccountIndex = 0;
         const provider = web3._provider;
         const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
@@ -88,37 +92,38 @@ contract('Salad', () => {
         amount = web3Utils.toWei('10');
     });
 
-    const quorumReached = new Promise((resolve) => {
-        const nbDeposits = parseInt(process.env.PARTICIPATION_THRESHOLD);
+    async function makeDeposit(depositIndex) {
         let sender;
         let encRecipient;
         let signature;
+        debug(`Make deposit ${depositIndex} on Ethereum`);
+        sender = salad.accounts[depositIndex];
+        const receipt = await salad.makeDepositAsync(sender, amount, opts);
+        expect(receipt.status).to.equal(true);
+
+        debug(`Encrypt deposit ${depositIndex}`);
+        const recipient = salad.accounts[depositIndex + 5];
+        encRecipient = await salad.encryptRecipientAsync(recipient);
+
+        debug(`Sign deposit ${depositIndex} payload`);
+        signature = await salad.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
+        debug('The signature', signature);
+        const sigBytes = web3Utils.hexToBytes(signature);
+        debug('The signature length', sigBytes.length, sigBytes);
+        expect(sigBytes.length).to.equal(65);
+
+        debug(`Submit signed deposit ${depositIndex} payload`);
+        debug('Testing deposit submit with signature', signature);
+        const result = await salad.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
+        expect(result).to.equal(true);
+    }
+
+    async function makeDeposits(nbDeposits) {
         for (let i = 0; i < nbDeposits; i++) {
             const depositIndex = i + 1;
-            it(`should make deposit ${depositIndex} on Ethereum`, async () => {
-                sender = salad.accounts[depositIndex];
-                const receipt = await salad.makeDepositAsync(sender, amount, opts);
-                expect(receipt.status).to.equal(true);
-            });
-
-            it(`should encrypt deposit ${depositIndex}`, async () => {
-                const recipient = salad.accounts[depositIndex + 5];
-                encRecipient = await salad.encryptRecipientAsync(recipient);
-            });
-
-            it(`should sign deposit ${depositIndex} payload`, async () => {
-                signature = await salad.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
-                debug('The signature', signature);
-                const sigBytes = web3Utils.hexToBytes(signature);
-                debug('The signature length', sigBytes.length, sigBytes);
-                expect(sigBytes.length).to.equal(65);
-            });
-
-            it(`should submit signed deposit ${depositIndex} payload`, async () => {
-                debug('Testing deposit submit with signature', signature);
-                const result = await salad.submitDepositMetadataAsync(sender, amount, encRecipient, pubKey, signature);
-                expect(result).to.equal(true);
-            }).timeout(5000);
+            it(`should submit deposit ${depositIndex}`, async () => {
+                await makeDeposit(depositIndex);
+            }).timeout(6000);
         }
 
         it('should verify that the submitted deposits are fillable', async () => {
@@ -126,31 +131,16 @@ contract('Salad', () => {
             expect(salad.quorum).to.equal(nbDeposits);
             const {deposits} = await salad.fetchFillableDepositsAsync();
             expect(deposits.length).to.equal(nbDeposits);
-            resolve(true);
-        }).timeout(5000);
-    });
+        }).timeout(6000);
+    }
 
+    const nbDeposits = parseInt(process.env.PARTICIPATION_THRESHOLD);
+    const quorumReached = makeDeposits(nbDeposits);
     let dealPromise;
     let executedDealPromise;
     it('should mine blocks until the deal interval', async () => {
         await quorumReached;
-        let countdown;
-        do {
-            const result = await new Promise((resolve, reject) => {
-                web3.currentProvider.send({
-                    jsonrpc: '2.0',
-                    method: 'evm_mine',
-                    id: new Date().getTime()
-                }, (err, result) => {
-                    if (err) {
-                        return reject(err)
-                    }
-                    return resolve(result)
-                });
-            });
-            debug('Mined block', result);
-            countdown = await server.refreshBlocksUntilDeal();
-        } while (countdown > 0);
+        await mineUntilDeal(web3, server);
         // Catching the deal created event
         dealPromise = new Promise((resolve) => {
             salad.onDealCreated((deal) => resolve(deal));
@@ -177,5 +167,19 @@ contract('Salad', () => {
         // expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(salad.quorum).to.equal(0);
+        const blockNumber = await web3.eth.getBlockNumber();
+        debug('The block number after execution', blockNumber);
     });
+
+    const nbDepositsQuorumNotReached = parseInt(process.env.PARTICIPATION_THRESHOLD) - 1 ;
+    const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
+    it.skip('should mine blocks until deal without reaching the quorum', async () => {
+        await partialQuorumDepositsSubmitted;
+        await mineUntilDeal(web3, server);
+        // Catching the quorum not reached event
+        const quorumNotReachedPromise = new Promise((resolve) => {
+            salad.onQuorumNotReached(() => resolve(true));
+        });
+        expect(await quorumNotReachedPromise).to.equal(true);
+    }).timeout(120000); // Give enough time to execute the deal on Enigma
 });

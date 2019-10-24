@@ -1,7 +1,8 @@
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
 const {CoinjoinClient} = require('@salad/client');
-const debug = require('debug')('operator-deal-manager');
+const debug = require('debug')('operator:deal-manager');
+debug.enabled = true;
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -106,7 +107,9 @@ class DealManager {
      * @returns {Promise<Array<Deposit>>}
      */
     async fetchFillableDepositsAsync(minimumAmount = 0) {
-        return this.store.queryFillableDepositsAsync(minimumAmount);
+        const deposits = await this.store.queryFillableDepositsAsync(minimumAmount);
+        debug('The fillable deposits', deposits);
+        return deposits;
     }
 
     /**
