@@ -17,7 +17,7 @@
     "openzeppelin-solidity": "^2.3.0"
   },
   "scripts": {
-    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js",
+    "dc": "node ./node_modules/.bin/discovery",
     "configure": "scripts/configure.sh",
     "configure-sw": "SGX_MODE=SW scripts/configure.sh",
     "start": "yarn dc start",
