@@ -29,6 +29,7 @@ echo "SGX_MODE = $SGX_MODE"
 print_line_of '='
 
 cp "$ENV_TEMPLATE" '.env'
+cp "operator/$ENV_TEMPLATE" 'operator/.env'
 cp "$DOCKER_COMPOSE_TEMPLATE" 'docker-compose.yml'
 
 # Edit the configuration files to work well with Simulation mode.
