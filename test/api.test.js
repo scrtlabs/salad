@@ -20,6 +20,7 @@ contract('Salad', () => {
     let token;
     let web3Utils;
     let accounts;
+    const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     before(async () => {
         console.log('The debug object', debug);
         debug.enabled = true;
@@ -27,7 +28,6 @@ contract('Salad', () => {
         const operatorAccountIndex = 0;
         const provider = web3._provider;
         const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
-        const threshold = 2;
         const saladContractAddr = SaladContract.address;
         const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
@@ -134,8 +134,7 @@ contract('Salad', () => {
         }).timeout(6000);
     }
 
-    const nbDeposits = parseInt(process.env.PARTICIPATION_THRESHOLD);
-    const quorumReached = makeDeposits(nbDeposits);
+    const quorumReached = makeDeposits(threshold);
     let dealPromise;
     let executedDealPromise;
     it('should mine blocks until the deal interval', async () => {
@@ -171,15 +170,16 @@ contract('Salad', () => {
         debug('The block number after execution', blockNumber);
     });
 
-    const nbDepositsQuorumNotReached = parseInt(process.env.PARTICIPATION_THRESHOLD) - 1 ;
+    const nbDepositsQuorumNotReached = threshold - 1 ;
     const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
-    it.skip('should mine blocks until deal without reaching the quorum', async () => {
+    it('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
         // Catching the quorum not reached event
         const quorumNotReachedPromise = new Promise((resolve) => {
             salad.onQuorumNotReached(() => resolve(true));
         });
+        await server.handleDealExecutionAsync();
         expect(await quorumNotReachedPromise).to.equal(true);
     }).timeout(120000); // Give enough time to execute the deal on Enigma
 });
