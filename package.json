@@ -17,8 +17,14 @@
     "openzeppelin-solidity": "^2.3.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
+    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js",
+    "configure": "scripts/configure.sh",
+    "configure-sw": "SGX_MODE=SW scripts/configure.sh",
+    "start": "yarn dc start",
+    "stop": "yarn dc stop",
+    "compile": "yarn dc compile",
+    "test": "yarn dc compile && yarn dc test",
+    "migrate": "yarn dc compile && yarn dc migrate"
   },
   "author": "",
   "license": "ISC",

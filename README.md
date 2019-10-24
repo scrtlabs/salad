@@ -13,14 +13,14 @@ A CoinJoin implementation of the Enigma Discovery Network.
 This project uses Yarn Workplaces so using yarn over npm is recommended.
 
 - `git clone https://github.com/enigmampc/coinjoin-poc`
-- `make configure` or `make configure SGX_MODE=SW` for Simulation Mode
-- In another console, run: `make start`
+- `yarn configure` or `yarn configure-sw` to run salad on Simulation Mode
+- In another console, run: `yarn start`
 
-after closing it, you can run `make stop` to shut down the docker containers.
+after closing it, you can run `yarn stop` to shut down the docker containers.
 
 In your first console now you can:
-- `make migrate`, or
-- `make test`
+- `yarn migrate`, or
+- `yarn test`
 
 ## Architecture
 ### Definitions
