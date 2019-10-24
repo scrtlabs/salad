@@ -2,3 +2,7 @@
 .idea
 node_modules
 etc
+build/enigma_contracts/*.json
+build/secret_contracts/
+build/smart_contracts/
+docker-compose.yml
