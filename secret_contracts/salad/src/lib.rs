@@ -34,7 +34,7 @@ trait ContractInterface {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160>;
+    );
 }
 
 struct Contract;
@@ -144,7 +144,7 @@ impl ContractInterface for Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160> {
+    ) {
         eprint!(
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
@@ -191,6 +191,5 @@ impl ContractInterface for Contract {
         // TODO: Converting as a workaround for lack of bytes32 support
         let deal_id_uint = U256::from(deal_id);
         eth_contract.distribute(deal_id_uint, recipients.clone());
-        recipients
     }
 }

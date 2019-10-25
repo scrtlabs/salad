@@ -174,12 +174,21 @@ contract('Salad', () => {
     it('should verify the deal execution', async () => {
         const deal = await executedDealPromise;
         debug('Executed deal', deal);
+        const receipts = await server.dealManager.contract.getPastEvents('Distribute', {
+            filter: {},
+            fromBlock: 0,
+            toBlock: 'latest'
+        });
+        debug('Distributed event receipts', receipts);
+
         const deals = await salad.findDealsAsync(2);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(salad.quorum).to.equal(0);
         const blockNumber = await web3.eth.getBlockNumber();
         debug('The block number after deal execution', blockNumber);
+        const lastExecutionBlockNumber = await server.dealManager.contract.methods.lastExecutionBlockNumber().call();
+        debug('The execution block number after deal execution', lastExecutionBlockNumber);
     });
 
     const nbDepositsQuorumNotReached = threshold - 1;
