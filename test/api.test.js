@@ -124,6 +124,16 @@ contract('Salad', () => {
             it(`should submit deposit ${depositIndex}`, async () => {
                 await makeDeposit(depositIndex);
             }).timeout(6000);
+
+            it(`should fail to withdraw ${depositIndex} before expiry`, async () => {
+                try {
+                    await salad.withdraw(salad.accounts[depositIndex], opts);
+                } catch (e) {
+                    expect(e.message).to.include('Deposit not yet available for withdrawal');
+                    return;
+                }
+                expect.fail('Withdrawal should not succeed until deposit expiry');
+            });
         }
 
         it('should verify that the submitted deposits are fillable', async () => {
@@ -153,6 +163,8 @@ contract('Salad', () => {
     it('should verify that a deal was created since the threshold is reached', async () => {
         const deal = await dealPromise;
         debug('Created deal', deal);
+        const blockNumber = await web3.eth.getBlockNumber();
+        debug('The block number after deal creation', blockNumber);
         const deals = await salad.findDealsAsync(1);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
@@ -163,16 +175,16 @@ contract('Salad', () => {
         const deal = await executedDealPromise;
         debug('Executed deal', deal);
         const deals = await salad.findDealsAsync(2);
-        // expect(deals.length).to.equal(1);
+        expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(salad.quorum).to.equal(0);
         const blockNumber = await web3.eth.getBlockNumber();
-        debug('The block number after execution', blockNumber);
+        debug('The block number after deal execution', blockNumber);
     });
 
-    const nbDepositsQuorumNotReached = threshold - 1 ;
+    const nbDepositsQuorumNotReached = threshold - 1;
     const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
-    it('should mine blocks until deal without reaching the quorum', async () => {
+    it.skip('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
         // Catching the quorum not reached event
@@ -182,4 +194,12 @@ contract('Salad', () => {
         await server.handleDealExecutionAsync();
         expect(await quorumNotReachedPromise).to.equal(true);
     }).timeout(120000); // Give enough time to execute the deal on Enigma
+
+    for (let i = 0; i < nbDepositsQuorumNotReached; i++) {
+        const depositIndex = i + 1;
+        it.skip(`should withdraw ${depositIndex} after expiry`, async () => {
+            const receipt = await salad.withdraw(salad.accounts[depositIndex], opts);
+            expect(receipt.status).to.equal(true);
+        });
+    }
 });

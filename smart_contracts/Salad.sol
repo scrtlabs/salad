@@ -188,22 +188,22 @@ contract Salad is ISalad, Ownable {
     function listDeals(uint8 _status)
     public
     view
-    returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory, uint8[] memory) {
+    returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory) {
         // A list of deals with their key properties
         bytes32[] memory dealId = new bytes32[](dealIds.length);
         address[] memory organizer = new address[](dealIds.length);
         uint[] memory depositInWei = new uint[](dealIds.length);
         uint[] memory numParticipants = new uint[](dealIds.length);
-        uint8[] memory status = new uint8[](dealIds.length);
         for (uint i = 0; i < dealIds.length; i++) {
             bytes32 _dealId = dealIds[i];
-            dealId[i] = _dealId;
-            organizer[i] = deals[_dealId].organizer;
-            depositInWei[i] = deals[_dealId].depositInWei;
-            numParticipants[i] = deals[_dealId].numParticipants;
-            status[i] = uint8(deals[_dealId].status);
+            if (uint8(deals[_dealId].status) == _status) {
+                dealId[i] = _dealId;
+                organizer[i] = deals[_dealId].organizer;
+                depositInWei[i] = deals[_dealId].depositInWei;
+                numParticipants[i] = deals[_dealId].numParticipants;
+            }
         }
-        return (dealId, organizer, depositInWei, numParticipants, status);
+        return (dealId, organizer, depositInWei, numParticipants);
     }
 
     /**
