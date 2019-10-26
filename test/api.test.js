@@ -3,17 +3,18 @@ const fs = require('fs');
 const {CoinjoinClient} = require('@salad/client');
 const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
-const SaladContract = artifacts.require('Salad');
 const {utils} = require('enigma-js/node');
 const {mineUntilDeal} = require('./test-utils');
 const debug = require('debug')('test');
+const Web3 = require('web3');
 
+const SaladContract = require('../build/smart_contracts/Salad.json');
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
 // const EnigmaContract = artifacts.require('Enigma');
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
-contract('Salad', () => {
+describe('Salad', () => {
     let server;
     let salad;
     let opts;
@@ -21,14 +22,15 @@ contract('Salad', () => {
     let web3Utils;
     let accounts;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
+    const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
+    const web3 = new Web3(provider);
     before(async () => {
-        console.log('The debug object', debug);
-        debug.enabled = true;
-        debug('Testing log');
+        // console.log('The debug object', debug);
+        // debug.enabled = true;
+        // debug('Testing log');
         const operatorAccountIndex = 0;
-        const provider = web3._provider;
         const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
-        const saladContractAddr = SaladContract.address;
+        const saladContractAddr = SaladContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
@@ -119,29 +121,32 @@ contract('Salad', () => {
     }
 
     async function makeDeposits(nbDeposits) {
-        for (let i = 0; i < nbDeposits; i++) {
-            const depositIndex = i + 1;
-            it(`should submit deposit ${depositIndex}`, async () => {
-                await makeDeposit(depositIndex);
+        return new Promise((resolve) => {
+            for (let i = 0; i < nbDeposits; i++) {
+                const depositIndex = i + 1;
+                it(`should submit deposit ${depositIndex}`, async () => {
+                    await makeDeposit(depositIndex);
+                }).timeout(6000);
+
+                it(`should fail to withdraw ${depositIndex} before expiry`, async () => {
+                    try {
+                        await salad.withdraw(salad.accounts[depositIndex], opts);
+                    } catch (e) {
+                        expect(e.message).to.include('Deposit not yet available for withdrawal');
+                        return;
+                    }
+                    expect.fail('Withdrawal should not succeed until deposit expiry');
+                });
+            }
+
+            it('should verify that the submitted deposits are fillable', async () => {
+                // Quorum should be N after deposits
+                expect(salad.quorum).to.equal(nbDeposits);
+                const {deposits} = await salad.fetchFillableDepositsAsync();
+                expect(deposits.length).to.equal(nbDeposits);
+                resolve(true);
             }).timeout(6000);
-
-            it(`should fail to withdraw ${depositIndex} before expiry`, async () => {
-                try {
-                    await salad.withdraw(salad.accounts[depositIndex], opts);
-                } catch (e) {
-                    expect(e.message).to.include('Deposit not yet available for withdrawal');
-                    return;
-                }
-                expect.fail('Withdrawal should not succeed until deposit expiry');
-            });
-        }
-
-        it('should verify that the submitted deposits are fillable', async () => {
-            // Quorum should be N after deposits
-            expect(salad.quorum).to.equal(nbDeposits);
-            const {deposits} = await salad.fetchFillableDepositsAsync();
-            expect(deposits.length).to.equal(nbDeposits);
-        }).timeout(6000);
+        });
     }
 
     const quorumReached = makeDeposits(threshold);
@@ -172,30 +177,43 @@ contract('Salad', () => {
     });
 
     it('should verify the deal execution', async () => {
-        const deal = await executedDealPromise;
+        const {deal} = await executedDealPromise;
         debug('Executed deal', deal);
-        const receipts = await server.dealManager.contract.getPastEvents('Distribute', {
-            filter: {},
-            fromBlock: 0,
-            toBlock: 'latest'
-        });
-        debug('Distributed event receipts', receipts);
+        const {enigmaContract} = salad;
+        const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
+        debug('The task record', taskRecord);
 
         const deals = await salad.findDealsAsync(2);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
         expect(salad.quorum).to.equal(0);
         const blockNumber = await web3.eth.getBlockNumber();
-        debug('The block number after deal execution', blockNumber);
         const lastExecutionBlockNumber = await server.dealManager.contract.methods.lastExecutionBlockNumber().call();
-        debug('The execution block number after deal execution', lastExecutionBlockNumber);
+        expect(blockNumber).to.equal(lastExecutionBlockNumber);
     });
+
+    for (let i = 0; i < threshold; i++) {
+        const depositIndex = i + 1;
+        it(`should verify that deposit ${depositIndex} balance is 0 (has been distributed)`, async () => {
+            const sender = salad.accounts[depositIndex];
+            debug('Verifying balance for sender', sender);
+            const balance = await server.dealManager.contract.methods.balances(sender).call();
+            debug('The balance', balance);
+            expect(balance[0]).to.equal('0');
+        });
+    }
 
     const nbDepositsQuorumNotReached = threshold - 1;
     const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
-    it.skip('should mine blocks until deal without reaching the quorum', async () => {
+    it('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
+        const receipts = await server.dealManager.contract.getPastEvents('Distribute', {
+            filter: {},
+            fromBlock: 0,
+            toBlock: 'latest'
+        });
+        debug('Distributed event receipts', receipts);
         // Catching the quorum not reached event
         const quorumNotReachedPromise = new Promise((resolve) => {
             salad.onQuorumNotReached(() => resolve(true));
@@ -206,7 +224,7 @@ contract('Salad', () => {
 
     for (let i = 0; i < nbDepositsQuorumNotReached; i++) {
         const depositIndex = i + 1;
-        it.skip(`should withdraw ${depositIndex} after expiry`, async () => {
+        it(`should withdraw ${depositIndex} after expiry`, async () => {
             const receipt = await salad.withdraw(salad.accounts[depositIndex], opts);
             expect(receipt.status).to.equal(true);
         });

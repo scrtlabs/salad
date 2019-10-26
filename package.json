@@ -14,11 +14,12 @@
     "debug": "^4.1.1",
     "dotenv": "^8.0.0",
     "enigma-js": "0.3.0",
+    "mocha": "^6.2.2",
     "openzeppelin-solidity": "^2.3.0",
     "supports-color": "^7.1.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
     "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
   },
   "author": "",

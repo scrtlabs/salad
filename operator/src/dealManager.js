@@ -18,6 +18,7 @@ const DEAL_STATUS = {
  * @property {string} nonce - The deal nonce (operator tx count)
  * @property {number} status - A list of participants Ethereum addresses
  * @property {string|null} _tx - The `createDeal` Ethereum transaction hash
+ * @property {string|null} taskId - The Enigma Task Id
  */
 
 /**
@@ -182,8 +183,10 @@ class DealManager {
             }
         }
         const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, taskRecordOpts);
-        deal._tx = task.transactionHash;
+        deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
+        await this.store.updateDealAsync(deal);
+        deal._tx = task.transactionHash;
     }
 
     async getBlocksUntilDealAsync() {

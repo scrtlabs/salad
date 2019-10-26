@@ -171,12 +171,12 @@ contract Salad is ISalad, Ownable {
         // Distribute the deposits to destination addresses
         // TODO: This conversion is only necessary because of an Enigma callback bug with bytes32
         bytes32 dealId = bytes32(_dealId);
-//        require(deals[dealId].status != DealStatus.Executable, "Deal is not executable.");
-//        deals[dealId].recipients = _recipients;
-//        for (uint i = 0; i < _recipients.length; i++) {
-//            _recipients[i].transfer(deals[dealId].depositInWei);
-//        }
-//        deals[dealId].status = DealStatus.Executed;
+        require(deals[dealId].status != DealStatus.Executable, "Deal is not executable.");
+        deals[dealId].recipients = _recipients;
+        for (uint i = 0; i < _recipients.length; i++) {
+            _recipients[i].transfer(deals[dealId].depositInWei);
+        }
+        deals[dealId].status = DealStatus.Executed;
         lastExecutionBlockNumber = block.number;
         emit Distribute(dealId, deals[dealId].depositInWei, uint32(_recipients.length));
     }
