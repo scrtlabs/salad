@@ -185,6 +185,7 @@ impl ContractInterface for Contract {
         }
         eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
+        eprint!("The smart contract address: {:?}", mixer_eth_addr);
         let eth_contract = EthContract::new(&mixer_eth_addr);
         let deal_id = Self::generate_deal_id(&amount, &senders, &operator_address, &operator_nonce);
         eprint!("The DealId: {:?}", deal_id);

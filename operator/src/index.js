@@ -3,7 +3,7 @@ const WebSocket = require('ws');
 const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS} = require("@salad/client").actions;
 const {OperatorApi} = require('./api');
 const debug = require('debug')('operator');
-debug.enabled = true;
+const {Store} = require("./store");
 
 const port = process.env.WS_PORT;
 
@@ -68,4 +68,4 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     return api;
 }
 
-module.exports = {startServer};
+module.exports = {startServer, Store};

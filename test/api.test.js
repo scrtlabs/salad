@@ -7,6 +7,7 @@ const {utils} = require('enigma-js/node');
 const {mineUntilDeal} = require('./test-utils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
+const {Store} = require("@salad/operator");
 
 const SaladContract = require('../build/smart_contracts/Salad.json');
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
@@ -21,6 +22,8 @@ describe('Salad', () => {
     let token;
     let web3Utils;
     let accounts;
+    let saladContractAddr;
+    let store;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
     const web3 = new Web3(provider);
@@ -28,9 +31,13 @@ describe('Salad', () => {
         // console.log('The debug object', debug);
         // debug.enabled = true;
         // debug('Testing log');
+        store = new Store();
+        await store.initAsync();
         const operatorAccountIndex = 0;
         const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
-        const saladContractAddr = SaladContract.networks[process.env.ETH_NETWORK_ID].address;
+        saladContractAddr = await store.fetchSaladContractAddr();
+        await store.closeAsync();
+
         const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
@@ -150,10 +157,12 @@ describe('Salad', () => {
     }
 
     const quorumReached = makeDeposits(threshold);
+    let lastDepositBlockNumber;
     let dealPromise;
     let executedDealPromise;
     it('should mine blocks until the deal interval', async () => {
         await quorumReached;
+        lastDepositBlockNumber = await web3.eth.getBlockNumber();
         await mineUntilDeal(web3, server);
         // Catching the deal created event
         dealPromise = new Promise((resolve) => {
@@ -183,6 +192,32 @@ describe('Salad', () => {
         const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
         debug('The task record', taskRecord);
 
+        const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
+            filter: {},
+            fromBlock: lastDepositBlockNumber,
+            toBlock: 'latest'
+        });
+        debug('Distributed event receipts', receipts);
+        expect(receipts.length).to.equal(1);
+        const receiptEthContractAddr = receipts[0].returnValues.optionalEthereumContractAddress;
+        expect(receiptEthContractAddr).to.equal(saladContractAddr);
+
+        const receiptFailed = await enigmaContract.getPastEvents('ReceiptFailed', {
+            filter: {},
+            fromBlock: lastDepositBlockNumber,
+            toBlock: 'latest'
+        });
+        debug('Failed receipts', receiptFailed);
+        expect(receiptFailed.length).to.equal(0);
+
+        const receiptsFailedEth = await enigmaContract.getPastEvents('ReceiptFailedETH', {
+            filter: {},
+            fromBlock: lastDepositBlockNumber,
+            toBlock: 'latest'
+        });
+        debug('Failed ETH receipts', receiptsFailedEth);
+        expect(receiptsFailedEth.length).to.equal(0);
+
         const deals = await salad.findDealsAsync(2);
         expect(deals.length).to.equal(1);
         // Quorum should be reset to 0 after deal creation
@@ -208,12 +243,6 @@ describe('Salad', () => {
     it('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
-        const receipts = await server.dealManager.contract.getPastEvents('Distribute', {
-            filter: {},
-            fromBlock: 0,
-            toBlock: 'latest'
-        });
-        debug('Distributed event receipts', receipts);
         // Catching the quorum not reached event
         const quorumNotReachedPromise = new Promise((resolve) => {
             salad.onQuorumNotReached(() => resolve(true));
