@@ -2,7 +2,6 @@
 const SaladContract = require('../../build/smart_contracts/Salad.json');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:deal-manager');
-debug.enabled = true;
 
 const DEAL_STATUS = {
     NEW: 0,
@@ -147,7 +146,6 @@ class DealManager {
             gas: this.gasValues.createDeal,
             from: sender,
         });
-        // debug('Got deal data from receipt', receipt.events.NewDeal.returnValues);
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {
             throw new Error(`DealId in receipt does not match generated value ${receiptDealId} !== ${dealId}`);

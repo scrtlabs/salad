@@ -7,7 +7,6 @@ const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
-debug.enabled = true;
 
 /**
  * @typedef {Object} OperatorAction

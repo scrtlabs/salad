@@ -13,11 +13,9 @@ contract Salad is ISalad, Ownable {
 
     struct Deal {
         address organizer;
-        mapping(address => uint) deposit;
-
         uint startTime;
         uint depositInWei;
-        uint numParticipants;
+        address[] participants;
         address[] recipients;
         DealStatus status;
     }
@@ -84,7 +82,11 @@ contract Salad is ISalad, Ownable {
         deals[_dealId].organizer = msg.sender;
         deals[_dealId].startTime = now;
         deals[_dealId].depositInWei = _amountInWei;
-        deals[_dealId].numParticipants = _participants.length;
+        //        deals[_dealId].participants = new address[](_participants.length);
+        //        for (uint i = 0; i < _participants.length; i++) {
+        //            deals[_dealId].participants.push(_participants[i]);
+        //        }
+        deals[_dealId].participants = _participants;
         deals[_dealId].recipients = new address[](_participants.length);
         deals[_dealId].status = DealStatus.Executable;
         emit NewDeal(msg.sender, _dealId, now, _amountInWei, _participants.length);
@@ -166,15 +168,17 @@ contract Salad is ISalad, Ownable {
     */
     function distribute(uint256 _dealId, address payable[] memory _recipients)
     public {
-//    onlyEnigma() {
+        //    onlyEnigma() {
 
         // Distribute the deposits to destination addresses
         // TODO: This conversion is only necessary because of an Enigma callback bug with bytes32
         bytes32 dealId = bytes32(_dealId);
-        require(deals[dealId].status != DealStatus.Executable, "Deal is not executable.");
+        require(deals[dealId].status == DealStatus.Executable, "Deal is not executable.");
         deals[dealId].recipients = _recipients;
         for (uint i = 0; i < _recipients.length; i++) {
-            _recipients[i].transfer(deals[dealId].depositInWei);
+            require(balances[deals[dealId].participants[i]].amount >= deals[dealId].depositInWei, "Not enough deposit to transfer.");
+            //            _recipients[i].transfer(deals[dealId].depositInWei);
+            balances[deals[dealId].participants[i]].amount = balances[deals[dealId].participants[i]].amount.sub(deals[dealId].depositInWei);
         }
         deals[dealId].status = DealStatus.Executed;
         lastExecutionBlockNumber = block.number;
@@ -201,7 +205,7 @@ contract Salad is ISalad, Ownable {
                 dealId[i] = _dealId;
                 organizer[i] = deals[_dealId].organizer;
                 depositInWei[i] = deals[_dealId].depositInWei;
-                numParticipants[i] = deals[_dealId].numParticipants;
+                numParticipants[i] = deals[_dealId].participants.length;
             }
         }
         return (dealId, organizer, depositInWei, numParticipants);
@@ -218,7 +222,7 @@ contract Salad is ISalad, Ownable {
     returns (uint, uint, uint) {
         // TODO: Include status code
         // Key attributes of a deal
-        uint numParticipants = deals[_dealId].numParticipants;
+        uint numParticipants = deals[_dealId].participants.length;
         uint deposit = deals[_dealId].depositInWei;
         uint numDestAddresses = deals[_dealId].recipients.length;
 

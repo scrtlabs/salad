@@ -1,6 +1,5 @@
 const {MongoClient} = require('mongodb');
 const debug = require('debug')('operator:store');
-debug.enabled = true;
 
 const DEPOSITS_COLLECTION = 'deposits';
 const DEALS_COLLECTION = 'deals';
@@ -136,4 +135,4 @@ class Store {
     }
 }
 
-module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION};
+module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION, CONFIG_COLLECTION};

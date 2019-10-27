@@ -1,7 +1,6 @@
 const actions = require('./actions');
 const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = actions;
 const debug = require('debug')('client');
-debug.enabled = true;
 
 const EventEmitter = require('events');
 const Web3 = require('web3');

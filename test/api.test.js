@@ -111,7 +111,8 @@ describe('Salad', () => {
         expect(receipt.status).to.equal(true);
 
         debug(`Encrypt deposit ${depositIndex}`);
-        const recipient = salad.accounts[depositIndex + 5];
+        const recipientIndex = depositIndex + 5;
+        const recipient = salad.accounts[recipientIndex];
         encRecipient = await salad.encryptRecipientAsync(recipient);
 
         debug(`Sign deposit ${depositIndex} payload`);
@@ -192,6 +193,14 @@ describe('Salad', () => {
         const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
         debug('The task record', taskRecord);
 
+        const distributeReceipts = await salad.contract.getPastEvents('Distribute', {
+            filter: {},
+            fromBlock: lastDepositBlockNumber,
+            toBlock: 'latest'
+        });
+        debug('Distributed event receipts', distributeReceipts);
+        expect(distributeReceipts.length).to.equal(1);
+
         const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
             filter: {},
             fromBlock: lastDepositBlockNumber,
@@ -224,7 +233,7 @@ describe('Salad', () => {
         expect(salad.quorum).to.equal(0);
         const blockNumber = await web3.eth.getBlockNumber();
         const lastExecutionBlockNumber = await server.dealManager.contract.methods.lastExecutionBlockNumber().call();
-        expect(blockNumber).to.equal(lastExecutionBlockNumber);
+        expect(blockNumber).to.equal(parseInt(lastExecutionBlockNumber));
     });
 
     for (let i = 0; i < threshold; i++) {
@@ -235,6 +244,13 @@ describe('Salad', () => {
             const balance = await server.dealManager.contract.methods.balances(sender).call();
             debug('The balance', balance);
             expect(balance[0]).to.equal('0');
+        });
+        const recipientIndex = depositIndex + 5;
+        it(`should verify recipient ${recipientIndex} balance`, async () => {
+            const recipient = salad.accounts[recipientIndex];
+            debug('Verifying balance for recipient', recipient);
+            const balance = await web3.eth.getBalance(recipient);
+            expect(balance).to.equal(amount);
         });
     }
 

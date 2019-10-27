@@ -5,6 +5,7 @@ const dotenv = require('dotenv');
 const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
 const {Store} = require("@salad/operator");
+const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
 const debug = require('debug')('operator:server');
@@ -80,6 +81,7 @@ async function deploySecretContract(config, mixerEthAddress) {
 module.exports = async function (deployer, network, accounts) {
     const store = new Store();
     await store.initAsync();
+    await store.truncate(CONFIG_COLLECTION);
 
     enigma = new Enigma(
         web3,
