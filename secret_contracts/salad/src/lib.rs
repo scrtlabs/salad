@@ -130,7 +130,7 @@ impl ContractInterface for Contract {
         eprint!("====> in get_pub_key");
         let keypair = Self::get_keypair();
         let pub_key = keypair.get_pubkey();
-        let pub_key_text = pub_key.to_hex::<String>();
+        let pub_key_text: String = pub_key.to_hex();
         eprint!("The pubKey hex: {}", pub_key_text);
         pub_key.to_vec()
     }
@@ -161,8 +161,10 @@ impl ContractInterface for Contract {
 
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipients[i], &shared_key);
+            let address_hex: String = plaintext.to_hex();
+            eprint!("The decrypted recipient address: {}", address_hex);
             let recipient = H160::from(&plaintext[0..20]);
-            eprint!("The decrypted recipient address: {:?}", recipient);
+            eprint!("The plaintext recipient address: {:?}", recipient);
 
             let mut signature = [0; SIG_SIZE];
             signature.copy_from_slice(&signatures[i]);

@@ -14,7 +14,7 @@ contract Salad is ISalad, Ownable {
     struct Deal {
         address organizer;
         uint startTime;
-        uint depositInWei;
+        uint deposit;
         address[] participants;
         address[] recipients;
         DealStatus status;
@@ -36,10 +36,10 @@ contract Salad is ISalad, Ownable {
     uint public lastExecutionBlockNumber;
     // TODO: Should the contract validate a fix deposit amount for all deals?
 
-    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _depositInWei, uint _numParticipants);
+    event NewDeal(address indexed user, bytes32 indexed _dealId, uint _startTime, uint _deposit, uint _numParticipants);
     event Deposit(address indexed _depositor, uint _value, uint _balance);
     event Withdraw(address indexed _depositor, uint _value);
-    event Distribute(bytes32 indexed _dealId, uint individualAmountInWei, uint32 nbTransfers);
+    event Distribute(bytes32 indexed _dealId, uint _amount, address[] _recipients);
 
     modifier onlyEnigma {
         // TODO: Verify the calling fn in addition to the Enigma contract address
@@ -66,30 +66,26 @@ contract Salad is ISalad, Ownable {
     /**
     * Create a new Pending Deal
     *
-    * @param _amountInWei The required deposit amount (in Wei)
+    * @param _amount The required deposit amount (in Wei)
     * @param _participants The sender addresses of Deal participants
     * @param _nonce The nonce (operator's transaction count)
     */
-    function newDeal(uint _amountInWei, address[] memory _participants, uint _nonce)
+    function newDeal(uint _amount, address[] memory _participants, uint _nonce)
     public {
         uint newDealBlockNumber = lastExecutionBlockNumber.add(dealIntervalInBlocks);
         require(newDealBlockNumber < block.number, "Deal creation interval not reached");
         for (uint i = 0; i < _participants.length; i++) {
-            require(balances[_participants[i]].amount >= _amountInWei, "Participant balance(s) insufficient");
+            require(balances[_participants[i]].amount >= _amount, "Participant balance(s) insufficient");
         }
-        bytes32 _dealId = generateDealId(_amountInWei, _participants, _nonce);
+        bytes32 _dealId = generateDealId(_amount, _participants, _nonce);
         dealIds.push(_dealId);
         deals[_dealId].organizer = msg.sender;
         deals[_dealId].startTime = now;
-        deals[_dealId].depositInWei = _amountInWei;
-        //        deals[_dealId].participants = new address[](_participants.length);
-        //        for (uint i = 0; i < _participants.length; i++) {
-        //            deals[_dealId].participants.push(_participants[i]);
-        //        }
+        deals[_dealId].deposit = _amount;
         deals[_dealId].participants = _participants;
         deals[_dealId].recipients = new address[](_participants.length);
         deals[_dealId].status = DealStatus.Executable;
-        emit NewDeal(msg.sender, _dealId, now, _amountInWei, _participants.length);
+        emit NewDeal(msg.sender, _dealId, now, _amount, _participants.length);
     }
 
     /**
@@ -127,11 +123,11 @@ contract Salad is ISalad, Ownable {
         return balances[_account].amount;
     }
 
-    function _generateDealIdMessage(uint _amountInWei, address[] memory _participants, uint _nonce)
+    function _generateDealIdMessage(uint _amount, address[] memory _participants, uint _nonce)
     public
     returns (bytes memory) {
         bytes memory _message;
-        _message = SaladCommon.appendMessage(_message, _amountInWei.toBytes());
+        _message = SaladCommon.appendMessage(_message, _amount.toBytes());
         _message = SaladCommon.appendMessageArrayLength(_participants.length, _message);
         for (uint i = 0; i < _participants.length; i++) {
             _message = SaladCommon.appendMessage(_message, _participants[i].toBytes());
@@ -147,14 +143,14 @@ contract Salad is ISalad, Ownable {
     * Generate a DealId
     * H(Amount, Sender Addresses, Relayer Ethereum Address, Relayer Ethereum Nonce)
     *
-    * @param _amountInWei The required deposit amount (in Wei)
+    * @param _amount The required deposit amount (in Wei)
     * @param _participants The sender addresses of Deal participants
     * @param _nonce The nonce (operator's transaction count)
     */
-    function generateDealId(uint _amountInWei, address[] memory _participants, uint _nonce)
+    function generateDealId(uint _amount, address[] memory _participants, uint _nonce)
     public
     returns (bytes32) {
-        bytes memory _message = _generateDealIdMessage(_amountInWei, _participants, _nonce);
+        bytes memory _message = _generateDealIdMessage(_amount, _participants, _nonce);
         bytes32 _dealId = keccak256(_message);
         return _dealId;
     }
@@ -175,14 +171,18 @@ contract Salad is ISalad, Ownable {
         bytes32 dealId = bytes32(_dealId);
         require(deals[dealId].status == DealStatus.Executable, "Deal is not executable.");
         deals[dealId].recipients = _recipients;
+        address[] memory _npRecipients = new address[](_recipients.length);
         for (uint i = 0; i < _recipients.length; i++) {
-            require(balances[deals[dealId].participants[i]].amount >= deals[dealId].depositInWei, "Not enough deposit to transfer.");
-            //            _recipients[i].transfer(deals[dealId].depositInWei);
-            balances[deals[dealId].participants[i]].amount = balances[deals[dealId].participants[i]].amount.sub(deals[dealId].depositInWei);
+            require(balances[deals[dealId].participants[i]].amount >= deals[dealId].deposit, "Not enough deposit to transfer.");
+            // Transferring the deal's deposit amount to each recipient
+            // TODO: Not working because the decrypted recipient address in incorrect
+//            _recipients[i].transfer(deals[dealId].deposit);
+            balances[deals[dealId].participants[i]].amount = balances[deals[dealId].participants[i]].amount.sub(deals[dealId].deposit);
+            _npRecipients[i] = _recipients[i];
         }
         deals[dealId].status = DealStatus.Executed;
         lastExecutionBlockNumber = block.number;
-        emit Distribute(dealId, deals[dealId].depositInWei, uint32(_recipients.length));
+        emit Distribute(dealId, deals[dealId].deposit, _npRecipients);
     }
 
     /**
@@ -197,18 +197,18 @@ contract Salad is ISalad, Ownable {
         // A list of deals with their key properties
         bytes32[] memory dealId = new bytes32[](dealIds.length);
         address[] memory organizer = new address[](dealIds.length);
-        uint[] memory depositInWei = new uint[](dealIds.length);
+        uint[] memory deposit = new uint[](dealIds.length);
         uint[] memory numParticipants = new uint[](dealIds.length);
         for (uint i = 0; i < dealIds.length; i++) {
             bytes32 _dealId = dealIds[i];
             if (uint8(deals[_dealId].status) == _status) {
                 dealId[i] = _dealId;
                 organizer[i] = deals[_dealId].organizer;
-                depositInWei[i] = deals[_dealId].depositInWei;
+                deposit[i] = deals[_dealId].deposit;
                 numParticipants[i] = deals[_dealId].participants.length;
             }
         }
-        return (dealId, organizer, depositInWei, numParticipants);
+        return (dealId, organizer, deposit, numParticipants);
     }
 
     /**
@@ -223,7 +223,7 @@ contract Salad is ISalad, Ownable {
         // TODO: Include status code
         // Key attributes of a deal
         uint numParticipants = deals[_dealId].participants.length;
-        uint deposit = deals[_dealId].depositInWei;
+        uint deposit = deals[_dealId].deposit;
         uint numDestAddresses = deals[_dealId].recipients.length;
 
         return (numParticipants, deposit, numDestAddresses);

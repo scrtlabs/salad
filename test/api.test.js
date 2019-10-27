@@ -113,6 +113,7 @@ describe('Salad', () => {
         debug(`Encrypt deposit ${depositIndex}`);
         const recipientIndex = depositIndex + 5;
         const recipient = salad.accounts[recipientIndex];
+        debug('The recipient address bytes', web3.utils.hexToBytes(recipient));
         encRecipient = await salad.encryptRecipientAsync(recipient);
 
         debug(`Sign deposit ${depositIndex} payload`);
@@ -200,6 +201,8 @@ describe('Salad', () => {
         });
         debug('Distributed event receipts', distributeReceipts);
         expect(distributeReceipts.length).to.equal(1);
+        const recipients = [salad.accounts[6], salad.accounts[7], salad.accounts[8]];
+        expect(distributeReceipts[0].returnValues._recipients).to.equal(recipients);
 
         const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
             filter: {},
