@@ -4,8 +4,11 @@ const Web3 = require('web3');
 const dotenv = require('dotenv');
 const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
+const {Store} = require("@salad/operator");
+const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
+const debug = require('debug')('operator:server');
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
@@ -28,7 +31,7 @@ function sleep(ms) {
 }
 
 async function deploySecretContract(config, mixerEthAddress) {
-    console.log(`Deploying Secret Contract "${config.filename}"...`);
+    debug(`Deploying Secret Contract "${config.filename}"...`);
     let scTask;
     let preCode;
     try {
@@ -76,6 +79,9 @@ async function deploySecretContract(config, mixerEthAddress) {
 }
 
 module.exports = async function (deployer, network, accounts) {
+    const store = new Store();
+    await store.initAsync();
+    await store.truncate(CONFIG_COLLECTION);
 
     enigma = new Enigma(
         web3,
@@ -100,6 +106,7 @@ module.exports = async function (deployer, network, accounts) {
     console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
     await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold);
     console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
+    await store.insertSaladContractAddressInCache(Salad.address);
 
     const config = {
         filename: 'salad.wasm',
@@ -111,4 +118,5 @@ module.exports = async function (deployer, network, accounts) {
     };
     const address = await deploySecretContract(config, Salad.address);
     console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
+    await store.closeAsync();
 };

@@ -4,7 +4,7 @@ use eng_wasm_derive::eth_contract;
 use eng_wasm_derive::pub_interface;
 use enigma_crypto::hash::Keccak256;
 use enigma_crypto::KeyPair;
-use rustc_hex::ToHex;
+use rustc_hex::{ToHex};
 
 #[eth_contract("ISalad.json")]
 struct EthContract;
@@ -13,10 +13,9 @@ struct EthContract;
 static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 
-const ENC_RECIPIENT_SIZE: usize = 70;
+const ENC_RECIPIENT_SIZE: usize = 48;
 const PUB_KEY_SIZE: usize = 64;
 const UNIT256_SIZE: usize = 32;
-const UINT32_SIZE: usize = 16;
 const SIG_SIZE: usize = 65;
 const ADDRESS_SIZE: usize = 20;
 
@@ -34,7 +33,7 @@ trait ContractInterface {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160>;
+    );
 }
 
 struct Contract;
@@ -130,7 +129,7 @@ impl ContractInterface for Contract {
         eprint!("====> in get_pub_key");
         let keypair = Self::get_keypair();
         let pub_key = keypair.get_pubkey();
-        let pub_key_text = pub_key.to_hex::<String>();
+        let pub_key_text: String = pub_key.to_hex();
         eprint!("The pubKey hex: {}", pub_key_text);
         pub_key.to_vec()
     }
@@ -144,7 +143,7 @@ impl ContractInterface for Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160> {
+    ) {
         eprint!(
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
@@ -154,15 +153,16 @@ impl ContractInterface for Contract {
         // TODO: Use the rand service
         let seed = 10;
         for i in 0..nb_recipients.low_u64() as usize {
-            eprint!("Decrypting recipient: {}", i);
+            eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
             let mut user_pubkey = [0; PUB_KEY_SIZE];
             user_pubkey.copy_from_slice(&pub_keys[i]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipients[i], &shared_key);
+            eprint!("The decrypted recipient address: {:?}", plaintext);
             let recipient = H160::from(&plaintext[0..20]);
-            eprint!("The decrypted recipient address: {:?}", recipient);
+            eprint!("The plaintext recipient address: {:?}", recipient);
 
             let mut signature = [0; SIG_SIZE];
             signature.copy_from_slice(&signatures[i]);
@@ -185,12 +185,13 @@ impl ContractInterface for Contract {
         }
         eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
-        let eth_contract = EthContract::new(&mixer_eth_addr);
+        let prefixed_eth_addr = format!("0x{}", mixer_eth_addr);
+        eprint!("The smart contract address: {}", prefixed_eth_addr);
+        let eth_contract = EthContract::new(&prefixed_eth_addr);
         let deal_id = Self::generate_deal_id(&amount, &senders, &operator_address, &operator_nonce);
         eprint!("The DealId: {:?}", deal_id);
         // TODO: Converting as a workaround for lack of bytes32 support
         let deal_id_uint = U256::from(deal_id);
         eth_contract.distribute(deal_id_uint, recipients.clone());
-        recipients
     }
 }

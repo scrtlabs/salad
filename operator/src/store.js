@@ -1,9 +1,10 @@
-const {Db, MongoClient} = require('mongodb');
-const debug = require('debug')('operator-store');
+const {MongoClient} = require('mongodb');
+const debug = require('debug')('operator:store');
 
 const DEPOSITS_COLLECTION = 'deposits';
 const DEALS_COLLECTION = 'deals';
 const CACHE_COLLECTION = 'cache';
+const CONFIG_COLLECTION = 'config';
 
 class Store {
     constructor() {
@@ -65,12 +66,37 @@ class Store {
     }
 
     /**
+     * Insert Salad contract address in cache
+     * @param {string} addr
+     * @returns {Promise<void>}
+     */
+    async insertSaladContractAddressInCache(addr) {
+        const data = {_id: 'saladContractAddr', addr};
+        await this._insertRecordAsync(data, CONFIG_COLLECTION);
+    }
+    /**
+     * Fetch the Salad contract address from cache
+     * @returns {Promise<string>}
+     */
+    async fetchSaladContractAddr() {
+        const query = {_id: 'saladContractAddr'};
+        const data = await this.db.collection(CONFIG_COLLECTION).findOne(query);
+        return data.addr;
+    }
+
+    /**
      * Insert Deposit
      * @param {Deposit} deposit
      */
     async insertDepositAsync(deposit) {
         deposit.dealId = null;
         await this._insertRecordAsync(deposit, DEPOSITS_COLLECTION);
+    }
+
+    async discardDepositAsync(deposit) {
+        const query = {dealId: null, sender: deposit.sender};
+        const newValues = {$set: {dealId: 'discarded'}};
+        await this.db.collection(DEPOSITS_COLLECTION).updateOne(query, newValues);
     }
 
     /**
@@ -115,4 +141,4 @@ class Store {
     }
 }
 
-module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION};
+module.exports = {Store, DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION, CONFIG_COLLECTION};

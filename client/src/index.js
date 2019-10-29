@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE,PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS} = actions;
+const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = actions;
 const debug = require('debug')('client');
 
 const EventEmitter = require('events');
@@ -245,6 +245,14 @@ class CoinjoinClient {
     }
 
     /**
+     * Subscribe to the `quorumNotReached` event
+     * @param {function} callback
+     */
+    onQuorumNotReached(callback) {
+        this.ee.on(QUORUM_NOT_REACHED_UPDATE, callback);
+    }
+
+    /**
      * Make user deposit on Ethereum
      * @param {string} sender - The deposit sender's Ethereum address
      * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
@@ -281,6 +289,10 @@ class CoinjoinClient {
         }
     }
 
+    /**
+     * Get the plaintext encryption pub key from the encrypted pub key data
+     * @returns {string}
+     */
     getPlaintextPubKey() {
         debug('Decrypting pubKey from data', this.pubKeyData);
         const derivedKey = utils.getDerivedKey(this.pubKeyData.workerPubKey, this.pubKeyData.userPrivateKey);
@@ -310,7 +322,9 @@ class CoinjoinClient {
         const {privateKey} = this.keyPair;
         debug('Deriving encryption from private key', privateKey);
         const derivedKey = utils.getDerivedKey(pubKey, privateKey);
-        return utils.encryptMessage(derivedKey, recipient);
+        const recipientBytes = new Uint8Array(this.web3.utils.hexToBytes(recipient));
+        // const recipientBytes = recipient;
+        return utils.encryptMessage(derivedKey, recipientBytes);
     }
 
     /**
@@ -376,16 +390,12 @@ class CoinjoinClient {
             return deals;
         }
         for (let i = 0; i < dealsFlat[0].length; i++) {
-            const status = parseInt(dealsFlat[4][i]);
-            if (status === statusFilter) {
-                deals.push({
-                    dealId: dealsFlat[0][i],
-                    organizer: dealsFlat[1][i],
-                    depositInWei: parseInt(dealsFlat[2][i]),
-                    numParticipant: parseInt(dealsFlat[3][i]),
-                    status,
-                });
-            }
+            deals.push({
+                dealId: dealsFlat[0][i],
+                organizer: dealsFlat[1][i],
+                depositInWei: parseInt(dealsFlat[2][i]),
+                numParticipant: parseInt(dealsFlat[3][i]),
+            });
         }
         debug('The active deals', deals);
         return deals;
@@ -425,6 +435,16 @@ class CoinjoinClient {
         // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
         sigBytes[sigBytes.length - 1] = sigBytes[sigBytes.length - 1] + 27;
         return this.web3.utils.bytesToHex(sigBytes);
+    }
+
+    /**
+     * Without the user's entire deposit amount
+     * @param {string} sender The depositor
+     * @param {Object} opts The tx options
+     * @returns {Promise<*>}
+     */
+    async withdraw(sender, opts) {
+        return this.contract.methods.withdraw().send({...opts, from: sender});
     }
 }
 
