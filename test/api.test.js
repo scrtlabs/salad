@@ -4,7 +4,7 @@ const {CoinjoinClient} = require('@salad/client');
 const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
 const {utils} = require('enigma-js/node');
-const {mineUntilDeal} = require('./test-utils');
+const {mineUntilDeal, mineBlock} = require('./test-utils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
 const {Store} = require("@salad/operator");
@@ -22,7 +22,8 @@ describe('Salad', () => {
     let accounts;
     let saladContractAddr;
     let store;
-    let recipients;
+    let recipients = [];
+    let recipientInitialBalances = [];
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
     const web3 = new Web3(provider);
@@ -66,7 +67,13 @@ describe('Salad', () => {
         };
         const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
-        recipients = [salad.accounts[6], salad.accounts[7], salad.accounts[8]];
+        // Starting the recipients in the middle of the account stack
+        // TODO: Test with larger account stacks
+        for (let i = 6; i < 6 + threshold; i++) {
+            const recipient = salad.accounts[i];
+            recipients[i] = recipient;
+            recipientInitialBalances[i] = await web3.eth.getBalance(recipient);
+        }
         debug('Environment initialized');
     });
 
@@ -258,16 +265,19 @@ describe('Salad', () => {
         });
         const recipientIndex = depositIndex + 5;
         it(`should verify recipient ${recipientIndex} balance`, async () => {
+            await mineBlock(web3);
             const recipient = salad.accounts[recipientIndex];
             debug('Verifying balance for recipient', recipient);
-            const balance = await web3.eth.getBalance(recipient);
-            expect(balance).to.equal(amount);
+            const balance = await web3.eth.getBalance(recipient, 'latest');
+            const initialBalance = recipientInitialBalances[recipientIndex];
+            const payment = web3.utils.toBN(balance).sub(web3.utils.toBN(initialBalance)).toString();
+            expect(payment).to.equal(amount);
         });
     }
 
     const nbDepositsQuorumNotReached = threshold - 1;
     const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
-    it('should mine blocks until deal without reaching the quorum', async () => {
+    it.skip('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
         // Catching the quorum not reached event
@@ -280,7 +290,7 @@ describe('Salad', () => {
 
     for (let i = 0; i < nbDepositsQuorumNotReached; i++) {
         const depositIndex = i + 1;
-        it(`should withdraw ${depositIndex} after expiry`, async () => {
+        it.skip(`should withdraw ${depositIndex} after expiry`, async () => {
             const receipt = await salad.withdraw(salad.accounts[depositIndex], opts);
             expect(receipt.status).to.equal(true);
         });
