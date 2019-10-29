@@ -4,7 +4,7 @@ use eng_wasm_derive::eth_contract;
 use eng_wasm_derive::pub_interface;
 use enigma_crypto::hash::Keccak256;
 use enigma_crypto::KeyPair;
-use rustc_hex::ToHex;
+use rustc_hex::{ToHex};
 
 #[eth_contract("ISalad.json")]
 struct EthContract;
@@ -13,10 +13,9 @@ struct EthContract;
 static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 
-const ENC_RECIPIENT_SIZE: usize = 70;
+const ENC_RECIPIENT_SIZE: usize = 48;
 const PUB_KEY_SIZE: usize = 64;
 const UNIT256_SIZE: usize = 32;
-const UINT32_SIZE: usize = 16;
 const SIG_SIZE: usize = 65;
 const ADDRESS_SIZE: usize = 20;
 
@@ -149,20 +148,32 @@ impl ContractInterface for Contract {
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
         );
+        // [
+        //  "0x3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9",
+        //  "0x28a8746e75304c0780E011BEd21C72cD78cd535E",
+        //  "0xACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E"
+        //]
+//        let mut ref_recipients: Vec<H160> = Vec::new();
+//        let recipient_a: Vec<u8> = "3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9".from_hex().unwrap();
+//        ref_recipients.push(H160::from(&recipient_a[0..20]));
+//        let recipient_b: Vec<u8> = "28a8746e75304c0780E011BEd21C72cD78cd535E".from_hex().unwrap();
+//        ref_recipients.push(H160::from(&recipient_b[0..20]));
+//        let recipient_c: Vec<u8> = "ACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E".from_hex().unwrap();
+//        ref_recipients.push(H160::from(&recipient_c[0..20]));
+
         let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
         // TODO: Use the rand service
         let seed = 10;
         for i in 0..nb_recipients.low_u64() as usize {
-            eprint!("Decrypting recipient: {}", i);
+            eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
             let mut user_pubkey = [0; PUB_KEY_SIZE];
             user_pubkey.copy_from_slice(&pub_keys[i]);
             eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
 
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipients[i], &shared_key);
-            let address_hex: String = plaintext.to_hex();
-            eprint!("The decrypted recipient address: {}", address_hex);
+            eprint!("The decrypted recipient address: {:?}", plaintext);
             let recipient = H160::from(&plaintext[0..20]);
             eprint!("The plaintext recipient address: {:?}", recipient);
 

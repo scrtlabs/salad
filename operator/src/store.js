@@ -93,6 +93,12 @@ class Store {
         await this._insertRecordAsync(deposit, DEPOSITS_COLLECTION);
     }
 
+    async discardDepositAsync(deposit) {
+        const query = {dealId: null, sender: deposit.sender};
+        const newValues = {$set: {dealId: 'discarded'}};
+        await this.db.collection(DEPOSITS_COLLECTION).updateOne(query, newValues);
+    }
+
     /**
      * Insert Deal
      * @param {Deal} deal

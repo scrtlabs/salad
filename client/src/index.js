@@ -322,7 +322,9 @@ class CoinjoinClient {
         const {privateKey} = this.keyPair;
         debug('Deriving encryption from private key', privateKey);
         const derivedKey = utils.getDerivedKey(pubKey, privateKey);
-        return utils.encryptMessage(derivedKey, recipient);
+        const recipientBytes = new Uint8Array(this.web3.utils.hexToBytes(recipient));
+        // const recipientBytes = recipient;
+        return utils.encryptMessage(derivedKey, recipientBytes);
     }
 
     /**

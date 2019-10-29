@@ -175,8 +175,7 @@ contract Salad is ISalad, Ownable {
         for (uint i = 0; i < _recipients.length; i++) {
             require(balances[deals[dealId].participants[i]].amount >= deals[dealId].deposit, "Not enough deposit to transfer.");
             // Transferring the deal's deposit amount to each recipient
-            // TODO: Not working because the decrypted recipient address in incorrect
-//            _recipients[i].transfer(deals[dealId].deposit);
+            _recipients[i].transfer(deals[dealId].deposit);
             balances[deals[dealId].participants[i]].amount = balances[deals[dealId].participants[i]].amount.sub(deals[dealId].deposit);
             _npRecipients[i] = _recipients[i];
         }

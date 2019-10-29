@@ -63,7 +63,11 @@ class DealManager {
         const account = this.web3.utils.toChecksumAddress(sender);
         const balance = await this.contract.methods.getParticipantBalance(account).call({from: this.scClient.getOperatorAccount()});
         debug('Comparing balance with amount', balance, amount);
-        return (this.web3.utils.toBN(balance) >= this.web3.utils.toBN(amount));
+        const senderBalance = this.web3.utils.toBN(balance);
+        const depositAmount = this.web3.utils.toBN(amount);
+        if (senderBalance.lt(depositAmount)) {
+            throw new Error(`Sender ${sender} balance (in wei) less than deposit: ${senderBalance} < ${depositAmount}`)
+        }
     }
 
     /**
@@ -170,17 +174,25 @@ class DealManager {
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
         const nbRecipient = deposits.length;
-        const pubKeysPayload = deposits.map(d => `0x${d.pubKey}`);
-        const encRecipientsPayload = deposits.map(d => `0x${d.encRecipient}`);
-        const sendersPayload = deposits.map(d => d.sender);
-        const signaturesPayload = deposits.map(d => d.signature);
+        const pubKeys = [];
+        const encRecipients = [];
+        const senders = [];
+        const signatures = [];
         for (const deposit of deposits) {
-            const sigBytes = this.web3.utils.hexToBytes(deposit.signature);
-            if (sigBytes.length !== 65) {
-                console.error('The signature length', sigBytes.length, sigBytes);
+            try {
+                // Discard the deposit if the balance is withdrawn
+                await this.verifyDepositAmountAsync(deposit.sender, deposit.amount);
+                pubKeys.push(`0x${deposit.pubKey}`);
+                encRecipients.push(`0x${deposit.encRecipient}`);
+                senders.push(deposit.sender);
+                signatures.push(deposit.signature);
+            } catch (e) {
+                debug('Discarding invalid deposit', e);
+                // TODO: Add to unit tests
+                await this.store.discardDepositAsync(deposit);
             }
         }
-        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeys, encRecipients, senders, signatures, nonce, taskRecordOpts);
         deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);

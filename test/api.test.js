@@ -9,10 +9,8 @@ const debug = require('debug')('test');
 const Web3 = require('web3');
 const {Store} = require("@salad/operator");
 
-const SaladContract = require('../build/smart_contracts/Salad.json');
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
-// const EnigmaContract = artifacts.require('Enigma');
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
 describe('Salad', () => {
@@ -24,6 +22,7 @@ describe('Salad', () => {
     let accounts;
     let saladContractAddr;
     let store;
+    let recipients;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
     const web3 = new Web3(provider);
@@ -67,6 +66,8 @@ describe('Salad', () => {
         };
         const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
+        recipients = [salad.accounts[6], salad.accounts[7], salad.accounts[8]];
+        debug('Environment initialized');
     });
 
     it('should connect to the WS server', async () => {
@@ -113,8 +114,15 @@ describe('Salad', () => {
         debug(`Encrypt deposit ${depositIndex}`);
         const recipientIndex = depositIndex + 5;
         const recipient = salad.accounts[recipientIndex];
-        debug('The recipient address bytes', web3.utils.hexToBytes(recipient));
         encRecipient = await salad.encryptRecipientAsync(recipient);
+        const encRecipientBytes = web3.utils.hexToBytes(`0x${encRecipient}`);
+        debug('The enc recipient bytes', encRecipientBytes, 'length', encRecipientBytes.length);
+        // TODO:  Verifying the decrypted recipient locally
+        // const pubKey = salad.getPlaintextPubKey();
+        // const {privateKey} = salad.keyPair;
+        // const derivedKey = utils.getDerivedKey(pubKey, privateKey);
+        // const plaintextRecipient = utils.decryptMessage(derivedKey, encRecipient);
+        // expect(web3.utils.toChecksumAddress(`0x${plaintextRecipient}`)).to.equal(recipient);
 
         debug(`Sign deposit ${depositIndex} payload`);
         signature = await salad.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
@@ -201,9 +209,9 @@ describe('Salad', () => {
         });
         debug('Distributed event receipts', distributeReceipts);
         expect(distributeReceipts.length).to.equal(1);
-        const recipients = [salad.accounts[6], salad.accounts[7], salad.accounts[8]];
-        expect(distributeReceipts[0].returnValues._recipients).to.equal(recipients);
-
+        for (const r of distributeReceipts[0].returnValues._recipients) {
+            expect(recipients).to.include(r);
+        }
         const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
             filter: {},
             fromBlock: lastDepositBlockNumber,
