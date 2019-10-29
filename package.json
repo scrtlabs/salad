@@ -20,7 +20,8 @@
   },
   "scripts": {
     "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
-    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
+    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js",
+    "compile": "yarn dc compile"
   },
   "author": "",
   "license": "ISC",

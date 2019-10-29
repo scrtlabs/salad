@@ -25,7 +25,7 @@ describe('Salad', () => {
     let recipients = [];
     let recipientInitialBalances = [];
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
-    const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
+    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
     const web3 = new Web3(provider);
     before(async () => {
         // console.log('The debug object', debug);
