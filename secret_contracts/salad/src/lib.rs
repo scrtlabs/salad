@@ -148,19 +148,6 @@ impl ContractInterface for Contract {
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
         );
-        // [
-        //  "0x3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9",
-        //  "0x28a8746e75304c0780E011BEd21C72cD78cd535E",
-        //  "0xACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E"
-        //]
-//        let mut ref_recipients: Vec<H160> = Vec::new();
-//        let recipient_a: Vec<u8> = "3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9".from_hex().unwrap();
-//        ref_recipients.push(H160::from(&recipient_a[0..20]));
-//        let recipient_b: Vec<u8> = "28a8746e75304c0780E011BEd21C72cD78cd535E".from_hex().unwrap();
-//        ref_recipients.push(H160::from(&recipient_b[0..20]));
-//        let recipient_c: Vec<u8> = "ACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E".from_hex().unwrap();
-//        ref_recipients.push(H160::from(&recipient_c[0..20]));
-
         let keypair = Self::get_keypair();
         let mut recipients: Vec<H160> = Vec::new();
         // TODO: Use the rand service

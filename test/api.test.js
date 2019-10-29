@@ -277,7 +277,7 @@ describe('Salad', () => {
 
     const nbDepositsQuorumNotReached = threshold - 1;
     const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
-    it.skip('should mine blocks until deal without reaching the quorum', async () => {
+    it('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
         // Catching the quorum not reached event
@@ -290,7 +290,7 @@ describe('Salad', () => {
 
     for (let i = 0; i < nbDepositsQuorumNotReached; i++) {
         const depositIndex = i + 1;
-        it.skip(`should withdraw ${depositIndex} after expiry`, async () => {
+        it(`should withdraw ${depositIndex} after expiry`, async () => {
             const receipt = await salad.withdraw(salad.accounts[depositIndex], opts);
             expect(receipt.status).to.equal(true);
         });
