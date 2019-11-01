@@ -64,11 +64,11 @@ async function deploySecretContract(config, mixerEthAddress) {
     // Verify deployed contract
     const result = await enigma.admin.isDeployed(scTask.scAddr);
     if (result) {
-        fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
-            if (err) {
-                return console.log(err);
-            }
-        });
+        // fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
+        //     if (err) {
+        //         return console.log(err);
+        //     }
+        // });
 
         return scTask.scAddr;
     } else {
@@ -85,9 +85,9 @@ module.exports = async function (deployer, network, accounts) {
 
     enigma = new Enigma(
         web3,
-        EnigmaContract.networks['4447'].address,
-        EnigmaTokenContract.networks['4447'].address,
-        'http://localhost:3346',
+        EnigmaContract.networks[process.env.ETH_NETWORK_ID].address,
+        EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address,
+        `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`,
         {
             gas: 4712388,
             gasPrice: 100000000000,
@@ -97,8 +97,7 @@ module.exports = async function (deployer, network, accounts) {
     enigma.admin();
     enigma.setTaskKeyPair();
 
-    // Deploy your Smart and Secret contracts below this point:
-
+    // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
     const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
@@ -106,7 +105,7 @@ module.exports = async function (deployer, network, accounts) {
     console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
     await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold);
     console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
-    await store.insertSaladContractAddressInCache(Salad.address);
+    await store.insertSmartContractAddress(Salad.address);
 
     const config = {
         filename: 'salad.wasm',
@@ -116,7 +115,8 @@ module.exports = async function (deployer, network, accounts) {
         gasPrice: utils.toGrains(0.001),
         from: accounts[0]
     };
-    const address = await deploySecretContract(config, Salad.address);
-    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${address}`);
+    const scAddress = await deploySecretContract(config, Salad.address);
+    await store.insertSecretContractAddress(scAddress);
+    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${scAddress}`);
     await store.closeAsync();
 };

@@ -31,8 +31,8 @@ describe('Salad', () => {
         store = new Store();
         await store.initAsync();
         const operatorAccountIndex = 0;
-        const scAddr = fs.readFileSync(`${__dirname}/salad.txt`, 'utf-8');
-        saladContractAddr = await store.fetchSaladContractAddr();
+        const scAddr = await store.fetchSecretContractAddr();
+        saladContractAddr = await store.fetchSmartContractAddr();
         await store.closeAsync();
 
         const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
