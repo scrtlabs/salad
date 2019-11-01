@@ -161,7 +161,7 @@ class DealManager {
     }
 
     /**
-     * Execute tracked Deal
+     * Execute pending Deal
      *   1- Send an Enigma tx with the `dealId` and `encRecipients`
      *   2- Enigma decrypts and shuffles the recipient Ethereum addresses
      *   3- Enigma calls the `executeDeal` method of the Ethereum contract
@@ -178,26 +178,29 @@ class DealManager {
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
         deal._tx = task.transactionHash;
-        // TODO: Get from the task
-        const blockNumber = await this.web3.eth.getBlockNumber();
-        await this.store.insertLastMixBlockNumber(blockNumber);
+        const {blockNumber} = task.receipt;
+        await this.store.setLastMixBlockNumber(blockNumber);
     }
 
+    /**
+     * Verify the deposits on Enigma similarity to `executeDeal` but without transferring funds
+     * @param {string} amount
+     * @param {Array<Deposit>} deposits
+     * @param {Object} taskRecordOpts
+     * @returns {Promise<void>}
+     */
     async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
-        /** @type string */
         const task = await this.scClient.verifyDepositsAsync(amount, deposits, taskRecordOpts);
         debug('The verify deposit task', task);
-        // TODO: Get from the task
-        const blockNumber = await this.web3.eth.getBlockNumber();
-        await this.store.insertLastMixBlockNumber(blockNumber);
-        return task;
+        const {blockNumber} = task.receipt;
+        await this.store.setLastMixBlockNumber(blockNumber);
     }
 
     async getLastMixBlockNumberAsync() {
         let blockNumber = await this.store.fetchLastMixBlockNumber();
         if (blockNumber === null) {
             blockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
-            await this.store.insertLastMixBlockNumber(blockNumber);
+            await this.store.setLastMixBlockNumber(blockNumber);
         }
         return blockNumber;
     }

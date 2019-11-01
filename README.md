@@ -28,12 +28,14 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 
 ## Architecture
 ### Definitions
-- Relayer: TODO: Use operator instead?
+- Relayer (aka Operator): 
 - Deposit
 - Recipient Address
-- Anonimity Set: TODO: Instead of liquidity pool? 
-- Deal
-- Plain Text
+- Anonymity Set: The number of participants 
+- Quorum: The number of participant in a deal
+- Last Execution Block Number: The block number during last deal execution
+- Last Mix Block Number: The block number during last deal execution or quorum not reached
+- Deal: A coin mixer transaction
 - Fee
 - Frontrunning
 - Selected Worker

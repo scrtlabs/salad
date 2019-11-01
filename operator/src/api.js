@@ -194,8 +194,7 @@ class OperatorApi {
             }
         } else {
             debug('Quorum not reached skipping deal execution');
-            const task = await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
-            debug('Below quorum deposits verified with task', task);
+            await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
             this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
         }
     }

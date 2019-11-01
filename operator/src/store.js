@@ -100,9 +100,16 @@ class Store {
      * @param {string} blockNumber
      * @returns {Promise<void>}
      */
-    async insertLastMixBlockNumber(blockNumber) {
-        const data = {_id: 'lastMixBlockNumber', blockNumber};
-        await this._insertRecordAsync(data, CACHE_COLLECTION);
+    async setLastMixBlockNumber(blockNumber) {
+        const query = {_id: 'lastMixBlockNumber'};
+        let data = await this.db.collection(CACHE_COLLECTION).findOne(query);
+        if (data) {
+            const newValues = {$set: {blockNumber}};
+            await this.db.collection(CACHE_COLLECTION).updateOne(query, newValues);
+        } else {
+            data = {_id: 'lastMixBlockNumber', blockNumber};
+            await this._insertRecordAsync(data, CACHE_COLLECTION);
+        }
     }
 
     /**
