@@ -96,6 +96,26 @@ class Store {
     }
 
     /**
+     * Insert last mix block number in cache
+     * @param {string} blockNumber
+     * @returns {Promise<void>}
+     */
+    async insertLastMixBlockNumber(blockNumber) {
+        const data = {_id: 'lastMixBlockNumber', blockNumber};
+        await this._insertRecordAsync(data, CACHE_COLLECTION);
+    }
+
+    /**
+     * Fetch the Salad contract address from cache
+     * @returns {Promise<string>}
+     */
+    async fetchLastMixBlockNumber() {
+        const query = {_id: 'lastMixBlockNumber'};
+        const data = await this.db.collection(CACHE_COLLECTION).findOne(query);
+        return (data) ? data.blockNumber : null;
+    }
+
+    /**
      * Fetch the Secret contract address from cache
      * @returns {Promise<string>}
      */
