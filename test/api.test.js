@@ -28,9 +28,6 @@ describe('Salad', () => {
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
     const web3 = new Web3(provider);
     before(async () => {
-        // console.log('The debug object', debug);
-        // debug.enabled = true;
-        // debug('Testing log');
         store = new Store();
         await store.initAsync();
         const operatorAccountIndex = 0;

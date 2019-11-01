@@ -1,9 +1,9 @@
-# Enigma CoinJoin
+# Salad
 A CoinJoin implementation of the Enigma Discovery Network.
 
 ## How to Build
 ### Dependencies
-- `node == v11.15.0`
+- `node == v10.0.17`
 - `rustc == nightly-2019-08-01`
 - `yarn == 1.17.3`
 - `Docker == 18.09.8-ce, build 0dd43dd87f`
@@ -89,19 +89,7 @@ For the initial prototype, I'm using approach #1. ZK-based mixers don't utilize 
 1. *Spam*: An attacker could submit large amount of deposits to create artificial liquidity and de-anonymize other participants. If there are 10 participants in a deal, and 9 of those are the attacker, the 1 left isn't anonymous to the attacker. Semaphore addresses this by executing deals on a schedule, not by a participation threshold. The best solution is probably a combination of both. More research needed. 
 
 ## Problems
-- [x] Unable to use latest ring. Error during migration.
-      ```
-      core_1      | Error in deployment of smart contract function: Error in execution of WASM code: Instantiation: Export GFp_gcm_gmult_4bit not found
-      core_1      | 15:20:18 [INFO] deploy_contract() => Ok(FailedTask { result: FailedTask { output: "435880ff72171fdbebbdc06f22c27e39957af05de3c963682e340e1f512cf69b583ba0a3eaad3b56f1afa9a5560d9d5be371b99cd12db45fa5754781e7f26f3ed4b6eef50a041be4f06b1f5f75953672c552f5ac72f51389b1ca05ecbf15a274436807cb79f0699e96e0beeaa9346d", used_gas: 0, signature: "800208408c6ee1bd8e6f233557821f99d748ba3ab600e8fb74de8d674505048d2956a582b8515e0c25ea29c0e86b30468f51e4fcf8d177d1964502c4ab883ab81b" } })
-      ```
-- [ ] Keeping the built Enigma contracts should not be necessary. Add to `discovery-cli`.
-- [x] How to approach error handling in secret contracts?
-- [ ] Intermittent: `Wrong epoch for this task` errors      
 - [ ] Unable to pass `bytes32` to smart contracts
-- [ ] Unable to pass `string[]` to secret contract. The current workaround is to concat/split a `Vec<u8>` argument.
-- [ ] Deployment often fails 
-- [x] Can't use the `vec![]` macro
-- [ ] Starting the network sometimes fails, resulting in a `Division by zero` error during deployment
 
 # Detailed Protocol
 Checked list items have been implemented, others are pending.
@@ -118,24 +106,24 @@ Checked list items have been implemented, others are pending.
 
 ## Workflow
 ### User
-- [x] Get the Public Encryption Key, and the signature of the worker who generated it, from the Relayer (previously fetched from the secret contract and stored in cache). 
-- [ ] Recover the worker's address from the signature, verify its authenticity against the Worker Registry of the Enigma contract.
-- [x] Generate a key pair for encryption of the Recipient Address.
-- [x] Make a deposit in the CoinJoin smart contract. A record of "Sender Address => Amount" now exists on-chain.
-- [x] Encrypt the Recipient Address using a key derived from the Public Encryption Key and the User Private Key. 
-- [x] Sign the payload using an Ethereum wallet (e.g. MetaMask).
-- [x] Submit the Deposit Payload and Signature to the Relayer. 
+1. Get the Public Encryption Key, and the signature of the worker who generated it, from the Relayer (previously fetched from the secret contract and stored in cache). 
+2. Recover the worker's address from the signature, verify its authenticity against the Worker Registry of the Enigma contract.
+3. Generate a key pair for encryption of the Recipient Address.
+4. Make a deposit in the CoinJoin smart contract. A record of "Sender Address => Amount" now exists on-chain.
+5. Encrypt the Recipient Address using a key derived from the Public Encryption Key and the User Private Key. 
+6. Sign the payload using an Ethereum wallet (e.g. MetaMask).
+7. Submit the Deposit Payload and Signature to the Relayer. 
 
 ### Mixer
-- [x] To prevent spam, the Relayer verifies the Payload Signature.
-- [x] Relayer holds the Payload until a trigger (based on time and participation threshold).
-- [x] Relayer creates a Deal on-chain by submitting the Amount and Sender Addresses. The DealId hash is computed on-chain. A record of a Pending Deal now exists on-chain.
-- [ ] Relayer submits its Ethereum Address, Ethereum Nonce, Payloads and Signatures to the secret contract.
-- [x] Secret contract verifies the signatures. We now have verified Payloads in the secret contract.
-- [ ] Relayer computes the DealId, which is a hash computed partly from verified Sender Addresses, becoming a proof to be validated on-chain. It is not possible to target a DealId hash without having verified the signatures.
-- [x] Secret contract decrypts each Recipient Address by deriving a key from the Encryption Private Key and each User Public Key.
-- [x] Secret contract generates a random seed and mixes the address using a Fisher–Yates shuffle.
-- [ ] Secret contract submits the DealId and Shuffled Plaintext Recipient Addresses on-chain.
-- [x] Smart contract finds the Deal by DealId, verifies that the status is Pending and verifies the Deposit balances.
-- [x] Smart contract transfers each deposit to the Recipients, subtracting them from the each Sender's balance.
-- [x] The Deal status is now Executed
+8. To prevent spam, the Relayer verifies the Payload Signature.
+9. Relayer holds the Payload until a trigger (based on time and participation threshold).
+10. Relayer creates a Deal on-chain by submitting the Amount and Sender Addresses. The DealId hash is computed on-chain. A record of a Pending Deal now exists on-chain.
+11. Relayer submits its Ethereum Address, Ethereum Nonce, Payloads and Signatures to the secret contract.
+12. Secret contract verifies the signatures. We now have verified Payloads in the secret contract.
+13. Relayer computes the DealId, which is a hash computed partly from verified Sender Addresses, becoming a proof to be validated on-chain. It is not possible to target a DealId hash without having verified the signatures.
+14. Secret contract decrypts each Recipient Address by deriving a key from the Encryption Private Key and each User Public Key.
+15. Secret contract generates a random seed and mixes the address using a Fisher–Yates shuffle.
+16. Secret contract submits the DealId and Shuffled Plaintext Recipient Addresses on-chain.
+17. Smart contract finds the Deal by DealId, verifies that the status is Pending and verifies the Deposit balances.
+18. Smart contract transfers each deposit to the Recipients, subtracting them from the each Sender's balance.
+19. The Deal status is now Executed
