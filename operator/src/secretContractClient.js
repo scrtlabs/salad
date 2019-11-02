@@ -140,8 +140,10 @@ class SecretContractClient {
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
+        const {taskId} = task;
+        // const taskRecord = await this.enigma.enigmaContract.methods.getTaskRecord(taskId).call();
         const output = await this.fetchOutput(task);
-        debug('Got execute deal task', task.taskId, 'with results:', output);
+        debug('Got execute deal task', taskId, 'with results:', output);
         return task;
     }
 
