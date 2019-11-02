@@ -28,17 +28,15 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 
 ## Architecture
 ### Definitions
-- Relayer (aka Operator): 
-- Deposit
-- Recipient Address
+- Relayer: The operator who brokers messages between users and the Enigma network 
+- Deposit: The currency about sent by each participant
+- Recipient Address: The obfuscated account receiving each deposit
 - Anonymity Set: The number of participants 
 - Quorum: The number of participant in a deal
 - Last Execution Block Number: The block number during last deal execution
 - Last Mix Block Number: The block number during last deal execution or quorum not reached
 - Deal: A coin mixer transaction
-- Fee
-- Frontrunning
-- Selected Worker
+- Fee: The fee taken by the relayer as percentage of currency mixed
 
 ### Overview
 
@@ -101,7 +99,6 @@ Checked list items have been implemented, others are pending.
 - Amount
 - Encrypted Recipient Address
 - User Public Key
-- Nonce
 
 ## Hashes
 - DealId: `H(Sender Addresses, Amount, Relayer Ethereum Address, Relayer Ethereum Nonce)`
