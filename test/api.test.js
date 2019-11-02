@@ -25,6 +25,7 @@ describe('Salad', () => {
     let recipients = [];
     let recipientInitialBalances = [];
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
+    const anonSetSize = threshold;
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
     const web3 = new Web3(provider);
     before(async () => {
@@ -66,7 +67,7 @@ describe('Salad', () => {
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
         // Starting the recipients in the middle of the account stack
         // TODO: Test with larger account stacks
-        for (let i = 6; i < 6 + threshold; i++) {
+        for (let i = 6; i < 6 + anonSetSize; i++) {
             const recipient = salad.accounts[i];
             recipients[i] = recipient;
             recipientInitialBalances[i] = await web3.eth.getBalance(recipient);
@@ -170,7 +171,7 @@ describe('Salad', () => {
         });
     }
 
-    const quorumReached = makeDeposits(threshold);
+    const quorumReached = makeDeposits(anonSetSize);
     let lastDepositBlockNumber;
     let dealPromise;
     let executedDealPromise;
@@ -223,8 +224,18 @@ describe('Salad', () => {
         });
         debug('Distributed event receipts', receipts);
         expect(receipts.length).to.equal(1);
-        const receiptEthContractAddr = receipts[0].returnValues.optionalEthereumContractAddress;
-        expect(receiptEthContractAddr).to.equal(saladContractAddr);
+        const {gasUsed, optionalEthereumContractAddress} = receipts[0].returnValues;
+        expect(optionalEthereumContractAddress).to.equal(saladContractAddr);
+        debug('The ENG gas used with', anonSetSize, 'participants:', gasUsed);
+        // 3 participants gas used: 71787720
+        // 3 participants gas used: 71661357
+        // 4 participants gas used: 94435916
+        // Per participant: ~23000000
+        // Base : 3000000
+        // const baseGasUnits = 3000000;
+        // const gasUnitsPerParticipant = 24000000;
+        // const estimatedGasUnits = baseGasUnits + (anonSetSize * gasUnitsPerParticipant);
+        // expect(estimatedGasUnits).to.be.greaterThan(parseInt(gasUsed));
 
         const receiptFailed = await enigmaContract.getPastEvents('ReceiptFailed', {
             filter: {},
@@ -251,7 +262,7 @@ describe('Salad', () => {
         expect(blockNumber).to.equal(parseInt(lastExecutionBlockNumber));
     });
 
-    for (let i = 0; i < threshold; i++) {
+    for (let i = 0; i < anonSetSize; i++) {
         const depositIndex = i + 1;
         it(`should verify that deposit ${depositIndex} balance is 0 (has been distributed)`, async () => {
             const sender = salad.accounts[depositIndex];
@@ -272,8 +283,8 @@ describe('Salad', () => {
         });
     }
 
-    const nbDepositsQuorumNotReached = threshold - 1;
-    const partialQuorumDepositsSubmitted = makeDeposits(nbDepositsQuorumNotReached);
+    const anonSetSizeUnderThreshold = threshold - 1;
+    const partialQuorumDepositsSubmitted = makeDeposits(anonSetSizeUnderThreshold);
     it('should mine blocks until deal without reaching the quorum', async () => {
         await partialQuorumDepositsSubmitted;
         await mineUntilDeal(web3, server);
@@ -285,7 +296,7 @@ describe('Salad', () => {
         expect(await quorumNotReachedPromise).to.equal(true);
     }).timeout(120000); // Give enough time to execute the deal on Enigma
 
-    for (let i = 0; i < nbDepositsQuorumNotReached; i++) {
+    for (let i = 0; i < anonSetSizeUnderThreshold; i++) {
         const depositIndex = i + 1;
         it(`should withdraw ${depositIndex} after expiry`, async () => {
             const receipt = await salad.withdraw(salad.accounts[depositIndex], opts);

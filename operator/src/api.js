@@ -18,7 +18,8 @@ const debug = require('debug')('operator:api');
 const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
 const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
 const EXECUTE_DEAL_GAS_PRICE = 0.001;
-const EXECUTE_DEAL_GAS_LIMIT = 87123880;
+const EXECUTE_DEAL_BASE_GAS_UNIT = 3000000;
+const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 24000000;
 
 class OperatorApi {
     constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0, pauseOnRetryInSeconds = 10) {
@@ -161,11 +162,11 @@ class OperatorApi {
      */
     async handleDealExecutionAsync() {
         debug('Evaluating deal creation in non-blocking scope');
+        const deposits = await this.dealManager.balanceFillableDepositsAsync();
         const taskRecordOpts = {
-            taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
+            taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (deposits.length * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
         };
-        const deposits = await this.dealManager.balanceFillableDepositsAsync();
         // TODO: Account for empty deposits
         /** @type string */
         const depositAmount = deposits[0].amount;
