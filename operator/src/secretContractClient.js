@@ -106,27 +106,63 @@ class SecretContractClient {
         this.enigma.setTaskKeyPair();
     }
 
-    async executeDealAsync(nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload, nonce, opts) {
-        debug('Calling `execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])`', nbRecipient, amount, pubKeysPayload, encRecipientsPayload, sendersPayload, signaturesPayload);
-        const taskFn = 'execute_deal(bytes32,uint256,uint256,bytes[],bytes[],address[],bytes[])';
+    _prepareDepositsParams(deposits) {
+        const nbRecipient = deposits.length;
+        const pubKeys = [];
+        const encRecipients = [];
+        const senders = [];
+        const signatures = [];
+        for (const deposit of deposits) {
+            pubKeys.push(`0x${deposit.pubKey}`);
+            encRecipients.push(`0x${deposit.encRecipient}`);
+            senders.push(deposit.sender);
+            signatures.push(deposit.signature);
+        }
+        return {nbRecipient, pubKeys, encRecipients, senders, signatures};
+    }
+
+    async executeDealAsync(amount, deposits, nonce, opts) {
+        const {nbRecipient, pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
         const operatorAddress = this.getOperatorAccount();
+        debug('Calling `execute_deal(address,uint256,uint256,uint256,bytes[],bytes[],address[],bytes[])`',
+            operatorAddress, nbRecipient, amount, pubKeys, encRecipients, senders, signatures);
+        const taskFn = 'execute_deal(address,uint256,uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const taskArgs = [
             [operatorAddress, 'address'],
             [nonce, 'uint256'],
             [nbRecipient, 'uint256'],
             [amount, 'uint256'],
-            [pubKeysPayload, 'bytes[]'],
-            [encRecipientsPayload, 'bytes[]'],
-            [sendersPayload, 'address[]'],
-            [signaturesPayload, 'bytes[]'],
+            [pubKeys, 'bytes[]'],
+            [encRecipients, 'bytes[]'],
+            [senders, 'address[]'],
+            [signatures, 'bytes[]'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        // TODO: Retry of Task Record fails
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
-        // TODO: Retry of task fails
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         const output = await this.fetchOutput(task);
         debug('Got execute deal task', task.taskId, 'with results:', output);
+        return task;
+    }
+
+    async verifyDepositsAsync(amount, deposits, opts) {
+        const {nbRecipient, pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
+        debug('Calling `verify_deposits(uint256,uint256,bytes[],bytes[],address[],bytes[])`',
+            nbRecipient, amount, pubKeys, encRecipients, senders, signatures);
+        const taskFn = 'verify_deposits(uint256,uint256,bytes[],bytes[],address[],bytes[])';
+        const taskArgs = [
+            [nbRecipient, 'uint256'],
+            [amount, 'uint256'],
+            [pubKeys, 'bytes[]'],
+            [encRecipients, 'bytes[]'],
+            [senders, 'address[]'],
+            [signatures, 'bytes[]'],
+        ];
+        const {taskGasLimit, taskGasPx} = opts;
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const task = await this.waitTaskSuccessAsync(pendingTask);
+        const output = await this.fetchOutput(task);
+        debug('Got verified deposits task', task.taskId, 'with results:', output);
         return task;
     }
 

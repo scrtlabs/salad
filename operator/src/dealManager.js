@@ -88,24 +88,6 @@ class DealManager {
     }
 
     /**
-     * Create deal on Ethereum if quorum reached or exit
-     * @param {Object} opts - Ethereum transaction options
-     * @param {string} amount - The minimum deposit amount in wei
-     * @returns {Promise<Deal|null>}
-     */
-    async createDealIfQuorumReachedAsync(opts, amount = 0) {
-        const deposits = await this.fetchFillableDepositsAsync(amount);
-        debug('Evaluating quorum', deposits.length, 'against threshold', this.threshold);
-        /** @type Deal | null */
-        let deal = null;
-        if (deposits.length >= this.threshold) {
-            debug('Quorum reached with deposits', deposits);
-            deal = await this.createDealAsync(deposits, opts);
-        }
-        return deal;
-    }
-
-    /**
      * Fetch the fillable deposits as tracked by the operator
      * @param minimumAmount
      * @returns {Promise<Array<Deposit>>}
@@ -118,20 +100,18 @@ class DealManager {
 
     /**
      * Create new Deal on Ethereum
+     * @param {string} depositAmount
      * @param {Array<Deposit>} deposits - The Deposits linked to the Deal
      * @param {Object} opts - Ethereum tx options
      * @returns {Promise<Deal>}
      */
-    async createDealAsync(deposits, opts) {
+    async createDealAsync(depositAmount, deposits, opts) {
         const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
         if (pendingDeals.length > 0) {
             debug('The executable deals', pendingDeals);
             throw new Error('Cannot creating a new deal until current deal is executed');
         }
         debug('Creating deal with deposits', deposits);
-        // TODO: Assuming that all deposits are equal for now
-        /** @type string */
-        const depositAmount = deposits[0].amount;
         /** @type string[] */
         const participants = deposits.map((deposit) => deposit.sender);
         const sender = this.scClient.getOperatorAccount();
@@ -161,7 +141,27 @@ class DealManager {
     }
 
     /**
-     * Execute tracked Deal
+     * Verify on-chain balance of locally stored fillable deposits and discard if too low
+     * @returns {Promise<Array<Deposit>>}
+     */
+    async balanceFillableDepositsAsync() {
+        const deposits = this.fetchFillableDepositsAsync();
+        for (let i = 0; i < deposits.length; i++) {
+            const deposit = deposits[i];
+            try {
+                // Discard the deposit if the balance is withdrawn
+                await this.verifyDepositAmountAsync(deposit.sender, deposit.amount);
+            } catch (e) {
+                debug('Discarding invalid deposit', e);
+                await this.store.discardDepositAsync(deposit);
+                deposits.splice(i, 1);
+            }
+        }
+        return deposits;
+    }
+
+    /**
+     * Execute pending Deal
      *   1- Send an Enigma tx with the `dealId` and `encRecipients`
      *   2- Enigma decrypts and shuffles the recipient Ethereum addresses
      *   3- Enigma calls the `executeDeal` method of the Ethereum contract
@@ -173,36 +173,46 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
-        const nbRecipient = deposits.length;
-        const pubKeys = [];
-        const encRecipients = [];
-        const senders = [];
-        const signatures = [];
-        for (const deposit of deposits) {
-            try {
-                // Discard the deposit if the balance is withdrawn
-                await this.verifyDepositAmountAsync(deposit.sender, deposit.amount);
-                pubKeys.push(`0x${deposit.pubKey}`);
-                encRecipients.push(`0x${deposit.encRecipient}`);
-                senders.push(deposit.sender);
-                signatures.push(deposit.signature);
-            } catch (e) {
-                debug('Discarding invalid deposit', e);
-                // TODO: Add to unit tests
-                await this.store.discardDepositAsync(deposit);
-            }
-        }
-        const task = await this.scClient.executeDealAsync(nbRecipient, depositAmount, pubKeys, encRecipients, senders, signatures, nonce, taskRecordOpts);
+        const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, taskRecordOpts);
         deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
         deal._tx = task.transactionHash;
+        const {blockNumber} = task.receipt;
+        await this.store.setLastMixBlockNumber(blockNumber);
     }
 
-    async getBlocksUntilDealAsync() {
+    /**
+     * Verify the deposits on Enigma similarity to `executeDeal` but without transferring funds
+     * @param {string} amount
+     * @param {Array<Deposit>} deposits
+     * @param {Object} taskRecordOpts
+     * @returns {Promise<void>}
+     */
+    async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
+        const task = await this.scClient.verifyDepositsAsync(amount, deposits, taskRecordOpts);
+        debug('The verify deposit task', task);
+        const {blockNumber} = task.receipt;
+        await this.store.setLastMixBlockNumber(blockNumber);
+    }
+
+    async getLastMixBlockNumberAsync() {
+        let blockNumber = await this.store.fetchLastMixBlockNumber();
+        if (blockNumber === null) {
+            blockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
+            await this.store.setLastMixBlockNumber(blockNumber);
+        }
+        return blockNumber;
+    }
+
+    /**
+     * Get the number of blocks left until mixing
+     * @returns {Promise<number>}
+     */
+    async getBlocksUntilMixAsync() {
         const blockNumber = await this.web3.eth.getBlockNumber();
         debug('The block', blockNumber);
-        const lastExecutionBlockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
+        const lastExecutionBlockNumber = await this.getLastMixBlockNumberAsync();
         const dealIntervalInBlocks = await this.contract.methods.dealIntervalInBlocks().call();
         const countdown = (parseInt(lastExecutionBlockNumber) + parseInt(dealIntervalInBlocks)) - parseInt(blockNumber);
         debug(lastExecutionBlockNumber, '+', dealIntervalInBlocks, '-', blockNumber, '=', countdown);

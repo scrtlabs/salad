@@ -70,16 +70,64 @@ class Store {
      * @param {string} addr
      * @returns {Promise<void>}
      */
-    async insertSaladContractAddressInCache(addr) {
+    async insertSmartContractAddress(addr) {
         const data = {_id: 'saladContractAddr', addr};
         await this._insertRecordAsync(data, CONFIG_COLLECTION);
     }
+
+    /**
+     * Insert Salad contract address in cache
+     * @param {string} addr
+     * @returns {Promise<void>}
+     */
+    async insertSecretContractAddress(addr) {
+        const data = {_id: 'secretContractAddr', addr};
+        await this._insertRecordAsync(data, CONFIG_COLLECTION);
+    }
+
     /**
      * Fetch the Salad contract address from cache
      * @returns {Promise<string>}
      */
-    async fetchSaladContractAddr() {
+    async fetchSmartContractAddr() {
         const query = {_id: 'saladContractAddr'};
+        const data = await this.db.collection(CONFIG_COLLECTION).findOne(query);
+        return data.addr;
+    }
+
+    /**
+     * Insert last mix block number in cache
+     * @param {string} blockNumber
+     * @returns {Promise<void>}
+     */
+    async setLastMixBlockNumber(blockNumber) {
+        const query = {_id: 'lastMixBlockNumber'};
+        let data = await this.db.collection(CACHE_COLLECTION).findOne(query);
+        if (data) {
+            const newValues = {$set: {blockNumber}};
+            await this.db.collection(CACHE_COLLECTION).updateOne(query, newValues);
+        } else {
+            data = {_id: 'lastMixBlockNumber', blockNumber};
+            await this._insertRecordAsync(data, CACHE_COLLECTION);
+        }
+    }
+
+    /**
+     * Fetch the Salad contract address from cache
+     * @returns {Promise<string>}
+     */
+    async fetchLastMixBlockNumber() {
+        const query = {_id: 'lastMixBlockNumber'};
+        const data = await this.db.collection(CACHE_COLLECTION).findOne(query);
+        return (data) ? data.blockNumber : null;
+    }
+
+    /**
+     * Fetch the Secret contract address from cache
+     * @returns {Promise<string>}
+     */
+    async fetchSecretContractAddr() {
+        const query = {_id: 'secretContractAddr'};
         const data = await this.db.collection(CONFIG_COLLECTION).findOne(query);
         return data.addr;
     }

@@ -73,7 +73,7 @@ class OperatorApi {
      * @returns {Promise<number>}
      */
     async refreshBlocksUntilDeal() {
-        const blockCountdown = await this.dealManager.getBlocksUntilDealAsync();
+        const blockCountdown = await this.dealManager.getBlocksUntilMixAsync();
         this.ee.emit(BLOCK_UPDATE, blockCountdown);
         return blockCountdown;
     }
@@ -161,32 +161,42 @@ class OperatorApi {
      */
     async handleDealExecutionAsync() {
         debug('Evaluating deal creation in non-blocking scope');
-        // TODO: Do accounting of deposit amounts on-chain and delete if not enough
-        const deal = await this.dealManager.createDealIfQuorumReachedAsync(this.txOpts);
-        if (!deal) {
-            debug('Quorum not reached skipping deal execution');
-            this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
-            return;
-        }
-        debug('Broadcasting new deal');
-        this.ee.emit(DEAL_CREATED_UPDATE, deal);
-
-        debug('Broadcasting quorum value 0 after new deal');
-        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
-        debug('Fillable deposits after deal', fillableDeposits);
-        if (fillableDeposits.length !== 0) {
-            throw new Error('Data corruption, the quorum should be 0 after creating a deal');
-        }
-        // Resetting quorum
-        this.ee.emit(QUORUM_UPDATE, 0);
-        debug('Deal created on Ethereum, executing...', deal._tx);
         const taskRecordOpts = {
             taskGasLimit: EXECUTE_DEAL_GAS_LIMIT,
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
         };
-        await this.dealManager.executeDealAsync(deal, taskRecordOpts);
-        debug('Deal executed on Ethereum', deal._tx);
-        this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
+        const deposits = await this.dealManager.balanceFillableDepositsAsync();
+        // TODO: Account for empty deposits
+        /** @type string */
+        const depositAmount = deposits[0].amount;
+        if (deposits.length >= this.threshold) {
+            debug('Quorum reached with deposits', deposits);
+            try {
+                const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
+                debug('Broadcasting new deal');
+                this.ee.emit(DEAL_CREATED_UPDATE, deal);
+
+                debug('Broadcasting quorum value 0 after new deal');
+                const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
+                debug('Fillable deposits after deal', fillableDeposits);
+                if (fillableDeposits.length !== 0) {
+                    throw new Error('Data corruption, the quorum should be 0 after creating a deal');
+                }
+                // Resetting quorum
+                this.ee.emit(QUORUM_UPDATE, 0);
+                debug('Deal created on Ethereum, executing...', deal._tx);
+                await this.dealManager.executeDealAsync(deal, taskRecordOpts);
+                debug('Deal executed on Ethereum', deal._tx);
+                this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
+            } catch (e) {
+                // TODO: add error log
+                debug('Deal creation error', e);
+            }
+        } else {
+            debug('Quorum not reached skipping deal execution');
+            await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
+            this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+        }
     }
 
     /**
