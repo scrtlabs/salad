@@ -1,12 +1,14 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = require("@salad/client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
+const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
+const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 
 /**
  * @typedef {Object} OperatorAction
@@ -53,6 +55,16 @@ class OperatorApi {
             await this.shutdownAsync();
             process.exit();
         });
+    }
+
+    async fetchConfigAsync() {
+        const scAddr = await this.store.fetchSecretContractAddr();
+        const saladAddr = await this.store.fetchSmartContractAddr();
+        const networkId = await this.web3.eth.net.getId();
+        const enigmaAddr = EnigmaContract.networks[networkId].address;
+        const enigmaTokenAddr = EnigmaTokenContract.networks[networkId].address;
+        const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr};
+        return {action: FETCH_CONFIG_SUCCESS, payload: {config}};
     }
 
     /**

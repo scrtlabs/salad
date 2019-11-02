@@ -56,7 +56,7 @@ class Mixer extends Component {
         });
         this.service.onQuorumValue((payload) => {
             console.log('Got quorum', payload);
-            const {quorum} = payload;
+            const {quorum} = this.service;
             this.setState({quorum});
         });
         this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {

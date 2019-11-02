@@ -4,9 +4,10 @@ const Web3 = require('web3');
 const debug = require('debug')('operator:server');
 const {Store} = require("@salad/operator");
 
+const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
+let server;
 (async () => {
     const operatorAccountIndex = 0;
-    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
     const store = new Store();
     await store.initAsync();
     const threshold = process.env.PARTICIPATION_THRESHOLD;
@@ -14,7 +15,7 @@ const {Store} = require("@salad/operator");
     const contractAddr = await store.fetchSmartContractAddr();
     const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
     await store.closeAsync();
-    const server = await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
+    server = await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
     // Fetch the encryption pub key and put in cache
     await server.loadEncryptionPubKeyAsync();
     // Watch blocks and update create deals when reaching thresholds

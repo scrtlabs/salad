@@ -4,7 +4,7 @@ const {CoinjoinClient} = require('@salad/client');
 const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
 const {utils} = require('enigma-js/node');
-const {mineUntilDeal, mineBlock} = require('./test-utils');
+const {mineUntilDeal, mineBlock} = require('@salad/operator/src/ganacheUtils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
 const {Store} = require("@salad/operator");
@@ -76,17 +76,9 @@ describe('Salad', () => {
     });
 
     it('should connect to the WS server', async () => {
-        debug('Testing connection');
-        const action = new Promise((resolve) => {
-            salad.ws.once('message', (msg) => {
-                const {action} = JSON.parse(msg);
-                if (action === 'pong') {
-                    resolve(action);
-                }
-            });
-        });
-        salad.ws.send(JSON.stringify({action: 'ping', payload: {}}));
-        await action;
+        debug('Fetching config');
+        const config = await salad.fetchConfigAsync();
+        debug('The config', config);
     });
 
     let pubKey;
@@ -107,6 +99,9 @@ describe('Salad', () => {
         amount = web3Utils.toWei('10');
     });
 
+    it('should have an initial quorum of 0', async () => {
+        expect(salad.quorum).to.equal(0);
+    });
     async function makeDeposit(depositIndex) {
         let sender;
         let encRecipient;

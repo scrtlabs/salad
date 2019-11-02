@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = actions;
+const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
 const debug = require('debug')('client');
 
 const EventEmitter = require('events');
@@ -41,6 +41,7 @@ class CoinjoinClient {
         this.keyPair = null;
         this.threshold = null;
         this.quorum = 0;
+        // TODO: Should fetch addresses from server on init
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
         this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaContractAddr);
     }
@@ -138,6 +139,17 @@ class CoinjoinClient {
         });
     }
 
+    async fetchConfigAsync() {
+        const promise = new Promise((resolve) => {
+            this.ee.once(FETCH_CONFIG_SUCCESS, (result) => resolve(result.config));
+        });
+        this.ws.send(JSON.stringify({
+            action: FETCH_CONFIG,
+            payload: {}
+        }));
+        return promise;
+    }
+
     /**
      * Init the client
      * 1- Wait for the WS client connection
@@ -149,6 +161,11 @@ class CoinjoinClient {
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this._waitConnectAsync();
         this.accounts = await this.web3.eth.getAccounts();
+        const config = await this.fetchConfigAsync();
+        const {saladAddr, enigmaAddr} = config;
+        // TODO: Remove from the constructor
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
+        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaAddr);
     }
 
     /**
