@@ -1,6 +1,5 @@
 exports.SUBMIT_DEPOSIT_METADATA = 'submitDepositMetadata';
-exports.SUBMIT_DEPOSIT_METADATA_SUCCESS = 'submitDepositMetadataSuccess';
-exports.SUBMIT_DEPOSIT_METADATA_ERROR = 'submitDepositMetadataError';
+exports.SUBMIT_DEPOSIT_METADATA_RESULT = 'submitDepositMetadataResult';
 exports.PUB_KEY_UPDATE = 'pubKeyUpdate';
 exports.THRESHOLD_UPDATE = 'thresholdUpdate';
 exports.QUORUM_UPDATE = 'quorumUpdate';

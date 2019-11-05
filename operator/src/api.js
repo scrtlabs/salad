@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -63,7 +63,8 @@ class OperatorApi {
         const networkId = await this.web3.eth.net.getId();
         const enigmaAddr = EnigmaContract.networks[networkId].address;
         const enigmaTokenAddr = EnigmaTokenContract.networks[networkId].address;
-        const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr};
+        const pubKeyData = await this.loadEncryptionPubKeyAsync();
+        const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
         return {action: FETCH_CONFIG_SUCCESS, payload: {config}};
     }
 
@@ -239,7 +240,8 @@ class OperatorApi {
                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
             }
         }
-        this.ee.emit(PUB_KEY_UPDATE, pubKeyData);
+        // this.ee.emit(PUB_KEY_UPDATE, pubKeyData);
+        return pubKeyData;
     }
 
     /**
@@ -269,10 +271,11 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
-        debug('Got deposit metadata with signature', signature);
+        debug('In submitDepositMetadataAsync(', sender, amount, pubKey, encRecipient, signature, ')');
         const payload = {sender, amount, encRecipient, pubKey};
         if (!this._verifyDepositSignature(payload, signature)) {
-            throw new Error(`Signature verification failed: ${signature}`);
+            debug(`Signature verification failed: ${signature}`);
+            return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
         }
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         debug('Registered deposit', registeredDeposit);
@@ -283,7 +286,7 @@ class OperatorApi {
         debug('Broadcasting quorum update', quorum);
         this.ee.emit(QUORUM_UPDATE, quorum);
 
-        return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
+        return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: true};
     }
 
     /**

@@ -34,20 +34,13 @@ class Mixer extends Component {
             isPending: false,
             page: 0,
             blockCountdown: this.service.blockCountdown,
-            pubKey: this.service.pubKey,
             quorum: this.service.quorum,
             threshold: this.service.threshold,
         };
-
         this.service.onBlock((payload) => {
             console.log('Got block countdown update', payload);
             const {blockCountdown} = payload;
             this.setState({blockCountdown});
-        });
-        this.service.onPubKey((payload) => {
-            console.log('Got pubKey', payload);
-            const {pubKey} = payload;
-            this.setState({pubKey});
         });
         this.service.onThresholdValue((payload) => {
             console.log('Got threshold', payload);
@@ -58,11 +51,6 @@ class Mixer extends Component {
             console.log('Got quorum', payload);
             const {quorum} = this.service;
             this.setState({quorum});
-        });
-        this.service.ee.on(actions.SUBMIT_DEPOSIT_METADATA_SUCCESS, () => {
-            openSnackbar({message: 'Your deposit was included in a pending deal.'});
-            this.setState({isSubmitting: false, isPending: true});
-            props.reset('mix');
         });
         this.service.onDealCreated((payload) => {
             if (!this.state.isPending) {
@@ -83,11 +71,6 @@ class Mixer extends Component {
             });
             this.setState({isPending: false});
         });
-
-        (async () => {
-            await this.service.initAsync();
-            console.log('Connected to WS');
-        })();
     }
 
     // Redux form/material-ui render address select component
@@ -137,21 +120,36 @@ class Mixer extends Component {
         }
         console.log('Submitted:', sender, recipient, amount);
         this.setState({isSubmitting: true});
-        const amountInWei = this.props.web3.utils.toWei(amount);
-        await this.service.makeDepositAsync(sender, amountInWei);
-        const encRecipient = await this.service.encryptRecipientAsync(recipient);
-        // The public key of the user must be submitted
-        // This is DH encryption, Enigma needs the user pub key to decrypt the data
-        const myPubKey = this.service.keyPair.publicKey;
-        // TODO: Add signature
-        await this.service.submitDepositMetadataAsync(sender, amountInWei, encRecipient, myPubKey);
+        try {
+            const amountInWei = this.props.web3.utils.toWei(amount);
+            const depositReceipt = await this.service.makeDepositAsync(sender, amountInWei);
+            openSnackbar({message: `Deposit made with tx: ${depositReceipt.transactionHash}`});
+            console.log('Deposit made', depositReceipt);
+            console.log('Encrypting recipient', recipient);
+            const encRecipient = await this.service.encryptRecipientAsync(recipient);
+            console.log('The encrypted recipient');
+            const myPubKey = this.service.keyPair.publicKey;
+            console.log('Signing deposit payload', sender, amountInWei, encRecipient, myPubKey);
+            const signature = await this.service.signDepositMetadataAsync(sender, amountInWei, encRecipient, myPubKey);
+            console.log('Deposit payload signed', signature);
+            // The public key of the user must be submitted
+            // This is DH encryption, Enigma needs the user pub key to decrypt the data
+            await this.service.submitDepositMetadataAsync(sender, amountInWei, encRecipient, myPubKey, signature);
+            console.log('Deposit metadata submitted');
+            openSnackbar({message: 'Deposit accepted by the Relayer'});
+            this.setState({isSubmitting: false, isPending: true});
+            this.props.reset('mix');
+        } catch (e) {
+            openSnackbar({message: `Error with your deposit: ${e.message}`});
+            console.error('Unable to make deposit', e);
+            debugger;
+        }
     };
 
-    // async componentDidMount() {
-    //     fetch('https://api.mydomain.com')
-    //         .then(response => response.json())
-    //         .then(data => this.setState({ data }));
-    // }
+    async componentDidMount() {
+        await this.service.initAsync();
+        console.log('Connected to WS');
+    }
 
     render() {
         const {isSubmitting, quorum, threshold, page, blockCountdown} = this.state;
@@ -261,7 +259,7 @@ class Mixer extends Component {
                             </div>
                             <div>
                                 <Field
-                                    name="amount"
+                                    name="mount"
                                     type="number"
                                     step="0.0001"
                                     min="0"

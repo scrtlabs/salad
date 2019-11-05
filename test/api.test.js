@@ -22,8 +22,6 @@ describe('Salad', () => {
     let accounts;
     let saladContractAddr;
     let store;
-    let recipients = [];
-    let recipientInitialBalances = [];
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const anonSetSize = threshold;
     const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
@@ -54,7 +52,6 @@ describe('Salad', () => {
             await server.shutdownAsync();
             process.exit();
         });
-        await salad.initAsync();
         // Convenience shortcuts
         web3Utils = web3.utils;
         accounts = salad.accounts;
@@ -65,6 +62,23 @@ describe('Salad', () => {
         };
         const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
+        debug('Environment initialized');
+    });
+
+    let pubKey;
+    it('should fetch and cache the encryption pub key', async () => {
+        // TODO: Consider loading the enc key in init process
+        await server.loadEncryptionPubKeyAsync();
+        await utils.sleep(300);
+        await salad.initAsync();
+        expect(salad.pubKeyData).to.not.be.null;
+        expect(salad.keyPair).to.not.be.null;
+        pubKey = salad.keyPair.publicKey;
+    }).timeout(60000); // Giving more time because fetching the pubKey
+
+    let recipients = [];
+    let recipientInitialBalances = [];
+    it('should assign recipient accounts and balances', async () => {
         // Starting the recipients in the middle of the account stack
         // TODO: Test with larger account stacks
         for (let i = 6; i < 6 + anonSetSize; i++) {
@@ -72,23 +86,7 @@ describe('Salad', () => {
             recipients[i] = recipient;
             recipientInitialBalances[i] = await web3.eth.getBalance(recipient);
         }
-        debug('Environment initialized');
     });
-
-    it('should connect to the WS server', async () => {
-        debug('Fetching config');
-        const config = await salad.fetchConfigAsync();
-        debug('The config', config);
-    });
-
-    let pubKey;
-    it('should fetch and cache the encryption pub key', async () => {
-        await server.loadEncryptionPubKeyAsync();
-        await utils.sleep(300);
-        expect(salad.pubKeyData).to.not.be.null;
-        expect(salad.keyPair).to.not.be.null;
-        pubKey = salad.keyPair.publicKey;
-    }).timeout(60000); // Giving more time because fetching the pubKey
 
     let amount;
     it('should have a valid block countdown', async () => {

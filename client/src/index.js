@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
+const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
 const debug = require('debug')('client');
 
 const EventEmitter = require('events');
@@ -34,6 +34,17 @@ class CoinjoinClient {
         // debug('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
+        this.isConnected = new Promise((resolve) => {
+            const callback = () => {
+                debug('Connected to server');
+                resolve(true);
+            };
+            if (isNode) {
+                this.ws.on('open', callback);
+                return;
+            }
+            this.ws.onopen = callback;
+        });
         this.ee = new EventEmitter();
         /** @type EncryptionPubKey|null */
         this.pubKeyData = null;
@@ -44,6 +55,7 @@ class CoinjoinClient {
         // TODO: Should fetch addresses from server on init
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
         this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaContractAddr);
+        this.config = null;
     }
 
     static obtainKeyPair() {
@@ -159,13 +171,14 @@ class CoinjoinClient {
     async initAsync() {
         this.watch();
         this.keyPair = CoinjoinClient.obtainKeyPair();
-        await this._waitConnectAsync();
+        await this.isConnected;
         this.accounts = await this.web3.eth.getAccounts();
         const config = await this.fetchConfigAsync();
-        const {saladAddr, enigmaAddr} = config;
+        const {saladAddr, enigmaAddr, pubKeyData} = config;
+        this.pubKeyData = pubKeyData;
         // TODO: Remove from the constructor
-        this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
-        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaAddr);
+        // this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
+        // this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaAddr);
     }
 
     /**
@@ -184,10 +197,6 @@ class CoinjoinClient {
                 case BLOCK_UPDATE:
                     const {blockCountdown} = payload;
                     this.blockCountdown = blockCountdown;
-                    break;
-                case PUB_KEY_UPDATE:
-                    const {pubKeyData} = payload;
-                    this.pubKeyData = pubKeyData;
                     break;
                 case THRESHOLD_UPDATE:
                     const {threshold} = payload;
@@ -329,9 +338,7 @@ class CoinjoinClient {
             throw new Error(`Invalid recipient address ${recipient}`);
         }
         if (!this.pubKeyData) {
-            await new Promise((resolve) => {
-                this.onPubKey((p) => resolve(p));
-            });
+            throw new Error("Attribute pubKeyData not set. Please call initAsync");
         }
         await this.verifyPubKeyAsync();
         const pubKey = this.getPlaintextPubKey();
@@ -370,8 +377,13 @@ class CoinjoinClient {
             throw new Error(`Invalid signature ${signature}`);
         }
         debug('Submitting deposit metadata to the operator', amount, encRecipient);
-        const promise = new Promise((resolve) => {
-            this.ee.once(SUBMIT_DEPOSIT_METADATA_SUCCESS, (result) => resolve(result));
+        const promise = new Promise((resolve, reject) => {
+            this.ee.once(SUBMIT_DEPOSIT_METADATA_RESULT, (result) => {
+                if (result.err) {
+                    reject(result.err);
+                }
+                resolve(result)
+            });
         });
         this.ws.send(JSON.stringify({
             action: SUBMIT_DEPOSIT_METADATA,

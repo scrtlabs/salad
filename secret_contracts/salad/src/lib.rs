@@ -216,6 +216,7 @@ impl ContractInterface for Contract {
             recipients.push(recipient);
         }
         eprint!("The ordered recipients: {:?}", recipients);
+        // TODO: Move this to an internal method, sender should't get the recipient list.
         recipients
     }
 }
