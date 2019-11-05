@@ -1,6 +1,7 @@
 const actions = require('./actions');
 const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
 const debug = require('debug')('client');
+debug.enabled = true;
 
 const EventEmitter = require('events');
 const Web3 = require('web3');
@@ -380,7 +381,7 @@ class CoinjoinClient {
         const promise = new Promise((resolve, reject) => {
             this.ee.once(SUBMIT_DEPOSIT_METADATA_RESULT, (result) => {
                 if (result.err) {
-                    reject(result.err);
+                    reject(new Error(result.err));
                 }
                 resolve(result)
             });
@@ -436,7 +437,7 @@ class CoinjoinClient {
      * @param {string} amount - The deposit amount in WEI (e.g. "10000000")
      * @param {string} encRecipient - The encrypted recipient Ethereum address
      * @param {string} pubKey - The user pubKey
-     * @returns {Promise<void>}
+     * @returns {Promise<string>}
      */
     async signDepositMetadataAsync(sender, amount, encRecipient, pubKey) {
         if (!this.web3.utils.isAddress(sender)) {
@@ -454,13 +455,17 @@ class CoinjoinClient {
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        // debug('The message', messageBytes);
-        // debug('The message length', messageBytes.length);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        // debug('Signing message', message);
-        const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+        let hash;
+        if (this.web3.currentProvider.isMetaMask === true) {
+            // TODO: The metamask signature does not match, find out why
+            hash = this.web3.eth.accounts.hashMessage(message);
+        } else {
+            hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+        }
         const sigHex = await this.web3.eth.sign(hash, sender);
         const sigBytes = this.web3.utils.hexToBytes(sigHex);
+        debug('The sig length', sigBytes.length);
         // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
         sigBytes[sigBytes.length - 1] = sigBytes[sigBytes.length - 1] + 27;
         return this.web3.utils.bytesToHex(sigBytes);

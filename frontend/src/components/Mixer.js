@@ -36,6 +36,7 @@ class Mixer extends Component {
             blockCountdown: this.service.blockCountdown,
             quorum: this.service.quorum,
             threshold: this.service.threshold,
+            err: null,
         };
         this.service.onBlock((payload) => {
             console.log('Got block countdown update', payload);
@@ -142,6 +143,7 @@ class Mixer extends Component {
         } catch (e) {
             openSnackbar({message: `Error with your deposit: ${e.message}`});
             console.error('Unable to make deposit', e);
+            this.setState({err: e});
             debugger;
         }
     };
@@ -152,8 +154,21 @@ class Mixer extends Component {
     }
 
     render() {
-        const {isSubmitting, quorum, threshold, page, blockCountdown} = this.state;
-        if (page === 0) {
+        const {isSubmitting, quorum, threshold, page, blockCountdown, err} = this.state;
+        if (err !== null) {
+            return (
+                <Grid container spacing={3}>
+                    <Grid item xs={2}/>
+                    <Grid item xs={8}>
+                        <Paper style={{padding: '30px'}}>
+                            <p style={{fontSize: '18px'}} align="center">Sorry, something bad happened.</p>
+                            <p align="center"> {err.message || err} </p>
+                            <p align="center">Please refresh and try again.</p>
+                        </Paper>
+                    </Grid>
+                </Grid>
+            )
+        } else if (page === 0) {
             return (
                 <Grid container spacing={3}>
                     <Grid item xs={2}/>
@@ -186,8 +201,7 @@ class Mixer extends Component {
                     </Grid>
                 </Grid>
             );
-        }
-        if (page === 1) {
+        } else if (page === 1) {
             return (
                 <Grid container spacing={3}>
                     <Grid item xs={1} style={{display: 'flex', alignItems: 'center'}}>

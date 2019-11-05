@@ -273,10 +273,11 @@ class OperatorApi {
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
         debug('In submitDepositMetadataAsync(', sender, amount, pubKey, encRecipient, signature, ')');
         const payload = {sender, amount, encRecipient, pubKey};
-        if (!this._verifyDepositSignature(payload, signature)) {
-            debug(`Signature verification failed: ${signature}`);
-            return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
-        }
+        // TODO: Disabled temporaribly while troubleshoot metamask signature issue
+        // if (!this._verifyDepositSignature(payload, signature)) {
+        //     debug(`Signature verification failed: ${signature}`);
+        //     return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
+        // }
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         debug('Registered deposit', registeredDeposit);
 

@@ -1,5 +1,4 @@
 require('dotenv').config();
-const fs = require('fs');
 const {CoinjoinClient} = require('@salad/client');
 const {startServer} = require('@salad/operator');
 const {expect} = require('chai');
@@ -94,12 +93,13 @@ describe('Salad', () => {
         await utils.sleep(300);
         debug('The block countdown', salad.blockCountdown);
         expect(salad.blockCountdown).to.be.above(0);
-        amount = web3Utils.toWei('10');
+        amount = web3Utils.toWei('0.1');
     });
 
     it('should have an initial quorum of 0', async () => {
         expect(salad.quorum).to.equal(0);
     });
+
     async function makeDeposit(depositIndex) {
         let sender;
         let encRecipient;
