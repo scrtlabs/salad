@@ -19,7 +19,7 @@
     "supports-color": "^7.1.0"
   },
   "scripts": {
-    "clean-run-operator": "yarn dc migrate && node ./operator/src/server.js -t",
+    "clean-run-operator": "yarn dc migrate && node ./operator/src/server.js -t -i",
     "run-operator": "node ./operator/src/server.js",
     "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
     "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"

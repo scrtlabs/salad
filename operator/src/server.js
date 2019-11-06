@@ -4,6 +4,7 @@ const Web3 = require('web3');
 const debug = require('debug')('operator:server');
 const {Store} = require("@salad/operator");
 const {DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION} = require('./store');
+const {mineUntilDeal} = require('@salad/operator/src/ganacheUtils');
 
 const args = process.argv;
 const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
@@ -19,6 +20,8 @@ let server;
     const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
     await store.closeAsync();
     server = await startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, operatorAccountIndex);
+
+    // -t: Truncate db - Truncate the Deposits, Deals and Cache collections
     if (args.indexOf('-t') !== -1) {
         debug('-t option provided, truncating the db');
         // Truncating the database
@@ -26,6 +29,21 @@ let server;
         await server.store.truncate(DEALS_COLLECTION);
         await server.store.truncate(CACHE_COLLECTION);
     }
+
+    // -i: Ignore deal interval - Mining blocks until new deal when the anonymity set is reached (Ganache only)
+    if (args.indexOf('-i') !== -1) {
+        debug('-i option provided, watching for quorum updates');
+        const web3 = new Web3(provider);
+        server.onQuorumUpdate(async (action) => {
+            debug('Quorum update', action);
+            const {quorum} = action.payload;
+            if (parseInt(quorum) >= parseInt(threshold)) {
+                debug('Quorum reached with -i option, mining blocks until deal');
+                await mineUntilDeal(web3, server);
+            }
+        });
+    }
+
     // Fetch the encryption pub key and put in cache
     await server.loadEncryptionPubKeyAsync();
     // Watch blocks and update create deals when reaching thresholds

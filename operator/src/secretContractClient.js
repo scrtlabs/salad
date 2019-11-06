@@ -68,6 +68,7 @@ class SecretContractClient {
             debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
         } while (task.ethStatus === 1);
         if (task.ethStatus === 3) {
+            debug('Enigma network error with task:', task);
             throw new Error(`Enigma network error with task: ${task.taskId}`);
         }
         return task;
