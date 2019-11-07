@@ -73,9 +73,12 @@ class OperatorApi {
      * @returns {Promise<void>}
      */
     async watchBlocksUntilDeal() {
+        debug('Watching blocks until deal');
         while (this.active === true) {
             const countdown = await this.refreshBlocksUntilDeal();
-            if (countdown === 0) {
+            debug('Block countdown', countdown);
+            if (countdown <= 0) {
+                debug('Block countdown <= 0', countdown);
                 await this.handleDealExecutionAsync();
             }
             await utils.sleep(10000);
@@ -185,17 +188,24 @@ class OperatorApi {
         const depositAmount = deposits[0].amount;
         if (deposits.length >= this.threshold) {
             debug('Quorum reached with deposits', deposits);
+            await this.dealManager.updateLastMixBlockNumberAsync();
+
+            let deal;
             try {
-                const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
+                deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
                 debug('Broadcasting new deal');
                 this.ee.emit(DEAL_CREATED_UPDATE, deal);
-
                 debug('Broadcasting quorum value 0 after new deal');
-                const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
-                debug('Fillable deposits after deal', fillableDeposits);
-                if (fillableDeposits.length !== 0) {
-                    throw new Error('Data corruption, the quorum should be 0 after creating a deal');
-                }
+                this.ee.emit(QUORUM_UPDATE, 0);
+            } catch (e) {
+                // TODO: Retry
+                console.error('Deal creation error', e);
+                debug('Broadcasting quorum value 0 after new deal');
+                this.ee.emit(QUORUM_UPDATE, 0);
+                // throw new Error('Unable to create deal');
+            }
+
+            try {
                 // Resetting quorum
                 this.ee.emit(QUORUM_UPDATE, 0);
                 debug('Deal created on Ethereum, executing...', deal._tx);
@@ -203,13 +213,19 @@ class OperatorApi {
                 debug('Deal executed on Ethereum', deal._tx);
                 this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
             } catch (e) {
-                // TODO: add error log
-                debug('Deal creation error', e);
+                // TODO: Retry here, create new execution task when the epoch changes
+                console.error('Deal execution error', e);
+                // throw new Error('Unable to execute deal');
             }
         } else {
             debug('Quorum not reached skipping deal execution');
-            await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
-            this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+            try {
+                await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
+                this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+            } catch (e) {
+                // TODO: Retry here, create new execution task when the epoch changes
+                console.error('Unable to verify deposits', e);
+            }
         }
     }
 

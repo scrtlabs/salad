@@ -1,4 +1,4 @@
-const {Enigma, utils, eeConstants} = require('enigma-js/node');
+const {Enigma, eeConstants} = require('enigma-js/node');
 const debug = require('debug')('operator:secret-contract');
 
 // TODO: Move path to config and reference Github

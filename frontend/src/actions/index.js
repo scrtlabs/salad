@@ -5,10 +5,10 @@ export const initializeWeb3 = (web3) => {
     };
 };
 
-export const initializeAccounts = (accounts) => {
+export const initializeSalad = (sender) => {
     return {
-        type: 'ACCOUNTS_INITIALIZED',
-        payload: accounts
+        type: 'SALAD_INITIALIZED',
+        payload: sender,
     };
 };
 
