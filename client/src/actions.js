@@ -1,6 +1,5 @@
 exports.SUBMIT_DEPOSIT_METADATA = 'submitDepositMetadata';
-exports.SUBMIT_DEPOSIT_METADATA_SUCCESS = 'submitDepositMetadataSuccess';
-exports.SUBMIT_DEPOSIT_METADATA_ERROR = 'submitDepositMetadataError';
+exports.SUBMIT_DEPOSIT_METADATA_RESULT = 'submitDepositMetadataResult';
 exports.PUB_KEY_UPDATE = 'pubKeyUpdate';
 exports.THRESHOLD_UPDATE = 'thresholdUpdate';
 exports.QUORUM_UPDATE = 'quorumUpdate';
@@ -11,3 +10,5 @@ exports.QUORUM_NOT_REACHED_UPDATE = 'quorumNotReached';
 exports.FETCH_FILLABLE_DEPOSITS = 'fetchFillableDeposits';
 exports.FETCH_FILLABLE_SUCCESS = 'fetchFillableDepositsSuccess';
 exports.FETCH_FILLABLE_ERROR = 'fetchFillableDepositsError';
+exports.FETCH_CONFIG_SUCCESS = 'fetchConfigSuccess';
+exports.FETCH_CONFIG = 'fetchConfig';

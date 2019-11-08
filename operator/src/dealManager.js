@@ -178,8 +178,6 @@ class DealManager {
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
         deal._tx = task.transactionHash;
-        const {blockNumber} = task.receipt;
-        await this.store.setLastMixBlockNumber(blockNumber);
     }
 
     /**
@@ -192,10 +190,23 @@ class DealManager {
     async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
         const task = await this.scClient.verifyDepositsAsync(amount, deposits, taskRecordOpts);
         debug('The verify deposit task', task);
-        const {blockNumber} = task.receipt;
+    }
+
+    /**
+     * Resetting the last mix block number regardless of task status
+     * All deposits received after current block will be included in the next Deal
+     * @returns {Promise<void>}
+     */
+    async updateLastMixBlockNumberAsync() {
+        const blockNumber = await this.web3.eth.getBlockNumber();
         await this.store.setLastMixBlockNumber(blockNumber);
     }
 
+    /**
+     * Get the block number of the last mix event (either deal execution or quorum not reached)
+     * This is a reference point for the next mix event
+     * @returns {Promise<string>}
+     */
     async getLastMixBlockNumberAsync() {
         let blockNumber = await this.store.fetchLastMixBlockNumber();
         if (blockNumber === null) {

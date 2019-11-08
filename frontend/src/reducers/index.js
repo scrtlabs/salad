@@ -9,12 +9,12 @@ const initializeWeb3Reducer = (web3 = null, action) => {
     return web3;
 };
 
-const initializeAccountsReducer = (accounts = [], action) => {
-    if (action.type === 'ACCOUNTS_INITIALIZED') {
+const initializeSaladReducer = (salad = null, action) => {
+    if (action.type === 'SALAD_INITIALIZED') {
         return action.payload;
     }
 
-    return accounts;
+    return salad;
 };
 
 const notifyMessageReducer = (notification = {open: false, message: ''}, action) => {
@@ -27,7 +27,7 @@ const notifyMessageReducer = (notification = {open: false, message: ''}, action)
 
 export default combineReducers({
     web3: initializeWeb3Reducer,
-    accounts: initializeAccountsReducer,
+    salad: initializeSaladReducer,
     notification: notifyMessageReducer,
     form: formReducer
 });

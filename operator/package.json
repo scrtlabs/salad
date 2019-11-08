@@ -15,8 +15,7 @@
     "ws": "^7.1.1"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "test": "mocha"
+    "serve": "node ./src/server.js"
   },
   "devDependencies": {
     "chai": "^4.2.0",

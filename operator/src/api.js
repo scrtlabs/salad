@@ -1,12 +1,14 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_SUCCESS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE} = require("@salad/client").actions;
+const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
+const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
+const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 
 /**
  * @typedef {Object} OperatorAction
@@ -55,15 +57,33 @@ class OperatorApi {
         });
     }
 
+    async fetchConfigAsync() {
+        const scAddr = await this.store.fetchSecretContractAddr();
+        const saladAddr = await this.store.fetchSmartContractAddr();
+        const networkId = await this.web3.eth.net.getId();
+        const enigmaAddr = EnigmaContract.networks[networkId].address;
+        const enigmaTokenAddr = EnigmaTokenContract.networks[networkId].address;
+        const pubKeyData = await this.loadEncryptionPubKeyAsync();
+        const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
+        return {action: FETCH_CONFIG_SUCCESS, payload: {config}};
+    }
+
     /**
      * Watch block countdown and trigger deal execution when reached
      * @returns {Promise<void>}
      */
     async watchBlocksUntilDeal() {
+        debug('Watching blocks until deal');
         while (this.active === true) {
             const countdown = await this.refreshBlocksUntilDeal();
-            if (countdown === 0) {
-                await this.handleDealExecutionAsync();
+            debug('Block countdown', countdown);
+            if (countdown <= 0) {
+                debug('Block countdown <= 0', countdown);
+                try {
+                    await this.handleDealExecutionAsync();
+                } catch (e) {
+                    console.error('Fatal execution error', e);
+                }
             }
             await utils.sleep(10000);
         }
@@ -172,17 +192,24 @@ class OperatorApi {
         const depositAmount = deposits[0].amount;
         if (deposits.length >= this.threshold) {
             debug('Quorum reached with deposits', deposits);
+            await this.dealManager.updateLastMixBlockNumberAsync();
+
+            let deal;
             try {
-                const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
+                deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
                 debug('Broadcasting new deal');
                 this.ee.emit(DEAL_CREATED_UPDATE, deal);
-
                 debug('Broadcasting quorum value 0 after new deal');
-                const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
-                debug('Fillable deposits after deal', fillableDeposits);
-                if (fillableDeposits.length !== 0) {
-                    throw new Error('Data corruption, the quorum should be 0 after creating a deal');
-                }
+                this.ee.emit(QUORUM_UPDATE, 0);
+            } catch (e) {
+                // TODO: Retry
+                console.error('Deal creation error', e);
+                debug('Broadcasting quorum value 0 after new deal');
+                this.ee.emit(QUORUM_UPDATE, 0);
+                // throw new Error('Unable to create deal');
+            }
+
+            try {
                 // Resetting quorum
                 this.ee.emit(QUORUM_UPDATE, 0);
                 debug('Deal created on Ethereum, executing...', deal._tx);
@@ -190,13 +217,19 @@ class OperatorApi {
                 debug('Deal executed on Ethereum', deal._tx);
                 this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
             } catch (e) {
-                // TODO: add error log
-                debug('Deal creation error', e);
+                // TODO: Retry here, create new execution task when the epoch changes
+                console.error('Deal execution error', e);
+                // throw new Error('Unable to execute deal');
             }
         } else {
             debug('Quorum not reached skipping deal execution');
-            await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
-            this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+            try {
+                await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
+                this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+            } catch (e) {
+                // TODO: Retry here, create new execution task when the epoch changes
+                console.error('Unable to verify deposits', e);
+            }
         }
     }
 
@@ -227,7 +260,8 @@ class OperatorApi {
                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
             }
         }
-        this.ee.emit(PUB_KEY_UPDATE, pubKeyData);
+        // this.ee.emit(PUB_KEY_UPDATE, pubKeyData);
+        return pubKeyData;
     }
 
     /**
@@ -257,10 +291,12 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
-        debug('Got deposit metadata with signature', signature);
+        debug('In submitDepositMetadataAsync(', sender, amount, pubKey, encRecipient, signature, ')');
         const payload = {sender, amount, encRecipient, pubKey};
+        // TODO: Disabled temporarily while troubleshoot metamask signature issue
         if (!this._verifyDepositSignature(payload, signature)) {
-            throw new Error(`Signature verification failed: ${signature}`);
+            debug(`Signature verification failed: ${signature}`);
+            return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
         }
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         debug('Registered deposit', registeredDeposit);
@@ -271,7 +307,7 @@ class OperatorApi {
         debug('Broadcasting quorum update', quorum);
         this.ee.emit(QUORUM_UPDATE, quorum);
 
-        return {action: SUBMIT_DEPOSIT_METADATA_SUCCESS, payload: true};
+        return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: true};
     }
 
     /**

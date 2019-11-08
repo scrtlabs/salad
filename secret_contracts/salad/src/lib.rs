@@ -44,7 +44,7 @@ trait ContractInterface {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160>;
+    ) -> bool;
 }
 
 struct Contract;
@@ -124,6 +124,47 @@ impl Contract {
         hash_raw.copy_from_slice(&message.keccak256().to_vec());
         H256::from(&hash_raw)
     }
+
+    fn verify_deposits_internal(
+        nb_recipients: U256,
+        amount: U256,
+        pub_keys: Vec<Vec<u8>>,
+        enc_recipients: Vec<Vec<u8>>,
+        senders: Vec<H160>,
+        signatures: Vec<Vec<u8>>,
+    ) -> Vec<H160> {
+        let mut recipients: Vec<H160> = Vec::new();
+        let keypair = Self::get_keypair();
+        for i in 0..nb_recipients.low_u64() as usize {
+            eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
+            let mut user_pubkey = [0; PUB_KEY_SIZE];
+            user_pubkey.copy_from_slice(&pub_keys[i]);
+            eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
+
+            let shared_key = keypair.derive_key(&user_pubkey).unwrap();
+            let plaintext = decrypt(&enc_recipients[i], &shared_key);
+            eprint!("Successfully decrypted recipient {}", i);
+            let recipient = H160::from(&plaintext[0..20]);
+
+            let mut signature = [0; SIG_SIZE];
+            signature.copy_from_slice(&signatures[i]);
+
+            let sig_sender = Self::verify_signature(signature,
+                                                    &senders[i],
+                                                    &amount,
+                                                    &enc_recipients[i],
+                                                    &user_pubkey);
+            if sig_sender != senders[i] {
+                panic!(
+                    "Invalid sender recovered from the signature: {:?} != {:?}",
+                    sig_sender, senders[i]
+                );
+            }
+            recipients.push(recipient);
+        }
+        eprint!("The ordered recipients: {:?}", recipients);
+        recipients
+    }
 }
 
 impl ContractInterface for Contract {
@@ -137,7 +178,6 @@ impl ContractInterface for Contract {
     }
 
     fn get_pub_key() -> Vec<u8> {
-        eprint!("====> in get_pub_key");
         let keypair = Self::get_keypair();
         let pub_key = keypair.get_pubkey();
         let pub_key_text: String = pub_key.to_hex();
@@ -159,7 +199,13 @@ impl ContractInterface for Contract {
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
             operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
         );
-        let mut recipients = Self::verify_deposits(nb_recipients, amount, pub_keys, enc_recipients, senders.clone(), signatures);
+        let mut recipients = Self::verify_deposits_internal(
+            nb_recipients,
+            amount,
+            pub_keys,
+            enc_recipients,
+            senders.clone(),
+            signatures);
         // TODO: Use the rand service
         let seed = 10;
         for i in (0..recipients.len()).rev() {
@@ -173,7 +219,10 @@ impl ContractInterface for Contract {
         let prefixed_eth_addr = format!("0x{}", mixer_eth_addr);
         eprint!("The smart contract address: {}", prefixed_eth_addr);
         let eth_contract = EthContract::new(&prefixed_eth_addr);
-        let deal_id = Self::generate_deal_id(&amount, &senders, &operator_address, &operator_nonce);
+        let deal_id = Self::generate_deal_id(&amount,
+                                             &senders,
+                                             &operator_address,
+                                             &operator_nonce);
         eprint!("The DealId: {:?}", deal_id);
         // TODO: Converting as a workaround for lack of bytes32 support
         let deal_id_uint = U256::from(deal_id);
@@ -188,34 +237,8 @@ impl ContractInterface for Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
-    ) -> Vec<H160> {
-        let mut recipients: Vec<H160> = Vec::new();
-        let keypair = Self::get_keypair();
-        for i in 0..nb_recipients.low_u64() as usize {
-            eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
-            let mut user_pubkey = [0; PUB_KEY_SIZE];
-            user_pubkey.copy_from_slice(&pub_keys[i]);
-            eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
-
-            let shared_key = keypair.derive_key(&user_pubkey).unwrap();
-            let plaintext = decrypt(&enc_recipients[i], &shared_key);
-            eprint!("The decrypted recipient address: {:?}", plaintext);
-            let recipient = H160::from(&plaintext[0..20]);
-            eprint!("The plaintext recipient address: {:?}", recipient);
-
-            let mut signature = [0; SIG_SIZE];
-            signature.copy_from_slice(&signatures[i]);
-
-            let sig_sender = Self::verify_signature(signature, &senders[i], &amount, &enc_recipients[i], &user_pubkey);
-            if sig_sender != senders[i] {
-                panic!(
-                    "Invalid sender recovered from the signature: {:?} != {:?}",
-                    sig_sender, senders[i]
-                );
-            }
-            recipients.push(recipient);
-        }
-        eprint!("The ordered recipients: {:?}", recipients);
-        recipients
+    ) -> bool {
+        Self::verify_deposits_internal(nb_recipients, amount, pub_keys, enc_recipients, senders, signatures);
+        true
     }
 }
