@@ -79,7 +79,11 @@ class OperatorApi {
             debug('Block countdown', countdown);
             if (countdown <= 0) {
                 debug('Block countdown <= 0', countdown);
-                await this.handleDealExecutionAsync();
+                try {
+                    await this.handleDealExecutionAsync();
+                } catch (e) {
+                    console.error('Fatal execution error', e);
+                }
             }
             await utils.sleep(10000);
         }

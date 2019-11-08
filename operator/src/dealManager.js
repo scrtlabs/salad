@@ -171,7 +171,6 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async executeDealAsync(deal, taskRecordOpts) {
-
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
         const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, taskRecordOpts);

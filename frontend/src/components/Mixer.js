@@ -225,7 +225,8 @@ class Mixer extends Component {
                 </Grid>
             );
         } else if (this.state.deal !== null) {
-            const {deal, web3} = this.state;
+            const {web3} = this.props;
+            const {deal} = this.state;
             return (
                 <Grid container spacing={3}>
                     <Grid item xs={1} style={{display: 'flex', alignItems: 'center'}}>

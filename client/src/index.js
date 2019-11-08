@@ -456,14 +456,15 @@ class CoinjoinClient {
         const payload = {sender, amount, encRecipient, pubKey};
         const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
         const message = this.web3.utils.bytesToHex(messageBytes);
-        let hash;
+        let sigHex;
         if (this.web3.currentProvider.isMetaMask === true) {
             // TODO: The metamask signature does not match, find out why
-            hash = this.web3.eth.accounts.hashMessage(message);
+            const hash = this.web3.eth.accounts.hashMessage(message);
+            sigHex = await this.web3.eth.personal.sign(hash, sender);
         } else {
-            hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+            const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
+            sigHex = await this.web3.eth.sign(hash, sender);
         }
-        const sigHex = await this.web3.eth.sign(hash, sender);
         const sigBytes = this.web3.utils.hexToBytes(sigHex);
         debug('The sig length', sigBytes.length);
         // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
