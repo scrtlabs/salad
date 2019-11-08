@@ -125,18 +125,12 @@ class Mixer extends Component {
         salad.onDealCreated((payload) => {
             const {deal} = payload;
             if (deal.participants.indexOf(salad.accounts[0]) !== -1) {
-                this.setState({deal});
+                this.setState({deal, isPending: true});
             }
         });
         salad.onDealExecuted((payload) => {
-            if (!this.state.isPending) {
-                return;
-            }
             const {deal} = payload;
-            openSnackbar({
-                message: `Your deposit was included in executed deal: ${deal.dealId}.`
-            });
-            this.setState({isPending: false});
+            this.setState({deal, isPending: false});
         });
     }
 
@@ -226,7 +220,7 @@ class Mixer extends Component {
             );
         } else if (this.state.deal !== null) {
             const {web3} = this.props;
-            const {deal} = this.state;
+            const {deal, isPending} = this.state;
             return (
                 <Grid container spacing={3}>
                     <Grid item xs={1} style={{display: 'flex', alignItems: 'center'}}>
@@ -238,16 +232,16 @@ class Mixer extends Component {
                     <Grid item xs={8}>
                         <Paper style={{padding: '30px'}}>
                             <p>
-                                Your deposit was included in <b>{(deal.status === 1) ? 'Pending' : 'Executed'}</b> Deal.
+                                Your deposit was included in <b>{(isPending) ? 'Pending' : 'Executed'}</b> Deal.
                             </p>
                             <p>
-                                The anonymity set is: <b>{deal.participants.length}</b>.
+                                The anonymity set is <b>{deal.participants.length}</b>.
                             </p>
                             <p>
-                                {web3.utils.fromWei(deal.depositAmount, 'ether')} ETH will be transferred to you recipient account upon execution.
+                                {web3.utils.fromWei(deal.depositAmount, 'ether')} ETH {(isPending) ? 'will be' : 'have been'} transferred to you recipient account.
                             </p>
                             <p>
-                                Deal Id: <b>{deal.dealId}</b>
+                                Deal Id <b>{deal.dealId}</b>
                             </p>
                             <br/>
                             <p align="center">
