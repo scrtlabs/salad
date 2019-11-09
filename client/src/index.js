@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
+const {BLOCK_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONTEXT, FETCH_CONTEXT_SUCCESS} = actions;
 const debug = require('debug')('client');
 debug.enabled = true;
 
@@ -96,7 +96,6 @@ class CoinjoinClient {
             messageBytes = messageBytes.concat(len);
             messageBytes = messageBytes.concat(param);
         }
-        // debug('The message bytes to sign', messageBytes);
         return messageBytes;
     }
 
@@ -122,7 +121,6 @@ class CoinjoinClient {
             CoinjoinClient.hexToBytes(web3, web3.utils.toChecksumAddress(operatorAddress)),
             CoinjoinClient.uint256ToBytes(web3, operatorNonce),
         ];
-        // debug('Building DealId from params', paramsInBytes);
         let messageBytes = [];
         for (let i = 0; i < paramsInBytes.length; i++) {
             const param = paramsInBytes[i];
@@ -136,30 +134,19 @@ class CoinjoinClient {
                 messageBytes = messageBytes.concat(param);
             }
         }
-        // debug('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
     }
 
-    async _waitConnectAsync() {
-        return new Promise((resolve) => {
-            const callback = () => {
-                debug('Connected to server');
-                resolve(true);
-            };
-            if (isNode) {
-                this.ws.on('open', callback);
-                return;
-            }
-            this.ws.onopen = callback;
-        });
-    }
-
-    async fetchConfigAsync() {
+    /**
+     * Fetch the application context
+     * @returns {Promise<OperatorAction>}
+     */
+    async fetchContextAsync() {
         const promise = new Promise((resolve) => {
-            this.ee.once(FETCH_CONFIG_SUCCESS, (result) => resolve(result.config));
+            this.ee.once(FETCH_CONTEXT_SUCCESS, (result) => resolve(result.config));
         });
         this.ws.send(JSON.stringify({
-            action: FETCH_CONFIG,
+            action: FETCH_CONTEXT,
             payload: {}
         }));
         return promise;
@@ -176,7 +163,7 @@ class CoinjoinClient {
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this.isConnected;
         this.accounts = await this.web3.eth.getAccounts();
-        const config = await this.fetchConfigAsync();
+        const config = await this.fetchContextAsync();
         const {saladAddr, enigmaAddr, pubKeyData} = config;
         this.pubKeyData = pubKeyData;
         // TODO: Remove from the constructor
@@ -227,14 +214,6 @@ class CoinjoinClient {
      */
     onBlock(callback) {
         this.ee.on(BLOCK_UPDATE, callback);
-    }
-
-    /**
-     * Subscribe to the `pubKeyUpdate` event
-     * @param {function} callback
-     */
-    onPubKey(callback) {
-        this.ee.on(PUB_KEY_UPDATE, callback);
     }
 
     /**
@@ -350,7 +329,6 @@ class CoinjoinClient {
         debug('Deriving encryption from private key', privateKey);
         const derivedKey = utils.getDerivedKey(pubKey, privateKey);
         const recipientBytes = new Uint8Array(this.web3.utils.hexToBytes(recipient));
-        // const recipientBytes = recipient;
         return utils.encryptMessage(derivedKey, recipientBytes);
     }
 
@@ -461,50 +439,29 @@ class CoinjoinClient {
         const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
         let sigHex;
         if (this.web3.currentProvider.isMetaMask === true) {
-            // TODO: The metamask signature does not match, find out why
-            // contract_1  | Available Accounts
-            // contract_1  | ==================
-            // contract_1  | (0) 0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1 (100 ETH)
-            // contract_1  | (1) 0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0 (100 ETH)
-            // contract_1  | (2) 0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b (100 ETH)
-            // contract_1  | (3) 0xE11BA2b4D45Eaed5996Cd0823791E0C93114882d (100 ETH)
-            // contract_1  | (4) 0xd03ea8624C8C5987235048901fB614fDcA89b117 (100 ETH)
-            // contract_1  | (5) 0x95cED938F7991cd0dFcb48F0a06a40FA1aF46EBC (100 ETH)
-            // contract_1  | (6) 0x3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9 (100 ETH)
-            // contract_1  | (7) 0x28a8746e75304c0780E011BEd21C72cD78cd535E (100 ETH)
-            // contract_1  | (8) 0xACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E (100 ETH)
-            // contract_1  | (9) 0x1dF62f291b2E969fB0849d99D9Ce41e2F137006e (100 ETH)
-            // contract_1  |
-            // contract_1  | Private Keys
-            // contract_1  | ==================
-            // contract_1  | (0) 0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d
-            // contract_1  | (1) 0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1
-            // contract_1  | (2) 0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c
-            // contract_1  | (3) 0x646f1ce2fdad0e6deeeb5c7e8e5543bdde65e86029e2fd9fc169899c440a7913
-            // contract_1  | (4) 0xadd53f9a7e588d003326d1cbf9e4a43c061aadd9bc938c843a79e7b4fd2ad743
-            // contract_1  | (5) 0x395df67f0c2d2d9fe1ad08d1bc8b6627011959b79c53d7dd6a3536a33ab8a4fd
-            // contract_1  | (6) 0xe485d098507f54e7733a205420dfddbe58db035fa577fc294ebd14db90767a52
-            // contract_1  | (7) 0xa453611d9419d0e56f499079478fd72c37b251a94bfde4d19872c44cf65386e3
-            // contract_1  | (8) 0x829e924fdf021ba3dbbc4225edfece9aca04b929d6e75613329ca6f1d31c0bb4
-            // contract_1  | (9) 0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773
-            // const pKeys = {
-            //     '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1': '0x4f3edf983ac636a65a842ce7c78d9aa706d3b113bce9c46f30d7d21715b23b1d',
-            //     '0xFFcf8FDEE72ac11b5c542428B35EEF5769C409f0': '0x6cbed15c793ce57650b9877cf6fa156fbef513c4e6134f022a85b1ffdd59b2a1',
-            //     '0x22d491Bde2303f2f43325b2108D26f1eAbA1e32b': '0x6370fd033278c143179d81c5526140625662b8daa446c22ee2d73db3707e620c',
-            //     '0xE11BA2b4D45Eaed5996Cd0823791E0C93114882d': '0x646f1ce2fdad0e6deeeb5c7e8e5543bdde65e86029e2fd9fc169899c440a7913',
-            //     '0xd03ea8624C8C5987235048901fB614fDcA89b117': '0xadd53f9a7e588d003326d1cbf9e4a43c061aadd9bc938c843a79e7b4fd2ad743',
-            //     '0x95cED938F7991cd0dFcb48F0a06a40FA1aF46EBC': '0x395df67f0c2d2d9fe1ad08d1bc8b6627011959b79c53d7dd6a3536a33ab8a4fd',
-            //     '0x3E5e9111Ae8eB78Fe1CC3bb8915d5D461F3Ef9A9': '0xe485d098507f54e7733a205420dfddbe58db035fa577fc294ebd14db90767a52',
-            //     '0x28a8746e75304c0780E011BEd21C72cD78cd535E': '0xa453611d9419d0e56f499079478fd72c37b251a94bfde4d19872c44cf65386e3',
-            //     '0xACa94ef8bD5ffEE41947b4585a84BdA5a3d3DA6E': '0x829e924fdf021ba3dbbc4225edfece9aca04b929d6e75613329ca6f1d31c0bb4',
-            //     '0x1dF62f291b2E969fB0849d99D9Ce41e2F137006e': '0xb0057716d5917badaf911b193b12b910811c1497b5bada8d7711f758981c3773',
-            // };
             const mmSigHex = await this.web3.eth.personal.sign(hash, sender);
             // TODO: Remove when sig issue is resolved
             sigHex = await this.patchedWeb3.eth.sign(hash, sender);
-            debug('Metamask/patched signatures', mmSigHex,'/', sigHex);
+            debug('Metamask/patched signatures', mmSigHex, '/', sigHex);
         } else {
-            sigHex = await this.web3.eth.sign(hash, sender);
+            // sigHex = await this.web3.eth.sign(hash, sender);
+            sigHex = await new Promise((resolve, reject) => {
+                return this.web3.currentProvider.send({
+                    jsonrpc: '2.0',
+                    method: 'eth_sign',
+                    id: new Date().getTime(),
+                    params: [
+                        hash,
+                        sender,
+                    ],
+                    from: sender,
+                }, (err, result) => {
+                    if (err) {
+                        return reject(err)
+                    }
+                    return resolve(result)
+                });
+            });
         }
         const sigBytes = this.web3.utils.hexToBytes(sigHex);
         debug('The sig length', sigBytes.length);

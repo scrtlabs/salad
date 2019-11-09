@@ -1,6 +1,6 @@
 require('dotenv').config();
 const WebSocket = require('ws');
-const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS, FETCH_CONFIG} = require("@salad/client").actions;
+const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS, FETCH_CONTEXT} = require("@salad/client").actions;
 const {OperatorApi} = require('./api');
 const debug = require('debug')('operator');
 const {Store} = require("./store");
@@ -25,7 +25,6 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         }
 
         // Subscribe to events to broadcast
-        api.onPubKey(broadcast);
         api.onDealCreated(broadcast);
         api.onDealExecuted(broadcast);
         api.onQuorumNotReached(broadcast);
@@ -49,8 +48,8 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
                     debug('Sending pong');
                     ws.send(JSON.stringify({action: 'pong', payload: {}}));
                     break;
-                case FETCH_CONFIG:
-                    const configAction = await api.fetchConfigAsync();
+                case FETCH_CONTEXT:
+                    const configAction = await api.fetchContextAsync();
                     ws.send(JSON.stringify(configAction));
                     break;
                 case SUBMIT_DEPOSIT_METADATA:

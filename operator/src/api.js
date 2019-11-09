@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
+const {DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONTEXT_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -57,7 +57,11 @@ class OperatorApi {
         });
     }
 
-    async fetchConfigAsync() {
+    /**
+     * Fetch the application context
+     * @returns {Promise<OperatorAction>}
+     */
+    async fetchContextAsync() {
         const scAddr = await this.store.fetchSecretContractAddr();
         const saladAddr = await this.store.fetchSmartContractAddr();
         const networkId = await this.web3.eth.net.getId();
@@ -65,7 +69,7 @@ class OperatorApi {
         const enigmaTokenAddr = EnigmaTokenContract.networks[networkId].address;
         const pubKeyData = await this.loadEncryptionPubKeyAsync();
         const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
-        return {action: FETCH_CONFIG_SUCCESS, payload: {config}};
+        return {action: FETCH_CONTEXT_SUCCESS, payload: {config}};
     }
 
     /**
@@ -110,16 +114,6 @@ class OperatorApi {
         } catch (e) {
             console.error('Unable to close the db connection', e);
         }
-    }
-
-    /**
-     * Call broadcast fn on pub key
-     * @param broadcastCallback
-     */
-    onPubKey(broadcastCallback) {
-        this.ee.on(PUB_KEY_UPDATE, (pubKeyData) => {
-            broadcastCallback({action: PUB_KEY_UPDATE, payload: {pubKeyData}})
-        });
     }
 
     /**
@@ -207,6 +201,7 @@ class OperatorApi {
                 debug('Broadcasting quorum value 0 after new deal');
                 this.ee.emit(QUORUM_UPDATE, 0);
                 // throw new Error('Unable to create deal');
+                return;
             }
 
             try {

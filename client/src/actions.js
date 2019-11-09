@@ -10,5 +10,5 @@ exports.QUORUM_NOT_REACHED_UPDATE = 'quorumNotReached';
 exports.FETCH_FILLABLE_DEPOSITS = 'fetchFillableDeposits';
 exports.FETCH_FILLABLE_SUCCESS = 'fetchFillableDepositsSuccess';
 exports.FETCH_FILLABLE_ERROR = 'fetchFillableDepositsError';
-exports.FETCH_CONFIG_SUCCESS = 'fetchConfigSuccess';
-exports.FETCH_CONFIG = 'fetchConfig';
+exports.FETCH_CONTEXT_SUCCESS = 'fetchContextSuccess';
+exports.FETCH_CONTEXT = 'fetchContext';
