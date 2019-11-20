@@ -109,8 +109,8 @@ class CoinjoinClient {
             message: {
                 sender,
                 amount,
-                encRecipient,
-                pubKey,
+                encRecipient: `0x${encRecipient}`,
+                pubKey: `0x${pubKey}`,
             },
         };
         // const {primaryType, message, types} = typedData;

@@ -96,11 +96,11 @@ impl Contract {
         deposit_message.extend_from_slice(&deposit_seperator_hash);
         eprint!("The sender: {:?}", sender);
         // addresses must be resized to 32 bytes
-//        let sender_prefix: [u8; 12] = [0; 12];
 //        let mut sender_part = sender_prefix.to_vec();
-//        sender_part.extend_from_slice(&sender.to_vec());
-        let mut sender_part = sender.to_vec();
-        sender_part.resize_with(32, Default::default);
+//        sender_part.resize_with(32, Default::default);
+        let sender_prefix: [u8; 12] = [0; 12];
+        let mut sender_part = sender_prefix.to_vec();
+        sender_part.extend_from_slice(&sender.to_vec());
         eprint!("The resized sender: {:?}", sender_part);
         deposit_message.extend_from_slice(&sender_part);
         deposit_message.extend_from_slice(&H256::from(amount));
@@ -109,11 +109,13 @@ impl Contract {
         let user_pubkey_hash = user_pubkey.keccak256().to_vec();
         deposit_message.extend_from_slice(&enc_recipient_hash);
         deposit_message.extend_from_slice(&user_pubkey_hash);
+        eprint!("The typed deposit message: {:?}", deposit_message);
+
         let deposit_hash = deposit_message.keccak256().to_vec();
         message.extend_from_slice(&deposit_hash);
         eprint!("The typed data message: {:?}", message);
 
-        let sender_pubkey = KeyPair::recover(&message.keccak256().to_vec(), signature).unwrap();
+        let sender_pubkey = KeyPair::recover(&message, signature).unwrap();
         let mut sender_raw = [0u8; 20];
         sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
         let sender = H160::from(&sender_raw);
@@ -240,10 +242,8 @@ impl ContractInterface for Contract {
             recipients[j] = recipients[i];
             recipients[i] = recipient;
         }
-        eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let prefixed_eth_addr = format!("0x{}", mixer_eth_addr);
-        eprint!("The smart contract address: {}", prefixed_eth_addr);
         let eth_contract = EthContract::new(&prefixed_eth_addr);
         let deal_id = Self::generate_deal_id(&amount,
                                              &senders,
