@@ -9,6 +9,7 @@ const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
 const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
+const {recoverTypedSignature_v4} = require('eth-sig-util');
 
 /**
  * @typedef {Object} OperatorAction
@@ -267,16 +268,13 @@ class OperatorApi {
     /**
      * Verify the deposit signature
      * @param {DepositPayload} payload
-     * @param {string} signature
+     * @param {string} sig
      * @returns {*}
      * @private
      */
-    _verifyDepositSignature(payload, signature) {
-        const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        const message = this.web3.utils.bytesToHex(messageBytes);
-        debug('Verifying message', message, 'with signature', signature);
-        const hash = this.web3.utils.soliditySha3({t: 'bytes', v: message});
-        const sender = this.web3.eth.accounts.recover(hash, signature);
+    _verifyDepositSignature(payload, sig) {
+        const data = CoinjoinClient.buildDepositTypedData(payload);
+        const sender = this.web3.utils.toChecksumAddress(recoverTypedSignature_v4({data, sig}));
         debug('Recovered sender', sender);
         return (sender === payload.sender);
     }

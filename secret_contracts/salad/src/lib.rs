@@ -13,7 +13,6 @@ struct EthContract;
 static MIXER_ETH_ADDR: &str = "mixer_eth_addr";
 static ENCRYPTION_KEY: &str = "encryption_key";
 
-const ENC_RECIPIENT_SIZE: usize = 48;
 const PUB_KEY_SIZE: usize = 64;
 const UNIT256_SIZE: usize = 32;
 const SIG_SIZE: usize = 65;
@@ -75,19 +74,46 @@ impl Contract {
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
-        message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
-        message.extend_from_slice(sender);
-        message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
-        message.extend_from_slice(&H256::from(amount));
-        message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
-        message.extend_from_slice(enc_recipient);
-        message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
-        message.extend_from_slice(user_pubkey);
+        // EIP191 header for EIP712 prefix
+        message.extend_from_slice(b"\x19\x01");
 
-        let mut prefixed_message: Vec<u8> = Vec::new();
-        prefixed_message.extend_from_slice(b"\x19Ethereum Signed Message:\n32");
-        prefixed_message.extend_from_slice(&message.keccak256().to_vec());
-        let sender_pubkey = KeyPair::recover(&prefixed_message, signature).unwrap();
+        let mut domain_message: Vec<u8> = Vec::new();
+        let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256().to_vec();
+        let domain_name_hash = b"Salad Deposit".keccak256().to_vec();
+        let domain_version_hash = b"1".keccak256().to_vec();
+        // TODO: Pass as an argument
+        let chain_id: usize = 50;
+        let chain_id_param = H256::from(&U256::from(chain_id)).to_vec();
+        domain_message.extend_from_slice(&eip712_domain_seperator);
+        domain_message.extend_from_slice(&domain_name_hash);
+        domain_message.extend_from_slice(&domain_version_hash);
+        domain_message.extend_from_slice(&chain_id_param);
+        let domain_hash = domain_message.keccak256().to_vec();
+        message.extend_from_slice(&domain_hash);
+
+        let mut deposit_message: Vec<u8> = Vec::new();
+        let deposit_seperator_hash = b"Deposit(address sender,uint256 amount,bytes encRecipient,bytes pubKey)".keccak256().to_vec();
+        deposit_message.extend_from_slice(&deposit_seperator_hash);
+        eprint!("The sender: {:?}", sender);
+        // addresses must be resized to 32 bytes
+        let sender_prefix: [u8; 12] = [0; 12];
+        let mut sender_part = sender_prefix.to_vec();
+        sender_part.extend_from_slice(&sender.to_vec());
+        eprint!("The resized sender: {:?}", sender_part);
+        deposit_message.extend_from_slice(&sender_part);
+        deposit_message.extend_from_slice(&H256::from(amount));
+        // bytes must be keccak hashes
+        let enc_recipient_hash = enc_recipient.keccak256().to_vec();
+        let user_pubkey_hash = user_pubkey.keccak256().to_vec();
+        deposit_message.extend_from_slice(&enc_recipient_hash);
+        deposit_message.extend_from_slice(&user_pubkey_hash);
+        eprint!("The typed deposit message: {:?}", deposit_message);
+
+        let deposit_hash = deposit_message.keccak256().to_vec();
+        message.extend_from_slice(&deposit_hash);
+        eprint!("The typed data message: {:?}", message);
+
+        let sender_pubkey = KeyPair::recover(&message, signature).unwrap();
         let mut sender_raw = [0u8; 20];
         sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
         let sender = H160::from(&sender_raw);
@@ -214,10 +240,8 @@ impl ContractInterface for Contract {
             recipients[j] = recipients[i];
             recipients[i] = recipient;
         }
-        eprint!("The mixed recipients: {:?}", recipients);
         let mixer_eth_addr: String = Self::get_mixer_eth_addr();
         let prefixed_eth_addr = format!("0x{}", mixer_eth_addr);
-        eprint!("The smart contract address: {}", prefixed_eth_addr);
         let eth_contract = EthContract::new(&prefixed_eth_addr);
         let deal_id = Self::generate_deal_id(&amount,
                                              &senders,
