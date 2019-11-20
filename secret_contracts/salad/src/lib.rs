@@ -96,8 +96,6 @@ impl Contract {
         deposit_message.extend_from_slice(&deposit_seperator_hash);
         eprint!("The sender: {:?}", sender);
         // addresses must be resized to 32 bytes
-//        let mut sender_part = sender_prefix.to_vec();
-//        sender_part.resize_with(32, Default::default);
         let sender_prefix: [u8; 12] = [0; 12];
         let mut sender_part = sender_prefix.to_vec();
         sender_part.extend_from_slice(&sender.to_vec());
