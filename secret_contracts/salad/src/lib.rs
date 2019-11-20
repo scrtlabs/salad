@@ -74,6 +74,7 @@ impl Contract {
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
+        // EIP191 header for EIP712 prefix
         message.extend_from_slice(b"\x19\x01");
 
         let mut domain_message: Vec<u8> = Vec::new();
@@ -82,21 +83,32 @@ impl Contract {
         let domain_version_hash = b"1".keccak256().to_vec();
         // TODO: Pass as an argument
         let chain_id: usize = 50;
-        let chain_id_hash = H256::from(&U256::from(chain_id)).keccak256().to_vec();
+        let chain_id_param = H256::from(&U256::from(chain_id)).to_vec();
         domain_message.extend_from_slice(&eip712_domain_seperator);
         domain_message.extend_from_slice(&domain_name_hash);
         domain_message.extend_from_slice(&domain_version_hash);
-        domain_message.extend_from_slice(&chain_id_hash);
+        domain_message.extend_from_slice(&chain_id_param);
         let domain_hash = domain_message.keccak256().to_vec();
         message.extend_from_slice(&domain_hash);
 
         let mut deposit_message: Vec<u8> = Vec::new();
         let deposit_seperator_hash = b"Deposit(address sender,uint256 amount,bytes encRecipient,bytes pubKey)".keccak256().to_vec();
         deposit_message.extend_from_slice(&deposit_seperator_hash);
-        deposit_message.extend_from_slice(sender);
+        eprint!("The sender: {:?}", sender);
+        // addresses must be resized to 32 bytes
+//        let sender_prefix: [u8; 12] = [0; 12];
+//        let mut sender_part = sender_prefix.to_vec();
+//        sender_part.extend_from_slice(&sender.to_vec());
+        let mut sender_part = sender.to_vec();
+        sender_part.resize_with(32, Default::default);
+        eprint!("The resized sender: {:?}", sender_part);
+        deposit_message.extend_from_slice(&sender_part);
         deposit_message.extend_from_slice(&H256::from(amount));
-        deposit_message.extend_from_slice(enc_recipient);
-        deposit_message.extend_from_slice(user_pubkey);
+        // bytes must be keccak hashes
+        let enc_recipient_hash = enc_recipient.keccak256().to_vec();
+        let user_pubkey_hash = user_pubkey.keccak256().to_vec();
+        deposit_message.extend_from_slice(&enc_recipient_hash);
+        deposit_message.extend_from_slice(&user_pubkey_hash);
         let deposit_hash = deposit_message.keccak256().to_vec();
         message.extend_from_slice(&deposit_hash);
         eprint!("The typed data message: {:?}", message);
