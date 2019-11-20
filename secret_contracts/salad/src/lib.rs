@@ -75,19 +75,25 @@ impl Contract {
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
-        message.extend_from_slice(&ADDRESS_SIZE.to_be_bytes());
-        message.extend_from_slice(sender);
-        message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
-        message.extend_from_slice(&H256::from(amount));
-        message.extend_from_slice(&ENC_RECIPIENT_SIZE.to_be_bytes());
-        message.extend_from_slice(enc_recipient);
-        message.extend_from_slice(&PUB_KEY_SIZE.to_be_bytes());
-        message.extend_from_slice(user_pubkey);
+        message.extend_from_slice(b"\x19\x01");
+        let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256().to_vec();
+        let domain_name_hash = b"Salad Deposit".keccak256().to_vec();
+        let domain_version_hash = b"1".keccak256().to_vec();
+        let chain_id_hash = H256::from(amount).keccak256().to_vec();
+        message.extend_from_slice(&eip712_domain_seperator);
+        message.extend_from_slice(&domain_name_hash);
+        message.extend_from_slice(&chain_id_hash);
+        let mut deposit_message: Vec<u8> = Vec::new();
+        let deposit_seperator_hash = b"Deposit(address sender,uint256 amount,bytes encRecipient,bytes pubKey)".keccak256().to_vec();
+        deposit_message.extend_from_slice(&deposit_seperator_hash);
+        deposit_message.extend_from_slice(sender);
+        deposit_message.extend_from_slice(&H256::from(amount));
+        deposit_message.extend_from_slice(enc_recipient);
+        deposit_message.extend_from_slice(user_pubkey);
+        let deposit_hash = deposit_message.keccak256().to_vec();
+        message.extend_from_slice(&deposit_hash);
 
-        let mut prefixed_message: Vec<u8> = Vec::new();
-        prefixed_message.extend_from_slice(b"\x19Ethereum Signed Message:\n32");
-        prefixed_message.extend_from_slice(&message.keccak256().to_vec());
-        let sender_pubkey = KeyPair::recover(&prefixed_message, signature).unwrap();
+        let sender_pubkey = KeyPair::recover(&message.keccak256().to_vec(), signature).unwrap();
         let mut sender_raw = [0u8; 20];
         sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
         let sender = H160::from(&sender_raw);
