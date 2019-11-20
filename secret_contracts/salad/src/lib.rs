@@ -79,7 +79,7 @@ impl Contract {
         let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256().to_vec();
         let domain_name_hash = b"Salad Deposit".keccak256().to_vec();
         let domain_version_hash = b"1".keccak256().to_vec();
-        let chain_id_hash = H256::from(amount).keccak256().to_vec();
+        let chain_id_hash = H256::from(50).keccak256().to_vec();
         message.extend_from_slice(&eip712_domain_seperator);
         message.extend_from_slice(&domain_name_hash);
         message.extend_from_slice(&chain_id_hash);
