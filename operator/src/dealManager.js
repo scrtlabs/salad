@@ -122,7 +122,6 @@ class DealManager {
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        // debug('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({

@@ -115,23 +115,6 @@ class CoinjoinClient {
         };
     }
 
-    static buildDepositMessage(web3, payload) {
-        const paramsInBytes = [
-            web3.utils.hexToBytes(payload.sender),
-            CoinjoinClient.uint256ToBytes(web3, payload.amount),
-            CoinjoinClient.hexToBytes(web3, payload.encRecipient),
-            CoinjoinClient.hexToBytes(web3, payload.pubKey),
-        ];
-        let messageBytes = [];
-        for (const param of paramsInBytes) {
-            const len = web3.utils.hexToBytes(web3.utils.padLeft(web3.utils.numberToHex(param.length), 8));
-            messageBytes = messageBytes.concat(len);
-            messageBytes = messageBytes.concat(param);
-        }
-        // debug('The message bytes to sign', messageBytes);
-        return messageBytes;
-    }
-
     /**
      * Generate DealId
      * @param web3
@@ -168,22 +151,7 @@ class CoinjoinClient {
                 messageBytes = messageBytes.concat(param);
             }
         }
-        // debug('The message bytes', JSON.stringify(messageBytes));
         return messageBytes;
-    }
-
-    async _waitConnectAsync() {
-        return new Promise((resolve) => {
-            const callback = () => {
-                debug('Connected to server');
-                resolve(true);
-            };
-            if (isNode) {
-                this.ws.on('open', callback);
-                return;
-            }
-            this.ws.onopen = callback;
-        });
     }
 
     async fetchConfigAsync() {
@@ -262,14 +230,6 @@ class CoinjoinClient {
     }
 
     /**
-     * Subscribe to the `pubKeyUpdate` event
-     * @param {function} callback
-     */
-    onPubKey(callback) {
-        this.ee.on(PUB_KEY_UPDATE, callback);
-    }
-
-    /**
      * Subscribe to the `thresholdUpdate` event
      * The threshold is the minimum number of participants required to create a Deal
      * @param {function} callback
@@ -328,10 +288,7 @@ class CoinjoinClient {
             throw new Error(`Invalid amount ${amount}`);
         }
         debug('Posting deposit to the smart contract', amount);
-        const receipt = await this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
-        // const balance = await this.contract.methods.getParticipantBalance(sender).call({from: sender});
-        // debug('Got balance', balance);
-        return receipt;
+        return this.contract.methods.makeDeposit().send({...opts, from: sender, value: amount});
     }
 
     /**
@@ -529,17 +486,9 @@ class CoinjoinClient {
         }
         /** @type DepositPayload */
         const payload = {sender, amount, encRecipient, pubKey};
-
-        // const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
         const chainId = await this.web3.eth.net.getId();
         const typedData = CoinjoinClient.buildDepositTypedData(payload, chainId);
-        let sigHex = await this.signMsgAsync(typedData, sender);
-        // const sigBytes = this.web3.utils.hexToBytes(sigHex);
-        // debug('The sig length', sigBytes.length);
-        // // See notes about the last byte of the signature here: https://github.com/ethereum/wiki/wiki/JavaScript-API
-        // sigBytes[sigBytes.length - 1] = sigBytes[sigBytes.length - 1] + 27;
-        // return this.web3.utils.bytesToHex(sigBytes);
-        return sigHex;
+        return this.signMsgAsync(typedData, sender);
     }
 
     /**
