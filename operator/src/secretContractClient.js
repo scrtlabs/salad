@@ -108,7 +108,6 @@ class SecretContractClient {
     }
 
     _prepareDepositsParams(deposits) {
-        const nbRecipient = deposits.length;
         const pubKeys = [];
         const encRecipients = [];
         const senders = [];
@@ -119,19 +118,18 @@ class SecretContractClient {
             senders.push(deposit.sender);
             signatures.push(deposit.signature);
         }
-        return {nbRecipient, pubKeys, encRecipients, senders, signatures};
+        return {pubKeys, encRecipients, senders, signatures};
     }
 
     async executeDealAsync(amount, deposits, nonce, opts) {
-        const {nbRecipient, pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
+        const {pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
         const operatorAddress = this.getOperatorAccount();
-        debug('Calling `execute_deal(address,uint256,uint256,uint256,bytes[],bytes[],address[],bytes[])`',
-            operatorAddress, nbRecipient, amount, pubKeys, encRecipients, senders, signatures);
+        debug('Calling `execute_deal(address,uint256,uint256,bytes[],bytes[],address[],bytes[])`',
+            operatorAddress, amount, pubKeys, encRecipients, senders, signatures);
         const taskFn = 'execute_deal(address,uint256,uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const taskArgs = [
             [operatorAddress, 'address'],
             [nonce, 'uint256'],
-            [nbRecipient, 'uint256'],
             [amount, 'uint256'],
             [pubKeys, 'bytes[]'],
             [encRecipients, 'bytes[]'],
@@ -142,19 +140,17 @@ class SecretContractClient {
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         const {taskId} = task;
-        // const taskRecord = await this.enigma.enigmaContract.methods.getTaskRecord(taskId).call();
         const output = await this.fetchOutput(task);
         debug('Got execute deal task', taskId, 'with results:', output);
         return task;
     }
 
     async verifyDepositsAsync(amount, deposits, opts) {
-        const {nbRecipient, pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
-        debug('Calling `verify_deposits(uint256,uint256,bytes[],bytes[],address[],bytes[])`',
-            nbRecipient, amount, pubKeys, encRecipients, senders, signatures);
+        const { pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
+        debug('Calling `verify_deposits(uint256,bytes[],bytes[],address[],bytes[])`',
+            amount, pubKeys, encRecipients, senders, signatures);
         const taskFn = 'verify_deposits(uint256,uint256,bytes[],bytes[],address[],bytes[])';
         const taskArgs = [
-            [nbRecipient, 'uint256'],
             [amount, 'uint256'],
             [pubKeys, 'bytes[]'],
             [encRecipients, 'bytes[]'],

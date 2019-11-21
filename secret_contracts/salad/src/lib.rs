@@ -28,7 +28,6 @@ trait ContractInterface {
     fn execute_deal(
         operator_address: H160,
         operator_nonce: U256,
-        nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<Vec<u8>>,
         enc_recipients: Vec<Vec<u8>>,
@@ -37,7 +36,6 @@ trait ContractInterface {
     ) -> Vec<H160>;
 
     fn verify_deposits(
-        nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<Vec<u8>>,
         enc_recipients: Vec<Vec<u8>>,
@@ -152,16 +150,22 @@ impl Contract {
     }
 
     fn verify_deposits_internal(
-        nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<Vec<u8>>,
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
     ) -> Vec<H160> {
+        let nb_participants = enc_recipients.len();
+        match nb_participants {
+            l if l != senders.len() => panic!("Mismatching senders list size: {} != {}", l, senders.len()),
+            l if l != pub_keys.len() => panic!("Mismatching pub_keys list size: {} != {}", l, pub_keys.len()),
+            l if l != signatures.len() => panic!("Mismatching signatures list size: {} != {}", l, signatures.len()),
+            l => { eprint!("The number of participants: {}", l); }
+        }
         let mut recipients: Vec<H160> = Vec::new();
         let keypair = Self::get_keypair();
-        for i in 0..nb_recipients.low_u64() as usize {
+        for i in 0..nb_participants {
             eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
             let mut user_pubkey = [0; PUB_KEY_SIZE];
             user_pubkey.copy_from_slice(&pub_keys[i]);
@@ -214,7 +218,6 @@ impl ContractInterface for Contract {
     fn execute_deal(
         operator_address: H160,
         operator_nonce: U256, // TODO: Try with lower integer
-        nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<Vec<u8>>,
         enc_recipients: Vec<Vec<u8>>,
@@ -223,10 +226,9 @@ impl ContractInterface for Contract {
     ) -> Vec<H160> {
         eprint!(
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
-            operator_address, operator_nonce, nb_recipients, pub_keys, enc_recipients
+            operator_address, operator_nonce, enc_recipients, senders, signatures
         );
         let mut recipients = Self::verify_deposits_internal(
-            nb_recipients,
             amount,
             pub_keys,
             enc_recipients,
@@ -255,14 +257,13 @@ impl ContractInterface for Contract {
     }
 
     fn verify_deposits(
-        nb_recipients: U256,
         amount: U256,
         pub_keys: Vec<Vec<u8>>,
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
     ) -> bool {
-        Self::verify_deposits_internal(nb_recipients, amount, pub_keys, enc_recipients, senders, signatures);
+        Self::verify_deposits_internal(amount, pub_keys, enc_recipients, senders, signatures);
         true
     }
 }
