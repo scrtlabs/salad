@@ -84,9 +84,9 @@ class CoinjoinClient {
         return web3.utils.hexToBytes(val);
     }
 
-    static buildDepositTypedData(payload) {
+    static buildDepositTypedData(payload, chainId) {
         const {sender, amount, encRecipient, pubKey} = payload;
-        const typedData = {
+        return {
             types: {
                 EIP712Domain: [
                     {name: 'name', type: 'string'},
@@ -104,7 +104,7 @@ class CoinjoinClient {
             domain: {
                 name: 'Salad Deposit',
                 version: '1',
-                chainId: 50,
+                chainId,
             },
             message: {
                 sender,
@@ -113,9 +113,6 @@ class CoinjoinClient {
                 pubKey: `0x${pubKey}`,
             },
         };
-        // const {primaryType, message, types} = typedData;
-        // return TypedDataUtils.encodeData(primaryType, message, types);
-        return typedData;
     }
 
     static buildDepositMessage(web3, payload) {
@@ -534,7 +531,8 @@ class CoinjoinClient {
         const payload = {sender, amount, encRecipient, pubKey};
 
         // const messageBytes = CoinjoinClient.buildDepositMessage(this.web3, payload);
-        const typedData = CoinjoinClient.buildDepositTypedData(payload);
+        const chainId = await this.web3.eth.net.getId();
+        const typedData = CoinjoinClient.buildDepositTypedData(payload, chainId);
         let sigHex = await this.signMsgAsync(typedData, sender);
         // const sigBytes = this.web3.utils.hexToBytes(sigHex);
         // debug('The sig length', sigBytes.length);

@@ -33,6 +33,7 @@ trait ContractInterface {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
+        chain_id: U256,
     ) -> Vec<H160>;
 
     fn verify_deposits(
@@ -41,6 +42,7 @@ trait ContractInterface {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
+        chain_id: U256,
     ) -> bool;
 }
 
@@ -69,6 +71,7 @@ impl Contract {
         amount: &U256,
         enc_recipient: &[u8],
         user_pubkey: &[u8; PUB_KEY_SIZE],
+        chain_id: &U256,
     ) -> H160 {
         eprint!("Verifying signature: {:?}", signature.to_vec());
         let mut message: Vec<u8> = Vec::new();
@@ -79,9 +82,7 @@ impl Contract {
         let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256().to_vec();
         let domain_name_hash = b"Salad Deposit".keccak256().to_vec();
         let domain_version_hash = b"1".keccak256().to_vec();
-        // TODO: Pass as an argument
-        let chain_id: usize = 50;
-        let chain_id_param = H256::from(&U256::from(chain_id)).to_vec();
+        let chain_id_param = H256::from(chain_id).to_vec();
         domain_message.extend_from_slice(&eip712_domain_seperator);
         domain_message.extend_from_slice(&domain_name_hash);
         domain_message.extend_from_slice(&domain_version_hash);
@@ -155,6 +156,7 @@ impl Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
+        chain_id: U256,
     ) -> Vec<H160> {
         let nb_participants = enc_recipients.len();
         match nb_participants {
@@ -183,7 +185,8 @@ impl Contract {
                                                     &senders[i],
                                                     &amount,
                                                     &enc_recipients[i],
-                                                    &user_pubkey);
+                                                    &user_pubkey,
+                                                    &chain_id);
             if sig_sender != senders[i] {
                 panic!(
                     "Invalid sender recovered from the signature: {:?} != {:?}",
@@ -192,7 +195,6 @@ impl Contract {
             }
             recipients.push(recipient);
         }
-        eprint!("The ordered recipients: {:?}", recipients);
         recipients
     }
 }
@@ -223,6 +225,7 @@ impl ContractInterface for Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
+        chain_id: U256,
     ) -> Vec<H160> {
         eprint!(
             "In execute_deal({:?}, {:?}, {:?}, {:?}, {:?})",
@@ -233,7 +236,8 @@ impl ContractInterface for Contract {
             pub_keys,
             enc_recipients,
             senders.clone(),
-            signatures);
+            signatures,
+            chain_id);
         // TODO: Use the rand service
         let seed = 10;
         for i in (0..recipients.len()).rev() {
@@ -262,8 +266,9 @@ impl ContractInterface for Contract {
         enc_recipients: Vec<Vec<u8>>,
         senders: Vec<H160>,
         signatures: Vec<Vec<u8>>,
+        chain_id: U256,
     ) -> bool {
-        Self::verify_deposits_internal(amount, pub_keys, enc_recipients, senders, signatures);
+        Self::verify_deposits_internal(amount, pub_keys, enc_recipients, senders, signatures, chain_id);
         true
     }
 }

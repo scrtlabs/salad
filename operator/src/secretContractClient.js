@@ -121,7 +121,7 @@ class SecretContractClient {
         return {pubKeys, encRecipients, senders, signatures};
     }
 
-    async executeDealAsync(amount, deposits, nonce, opts) {
+    async executeDealAsync(amount, deposits, nonce, chainId, opts) {
         const {pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
         const operatorAddress = this.getOperatorAccount();
         debug('Calling `execute_deal(address,uint256,uint256,bytes[],bytes[],address[],bytes[])`',
@@ -135,6 +135,7 @@ class SecretContractClient {
             [encRecipients, 'bytes[]'],
             [senders, 'address[]'],
             [signatures, 'bytes[]'],
+            [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
@@ -145,7 +146,7 @@ class SecretContractClient {
         return task;
     }
 
-    async verifyDepositsAsync(amount, deposits, opts) {
+    async verifyDepositsAsync(amount, deposits, chainId, opts) {
         const { pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
         debug('Calling `verify_deposits(uint256,bytes[],bytes[],address[],bytes[])`',
             amount, pubKeys, encRecipients, senders, signatures);
@@ -156,6 +157,7 @@ class SecretContractClient {
             [encRecipients, 'bytes[]'],
             [senders, 'address[]'],
             [signatures, 'bytes[]'],
+            [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);

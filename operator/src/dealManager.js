@@ -173,7 +173,8 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
-        const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, taskRecordOpts);
+        const chainId = await this.web3.eth.net.getId();
+        const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, chainId, taskRecordOpts);
         deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
@@ -188,7 +189,8 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
-        const task = await this.scClient.verifyDepositsAsync(amount, deposits, taskRecordOpts);
+        const chainId = await this.web3.eth.net.getId();
+        const task = await this.scClient.verifyDepositsAsync(amount, deposits, chainId, taskRecordOpts);
         debug('The verify deposit task', task);
     }
 

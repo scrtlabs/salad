@@ -272,8 +272,9 @@ class OperatorApi {
      * @returns {*}
      * @private
      */
-    _verifyDepositSignature(payload, sig) {
-        const data = CoinjoinClient.buildDepositTypedData(payload);
+    async _verifyDepositSignatureAsync(payload, sig) {
+        const chainId = await this.web3.eth.net.getId();
+        const data = CoinjoinClient.buildDepositTypedData(payload, chainId);
         const sender = this.web3.utils.toChecksumAddress(recoverTypedSignature_v4({data, sig}));
         debug('Recovered sender', sender);
         return (sender === payload.sender);
@@ -291,8 +292,8 @@ class OperatorApi {
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
         debug('In submitDepositMetadataAsync(', sender, amount, pubKey, encRecipient, signature, ')');
         const payload = {sender, amount, encRecipient, pubKey};
-        // TODO: Disabled temporarily while troubleshoot metamask signature issue
-        if (!this._verifyDepositSignature(payload, signature)) {
+        const isValidSig = await this._verifyDepositSignatureAsync(payload, signature);
+        if (!isValidSig) {
             debug(`Signature verification failed: ${signature}`);
             return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
         }
