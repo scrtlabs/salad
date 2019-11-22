@@ -272,6 +272,7 @@ describe('Salad', () => {
                 const initialBalance = recipientInitialBalances[recipientIndex];
                 const payment = web3.utils.toBN(balance).sub(web3.utils.toBN(initialBalance)).toString();
                 expect(payment).to.equal(amount);
+                recipientInitialBalances[recipientIndex] = balance;
             });
         }
     }
