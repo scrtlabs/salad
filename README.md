@@ -25,6 +25,11 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `yarn dc compile`
 - `yarn test`
 
+## Launch the front-end for development
+- `yarn clean-run-operator` // Truncate the database, re-deploy the contracts and start the operator
+- `cd frontend`
+- `yarn start` // Host the frontend with webpack and watch for changes
+
 ## Architecture
 ### Definitions
 - Relayer: The operator who brokers messages between users and the Enigma network 
