@@ -83,11 +83,15 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
+    let ethNetworkID = (typeof process.env.ETH_NETWORK_ID === 'undefined') ? '4447' : process.env.ETH_NETWORK_ID;
+    let enigmaHost = (typeof process.env.ENIGMA_HOST === 'undefined') ? 'localhost' : process.env.ENIGMA_HOST;
+    let enigmaPort = (typeof process.env.ENIGMA_PORT === 'undefined') ? '3333' : process.env.ENIGMA_PORT;
+
     enigma = new Enigma(
         web3,
-        EnigmaContract.networks[process.env.ETH_NETWORK_ID].address,
-        EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address,
-        `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`,
+        EnigmaContract.networks[ethNetworkID].address,
+        EnigmaTokenContract.networks[ethNetworkID].address,
+        'http://'+enigmaHost+':'+enigmaPort,
         {
             gas: 4712388,
             gasPrice: 100000000000,
