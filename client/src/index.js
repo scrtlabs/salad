@@ -418,7 +418,7 @@ class CoinjoinClient {
                 numParticipant: parseInt(dealsFlat[3][i]),
             });
         }
-        debug('The active deals', deals);
+        debug('Found deals on-chain with status', statusFilter, deals);
         return deals;
     }
 

@@ -300,7 +300,7 @@ class OperatorApi {
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         debug('Registered deposit', registeredDeposit);
 
-        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
+        const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync();
         const quorum = fillableDeposits.length;
 
         debug('Broadcasting quorum update', quorum);
@@ -314,19 +314,20 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async fetchFillableDepositsAsync(minimumAmount) {
-        const deposits = await this.dealManager.fetchFillableDepositsAsync(minimumAmount);
+        const deposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         return {action: FETCH_FILLABLE_SUCCESS, payload: {deposits}};
     }
 
     /**
      * Return the current Quorum value
-     * @returns {Promise<OperatorAction>}
+     * @returns {Promise<void>}
      */
-    async fetchQuorumAsync(minimumAmount) {
+    async broadcastQuorumAsync(minimumAmount) {
         // Sending current quorum on connection
-        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync(minimumAmount);
+        const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         const quorum = fillableDeposits.length;
-        return {action: QUORUM_UPDATE, payload: {quorum}};
+        debug('Broadcasting quorum', quorum);
+        this.ee.emit(QUORUM_UPDATE, quorum);
     }
 }
 

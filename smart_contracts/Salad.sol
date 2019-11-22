@@ -193,11 +193,18 @@ contract Salad is ISalad, Ownable {
     public
     view
     returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory) {
+        uint cpt = 0;
+        for (uint i = 0; i < dealIds.length; i++) {
+            bytes32 _dealId = dealIds[i];
+            if (uint8(deals[_dealId].status) == _status) {
+                cpt = cpt.add(1);
+            }
+        }
         // A list of deals with their key properties
-        bytes32[] memory dealId = new bytes32[](dealIds.length);
-        address[] memory organizer = new address[](dealIds.length);
-        uint[] memory deposit = new uint[](dealIds.length);
-        uint[] memory numParticipants = new uint[](dealIds.length);
+        bytes32[] memory dealId = new bytes32[](cpt);
+        address[] memory organizer = new address[](cpt);
+        uint[] memory deposit = new uint[](cpt);
+        uint[] memory numParticipants = new uint[](cpt);
         for (uint i = 0; i < dealIds.length; i++) {
             bytes32 _dealId = dealIds[i];
             if (uint8(deals[_dealId].status) == _status) {
