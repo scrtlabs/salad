@@ -193,18 +193,28 @@ contract Salad is ISalad, Ownable {
     public
     view
     returns (bytes32[] memory, address[] memory, uint[] memory, uint[] memory) {
-        // A list of deals with their key properties
-        bytes32[] memory dealId = new bytes32[](dealIds.length);
-        address[] memory organizer = new address[](dealIds.length);
-        uint[] memory deposit = new uint[](dealIds.length);
-        uint[] memory numParticipants = new uint[](dealIds.length);
+        // First pass calculates the capacity of the result lists
+        uint cpt = 0;
         for (uint i = 0; i < dealIds.length; i++) {
             bytes32 _dealId = dealIds[i];
             if (uint8(deals[_dealId].status) == _status) {
-                dealId[i] = _dealId;
-                organizer[i] = deals[_dealId].organizer;
-                deposit[i] = deals[_dealId].deposit;
-                numParticipants[i] = deals[_dealId].participants.length;
+                cpt = cpt.add(1);
+            }
+        }
+        // A list of deals with their key properties
+        bytes32[] memory dealId = new bytes32[](cpt);
+        address[] memory organizer = new address[](cpt);
+        uint[] memory deposit = new uint[](cpt);
+        uint[] memory numParticipants = new uint[](cpt);
+        uint j = 0;
+        for (uint i = 0; i < dealIds.length; i++) {
+            bytes32 _dealId = dealIds[i];
+            if (uint8(deals[_dealId].status) == _status) {
+                dealId[j] = _dealId;
+                organizer[j] = deals[_dealId].organizer;
+                deposit[j] = deals[_dealId].deposit;
+                numParticipants[j] = deals[_dealId].participants.length;
+                j = j.add(1);
             }
         }
         return (dealId, organizer, deposit, numParticipants);

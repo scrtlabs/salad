@@ -156,7 +156,7 @@ describe('Salad', () => {
 
             it('should verify that the submitted deposits are fillable', async () => {
                 // Quorum should be N after deposits
-                expect(salad.quorum).to.equal(nbDeposits);
+                // expect(salad.quorum).to.equal(nbDeposits);
                 const {deposits} = await salad.fetchFillableDepositsAsync();
                 expect(deposits.length).to.equal(nbDeposits);
                 resolve(true);
@@ -164,117 +164,123 @@ describe('Salad', () => {
         });
     }
 
-    const quorumReached = makeDeposits(anonSetSize);
-    let lastDepositBlockNumber;
-    let dealPromise;
-    let executedDealPromise;
-    it('should mine blocks until the deal interval', async () => {
-        await quorumReached;
-        lastDepositBlockNumber = await web3.eth.getBlockNumber();
-        await mineUntilDeal(web3, server);
-        // Catching the deal created event
-        dealPromise = new Promise((resolve) => {
-            salad.onDealCreated((deal) => resolve(deal));
-        });
-        executedDealPromise = new Promise((resolve) => {
-            salad.onDealExecuted((deal) => resolve(deal));
-        });
-        await server.handleDealExecutionAsync();
-    }).timeout(120000); // Give enough time to execute the deal on Enigma
+    async function orchestrateDeal(anonSetSize) {
+        const quorumReached = makeDeposits(anonSetSize);
+        let lastDepositBlockNumber;
+        let dealPromise;
+        let executedDealPromise;
+        it('should mine blocks until the deal interval', async () => {
+            await quorumReached;
+            lastDepositBlockNumber = await web3.eth.getBlockNumber();
+            await mineUntilDeal(web3, server);
+            // Catching the deal created event
+            dealPromise = new Promise((resolve) => {
+                salad.onDealCreated((deal) => resolve(deal));
+            });
+            executedDealPromise = new Promise((resolve) => {
+                salad.onDealExecuted((deal) => resolve(deal));
+            });
+            await server.handleDealExecutionAsync();
+        }).timeout(120000); // Give enough time to execute the deal on Enigma
 
-    it('should verify that a deal was created since the threshold is reached', async () => {
-        const deal = await dealPromise;
-        debug('Created deal', deal);
-        const blockNumber = await web3.eth.getBlockNumber();
-        debug('The block number after deal creation', blockNumber);
-        const deals = await salad.findDealsAsync(1);
-        expect(deals.length).to.equal(1);
-        // Quorum should be reset to 0 after deal creation
-        expect(salad.quorum).to.equal(0);
-    });
-
-    it('should verify the deal execution', async () => {
-        const {deal} = await executedDealPromise;
-        debug('Executed deal', deal);
-        const {enigmaContract} = salad;
-        const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
-        debug('The task record', taskRecord);
-
-        const distributeReceipts = await salad.contract.getPastEvents('Distribute', {
-            filter: {},
-            fromBlock: lastDepositBlockNumber,
-            toBlock: 'latest'
+        it('should verify that a deal was created since the threshold is reached', async () => {
+            const deal = await dealPromise;
+            debug('Created deal', deal);
+            const blockNumber = await web3.eth.getBlockNumber();
+            debug('The block number after deal creation', blockNumber);
+            // Quorum should be reset to 0 after deal creation
+            expect(salad.quorum).to.equal(0);
         });
-        debug('Distributed event receipts', distributeReceipts);
-        expect(distributeReceipts.length).to.equal(1);
-        for (const r of distributeReceipts[0].returnValues._recipients) {
-            expect(recipients).to.include(r);
+
+        it('should verify the deal execution', async () => {
+            const {deal} = await executedDealPromise;
+            debug('Executed deal', deal);
+            const {enigmaContract} = salad;
+            const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
+            debug('The task record', taskRecord);
+
+            const distributeReceipts = await salad.contract.getPastEvents('Distribute', {
+                filter: {},
+                fromBlock: lastDepositBlockNumber,
+                toBlock: 'latest'
+            });
+            debug('Distributed event receipts', distributeReceipts);
+            expect(distributeReceipts.length).to.equal(1);
+            for (const r of distributeReceipts[0].returnValues._recipients) {
+                expect(recipients).to.include(r);
+            }
+            const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
+                filter: {},
+                fromBlock: lastDepositBlockNumber,
+                toBlock: 'latest'
+            });
+            debug('Distributed event receipts', receipts);
+            expect(receipts.length).to.equal(1);
+            const {gasUsed, optionalEthereumContractAddress} = receipts[0].returnValues;
+            expect(optionalEthereumContractAddress).to.equal(saladContractAddr);
+            debug('The ENG gas used with', anonSetSize, 'participants:', gasUsed);
+            // 3 participants gas used: 71787720
+            // 3 participants gas used: 71661357
+            // 4 participants gas used: 94435916
+            // Per participant: ~23000000
+            // Base : 3000000
+            // const baseGasUnits = 3000000;
+            // const gasUnitsPerParticipant = 24000000;
+            // const estimatedGasUnits = baseGasUnits + (anonSetSize * gasUnitsPerParticipant);
+            // expect(estimatedGasUnits).to.be.greaterThan(parseInt(gasUsed));
+
+            const receiptFailed = await enigmaContract.getPastEvents('ReceiptFailed', {
+                filter: {},
+                fromBlock: lastDepositBlockNumber,
+                toBlock: 'latest'
+            });
+            debug('Failed receipts', receiptFailed);
+            expect(receiptFailed.length).to.equal(0);
+
+            const receiptsFailedEth = await enigmaContract.getPastEvents('ReceiptFailedETH', {
+                filter: {},
+                fromBlock: lastDepositBlockNumber,
+                toBlock: 'latest'
+            });
+            debug('Failed ETH receipts', receiptsFailedEth);
+            expect(receiptsFailedEth.length).to.equal(0);
+
+            const deals = await salad.findDealsAsync(2);
+            expect(deals.findIndex(d => d.dealId === deal.dealId)).to.not.equal(-1);
+            // Quorum should be reset to 0 after deal creation
+            expect(salad.quorum).to.equal(0);
+            const blockNumber = await web3.eth.getBlockNumber();
+            const lastExecutionBlockNumber = await server.dealManager.contract.methods.lastExecutionBlockNumber().call();
+            expect(blockNumber).to.equal(parseInt(lastExecutionBlockNumber));
+        });
+
+        for (let i = 0; i < anonSetSize; i++) {
+            const depositIndex = i + 1;
+            it(`should verify that deposit ${depositIndex} balance is 0 (has been distributed)`, async () => {
+                const sender = salad.accounts[depositIndex];
+                debug('Verifying balance for sender', sender);
+                const balance = await server.dealManager.contract.methods.balances(sender).call();
+                debug('The balance', balance);
+                expect(balance[0]).to.equal('0');
+            });
+            const recipientIndex = depositIndex + 5;
+            it(`should verify recipient ${recipientIndex} balance`, async () => {
+                await mineBlock(web3);
+                const recipient = salad.accounts[recipientIndex];
+                debug('Verifying balance for recipient', recipient);
+                const balance = await web3.eth.getBalance(recipient, 'latest');
+                const initialBalance = recipientInitialBalances[recipientIndex];
+                const payment = web3.utils.toBN(balance).sub(web3.utils.toBN(initialBalance)).toString();
+                expect(payment).to.equal(amount);
+                recipientInitialBalances[recipientIndex] = balance;
+            });
         }
-        const receipts = await enigmaContract.getPastEvents('ReceiptVerified', {
-            filter: {},
-            fromBlock: lastDepositBlockNumber,
-            toBlock: 'latest'
-        });
-        debug('Distributed event receipts', receipts);
-        expect(receipts.length).to.equal(1);
-        const {gasUsed, optionalEthereumContractAddress} = receipts[0].returnValues;
-        expect(optionalEthereumContractAddress).to.equal(saladContractAddr);
-        debug('The ENG gas used with', anonSetSize, 'participants:', gasUsed);
-        // 3 participants gas used: 71787720
-        // 3 participants gas used: 71661357
-        // 4 participants gas used: 94435916
-        // Per participant: ~23000000
-        // Base : 3000000
-        // const baseGasUnits = 3000000;
-        // const gasUnitsPerParticipant = 24000000;
-        // const estimatedGasUnits = baseGasUnits + (anonSetSize * gasUnitsPerParticipant);
-        // expect(estimatedGasUnits).to.be.greaterThan(parseInt(gasUsed));
-
-        const receiptFailed = await enigmaContract.getPastEvents('ReceiptFailed', {
-            filter: {},
-            fromBlock: lastDepositBlockNumber,
-            toBlock: 'latest'
-        });
-        debug('Failed receipts', receiptFailed);
-        expect(receiptFailed.length).to.equal(0);
-
-        const receiptsFailedEth = await enigmaContract.getPastEvents('ReceiptFailedETH', {
-            filter: {},
-            fromBlock: lastDepositBlockNumber,
-            toBlock: 'latest'
-        });
-        debug('Failed ETH receipts', receiptsFailedEth);
-        expect(receiptsFailedEth.length).to.equal(0);
-
-        const deals = await salad.findDealsAsync(2);
-        expect(deals.length).to.equal(1);
-        // Quorum should be reset to 0 after deal creation
-        expect(salad.quorum).to.equal(0);
-        const blockNumber = await web3.eth.getBlockNumber();
-        const lastExecutionBlockNumber = await server.dealManager.contract.methods.lastExecutionBlockNumber().call();
-        expect(blockNumber).to.equal(parseInt(lastExecutionBlockNumber));
-    });
-
-    for (let i = 0; i < anonSetSize; i++) {
-        const depositIndex = i + 1;
-        it(`should verify that deposit ${depositIndex} balance is 0 (has been distributed)`, async () => {
-            const sender = salad.accounts[depositIndex];
-            debug('Verifying balance for sender', sender);
-            const balance = await server.dealManager.contract.methods.balances(sender).call();
-            debug('The balance', balance);
-            expect(balance[0]).to.equal('0');
-        });
-        const recipientIndex = depositIndex + 5;
-        it(`should verify recipient ${recipientIndex} balance`, async () => {
-            await mineBlock(web3);
-            const recipient = salad.accounts[recipientIndex];
-            debug('Verifying balance for recipient', recipient);
-            const balance = await web3.eth.getBalance(recipient, 'latest');
-            const initialBalance = recipientInitialBalances[recipientIndex];
-            const payment = web3.utils.toBN(balance).sub(web3.utils.toBN(initialBalance)).toString();
-            expect(payment).to.equal(amount);
-        });
     }
+
+    const firstDealExecuted = orchestrateDeal(anonSetSize);
+    it('should finalize the first deal execution', async () => {
+        await firstDealExecuted;
+    });
 
     const anonSetSizeUnderThreshold = threshold - 1;
     const partialQuorumDepositsSubmitted = makeDeposits(anonSetSizeUnderThreshold);
@@ -296,4 +302,16 @@ describe('Salad', () => {
             expect(receipt.status).to.equal(true);
         });
     }
+
+    it('should verify that deposits withdrawn are no longer in store', async () => {
+        await server.broadcastQuorumAsync();
+        await utils.sleep(300);
+        expect(salad.quorum).to.equal(0);
+        debug('');
+    });
+
+    const secondDealExecuted = orchestrateDeal(anonSetSize);
+    it('should finalize the second deal execution', async () => {
+        await secondDealExecuted;
+    });
 });

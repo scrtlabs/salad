@@ -272,8 +272,9 @@ class OperatorApi {
      * @returns {*}
      * @private
      */
-    _verifyDepositSignature(payload, sig) {
-        const data = CoinjoinClient.buildDepositTypedData(payload);
+    async _verifyDepositSignatureAsync(payload, sig) {
+        const chainId = await this.web3.eth.net.getId();
+        const data = CoinjoinClient.buildDepositTypedData(payload, chainId);
         const sender = this.web3.utils.toChecksumAddress(recoverTypedSignature_v4({data, sig}));
         debug('Recovered sender', sender);
         return (sender === payload.sender);
@@ -291,15 +292,15 @@ class OperatorApi {
     async submitDepositMetadataAsync(sender, amount, pubKey, encRecipient, signature) {
         debug('In submitDepositMetadataAsync(', sender, amount, pubKey, encRecipient, signature, ')');
         const payload = {sender, amount, encRecipient, pubKey};
-        // TODO: Disabled temporarily while troubleshoot metamask signature issue
-        if (!this._verifyDepositSignature(payload, signature)) {
+        const isValidSig = await this._verifyDepositSignatureAsync(payload, signature);
+        if (!isValidSig) {
             debug(`Signature verification failed: ${signature}`);
             return {action: SUBMIT_DEPOSIT_METADATA_RESULT, payload: {err: 'Invalid signature'}};
         }
         const registeredDeposit = await this.dealManager.registerDepositAsync(sender, amount, pubKey, encRecipient, signature);
         debug('Registered deposit', registeredDeposit);
 
-        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync();
+        const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync();
         const quorum = fillableDeposits.length;
 
         debug('Broadcasting quorum update', quorum);
@@ -313,19 +314,20 @@ class OperatorApi {
      * @returns {Promise<OperatorAction>}
      */
     async fetchFillableDepositsAsync(minimumAmount) {
-        const deposits = await this.dealManager.fetchFillableDepositsAsync(minimumAmount);
+        const deposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         return {action: FETCH_FILLABLE_SUCCESS, payload: {deposits}};
     }
 
     /**
      * Return the current Quorum value
-     * @returns {Promise<OperatorAction>}
+     * @returns {Promise<void>}
      */
-    async fetchQuorumAsync(minimumAmount) {
+    async broadcastQuorumAsync(minimumAmount) {
         // Sending current quorum on connection
-        const fillableDeposits = await this.dealManager.fetchFillableDepositsAsync(minimumAmount);
+        const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         const quorum = fillableDeposits.length;
-        return {action: QUORUM_UPDATE, payload: {quorum}};
+        debug('Broadcasting quorum', quorum);
+        this.ee.emit(QUORUM_UPDATE, quorum);
     }
 }
 

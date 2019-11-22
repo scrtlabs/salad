@@ -88,17 +88,6 @@ class DealManager {
     }
 
     /**
-     * Fetch the fillable deposits as tracked by the operator
-     * @param minimumAmount
-     * @returns {Promise<Array<Deposit>>}
-     */
-    async fetchFillableDepositsAsync(minimumAmount = 0) {
-        const deposits = await this.store.queryFillableDepositsAsync(minimumAmount);
-        debug('The fillable deposits', deposits);
-        return deposits;
-    }
-
-    /**
      * Create new Deal on Ethereum
      * @param {string} depositAmount
      * @param {Array<Deposit>} deposits - The Deposits linked to the Deal
@@ -122,7 +111,6 @@ class DealManager {
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        // debug('The dealId', dealId);
         const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
         await this.store.insertDealAsync(deal);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
@@ -144,18 +132,23 @@ class DealManager {
      * Verify on-chain balance of locally stored fillable deposits and discard if too low
      * @returns {Promise<Array<Deposit>>}
      */
-    async balanceFillableDepositsAsync() {
-        const deposits = this.fetchFillableDepositsAsync();
-        for (let i = 0; i < deposits.length; i++) {
-            const deposit = deposits[i];
+    async balanceFillableDepositsAsync(minimumAmount = 0) {
+        let deposits = await this.store.queryFillableDepositsAsync(minimumAmount);
+        debug('Verifying balance for deposits', deposits);
+        let hasChanged = false;
+        for (const deposit of deposits) {
             try {
                 // Discard the deposit if the balance is withdrawn
                 await this.verifyDepositAmountAsync(deposit.sender, deposit.amount);
             } catch (e) {
-                debug('Discarding invalid deposit', e);
+                debug('Discarding invalid deposit', e.message);
+                hasChanged = true;
                 await this.store.discardDepositAsync(deposit);
-                deposits.splice(i, 1);
             }
+        }
+        if (hasChanged) {
+            deposits = await this.store.queryFillableDepositsAsync(minimumAmount);
+            debug('The deposits after change', deposits);
         }
         return deposits;
     }
@@ -173,7 +166,8 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
-        const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, taskRecordOpts);
+        const chainId = await this.web3.eth.net.getId();
+        const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, chainId, taskRecordOpts);
         deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
@@ -188,7 +182,8 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
-        const task = await this.scClient.verifyDepositsAsync(amount, deposits, taskRecordOpts);
+        const chainId = await this.web3.eth.net.getId();
+        const task = await this.scClient.verifyDepositsAsync(amount, deposits, chainId, taskRecordOpts);
         debug('The verify deposit task', task);
     }
 
