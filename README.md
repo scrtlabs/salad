@@ -23,8 +23,7 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `yarn dc pull`
 - `yarn dc start` <- In background or separate terminal
 - `yarn dc compile`
-- `yarn dc migrate`
-- `yarn dc test`
+- `yarn test`
 
 ## Architecture
 ### Definitions
