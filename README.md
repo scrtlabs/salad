@@ -14,15 +14,15 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 
 - `git clone https://github.com/enigmampc/salad`
 - `cd salad`
-- Create `.env` from `.env.template` after review or edit
-- `cd operator`
-- Create `.env` from `.env.template` after review or edit
-- `cd ..`
-- Create `docker-compose.yml` from `docker-compose.cli-hw.yml` or `docker-compose.cli-sw.yml`
+- `yarn configure` or `yarn configure-sw` to run salad on Simulation Mode
 - `yarn install`
 - `yarn dc pull`
-- `yarn dc start` <- In background or separate terminal
-- `yarn dc compile`
+- In another console, run: `yarn start`
+
+after closing it, you can run `yarn stop` to shut down the docker containers.
+
+In your first console now you can:
+- `yarn migrate`, or
 - `yarn test`
 
 ## Launch the front-end for development

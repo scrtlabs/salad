@@ -12,17 +12,9 @@ const debug = require('debug')('operator:server');
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-let EnigmaContract;
-if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW' && process.env.SGX_MODE != 'HW')) {
-    console.log(`Error reading ".env" file, aborting....`);
-    process.exit();
-} else if (process.env.SGX_MODE == 'SW') {
-    EnigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
-} else {
-    EnigmaContract = require('../build/enigma_contracts/Enigma.json');
-}
-const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-const provider = new Web3.providers.HttpProvider('http://localhost:9545');
+const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
+const {getEnigmaTokenContractAddress} = require('@salad/client/src/enigmaTokenSmartContract');
+const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:9545`);
 const web3 = new Web3(provider);
 let enigma = null;
 
@@ -30,12 +22,20 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+let SECRET_CONTRACT_BUILD_FOLDER = null;
+if (process.env.ENIGMA_ENV === 'COMPOSE') {
+    // In the docker compose environment, this file is provided in the root directory of the project
+    SECRET_CONTRACT_BUILD_FOLDER = '..';
+} else {
+    SECRET_CONTRACT_BUILD_FOLDER = '../build/secret_contracts';
+}
+
 async function deploySecretContract(config, mixerEthAddress) {
     debug(`Deploying Secret Contract "${config.filename}"...`);
     let scTask;
     let preCode;
     try {
-        preCode = fs.readFileSync(path.resolve(migrationsFolder, '../build/secret_contracts', config.filename));
+        preCode = fs.readFileSync(path.resolve(migrationsFolder, SECRET_CONTRACT_BUILD_FOLDER, config.filename));
     } catch (e) {
         console.log('Error:', e.stack);
     }
@@ -83,15 +83,16 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    let ethNetworkID = (typeof process.env.ETH_NETWORK_ID === 'undefined') ? '4447' : process.env.ETH_NETWORK_ID;
-    let enigmaHost = (typeof process.env.ENIGMA_HOST === 'undefined') ? 'localhost' : process.env.ENIGMA_HOST;
-    let enigmaPort = (typeof process.env.ENIGMA_PORT === 'undefined') ? '3333' : process.env.ENIGMA_PORT;
+    let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
+    let enigmaPort = process.env.ENIGMA_PORT || '3333';
 
+
+    console.log('enigma host is at ' + 'http://'+enigmaHost+':'+enigmaPort);
     enigma = new Enigma(
         web3,
-        EnigmaContract.networks[ethNetworkID].address,
-        EnigmaTokenContract.networks[ethNetworkID].address,
-        'http://'+enigmaHost+':'+enigmaPort,
+        await getEnigmaContractAddress(),
+        await getEnigmaTokenContractAddress(),
+        'http://worker:3346',
         {
             gas: 4712388,
             gasPrice: 100000000000,

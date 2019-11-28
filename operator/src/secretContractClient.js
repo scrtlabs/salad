@@ -1,9 +1,10 @@
 const {Enigma, eeConstants} = require('enigma-js/node');
 const debug = require('debug')('operator:secret-contract');
 
+const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
+
 // TODO: Move path to config and reference Github
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
-const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
+const {getEnigmaTokenContractAddress} = require('@salad/client/src/enigmaTokenSmartContract');
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -22,11 +23,10 @@ class SecretContractClient {
 
     async initAsync(engOpts) {
         const accounts = this.accounts = await this.web3.eth.getAccounts();
-        const networkId = await this.web3.eth.net.getId();
         this.enigma = new Enigma(
             this.web3,
-            EnigmaContract.networks[networkId].address,
-            EnigmaTokenContract.networks[networkId].address,
+            await getEnigmaContractAddress(),
+            await getEnigmaTokenContractAddress(),
             this.enigmaUrl,
             {
                 gas: engOpts.taskGasLimit,

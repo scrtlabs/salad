@@ -8,8 +8,7 @@ const debug = require('debug')('test');
 const Web3 = require('web3');
 const {Store} = require("@salad/operator");
 
-const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
+const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
 const DEPOSIT_AMOUNT = '0.01';
@@ -17,7 +16,6 @@ describe('Salad', () => {
     let server;
     let salad;
     let opts;
-    let token;
     let web3Utils;
     let accounts;
     let saladContractAddr;
@@ -34,7 +32,7 @@ describe('Salad', () => {
         saladContractAddr = await store.fetchSmartContractAddr();
         await store.closeAsync();
 
-        const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
+        const enigmaContractAddr = await getEnigmaContractAddress();
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
 
@@ -60,8 +58,6 @@ describe('Salad', () => {
             gas: 4712388,
             gasPrice: 100000000000,
         };
-        const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
-        token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
         debug('Environment initialized');
     });
 
