@@ -37,9 +37,7 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         const thresholdAction = api.getThreshold();
         ws.send(JSON.stringify(thresholdAction));
 
-        const quorumAction = await api.fetchQuorumAsync(0);
-        debug('Sending quorum value', quorumAction);
-        ws.send(JSON.stringify(quorumAction));
+        await api.broadcastQuorumAsync(0);
 
         ws.on('message', async function incoming(message) {
             debug('received: %s', message);

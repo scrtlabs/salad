@@ -23,8 +23,12 @@ This project uses Yarn Workplaces so using yarn over npm is recommended.
 - `yarn dc pull`
 - `yarn dc start` <- In background or separate terminal
 - `yarn dc compile`
-- `yarn dc migrate`
-- `yarn dc test`
+- `yarn test`
+
+## Launch the front-end for development
+- `yarn clean-run-operator` // Truncate the database, re-deploy the contracts and start the operator
+- `cd frontend`
+- `yarn start` // Host the frontend with webpack and watch for changes
 
 ## Architecture
 ### Definitions

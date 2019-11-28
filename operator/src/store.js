@@ -144,7 +144,8 @@ class Store {
     async discardDepositAsync(deposit) {
         const query = {dealId: null, sender: deposit.sender};
         const newValues = {$set: {dealId: 'discarded'}};
-        await this.db.collection(DEPOSITS_COLLECTION).updateOne(query, newValues);
+        const result = await this.db.collection(DEPOSITS_COLLECTION).updateOne(query, newValues);
+        debug('Discarded deposit', result);
     }
 
     /**
