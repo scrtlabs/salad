@@ -9,7 +9,7 @@
     "dotenv": "^8.2.0",
     "enigma-js": "0.3.0",
     "eth-sig-util": "^2.5.1",
-    "mongodb": "^3.3.4",
+    "mongodb": "^3.3.5",
     "node-forge": "^0.9.1",
     "supports-color": "^7.1.0",
     "web3": "^1.2.4",

@@ -10,7 +10,7 @@
     "@enigmampc/discovery-cli": "0.1.5",
     "@salad/client": "0.1.0",
     "@salad/operator": "0.1.0",
-    "core-js": "^3.4.2",
+    "core-js": "^3.4.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
     "enigma-js": "0.3.0",
