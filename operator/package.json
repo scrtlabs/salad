@@ -6,14 +6,14 @@
   "dependencies": {
     "@salad/client": "0.1.0",
     "debug": "^4.1.1",
-    "dotenv": "^8.0.0",
+    "dotenv": "^8.2.0",
     "enigma-js": "0.3.0",
-    "eth-sig-util": "^2.5.0",
-    "mongodb": "^3.3.0-beta2",
-    "node-forge": "^0.8.5",
+    "eth-sig-util": "^2.5.1",
+    "mongodb": "^3.3.5",
+    "node-forge": "^0.9.1",
     "supports-color": "^7.1.0",
-    "web3": "^1.0.0-beta.37",
-    "ws": "^7.1.1"
+    "web3": "^1.2.4",
+    "ws": "^7.1.2"
   },
   "scripts": {
     "serve": "node ./src/server.js"
