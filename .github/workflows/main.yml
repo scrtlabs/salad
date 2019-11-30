@@ -1,0 +1,16 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Build the Docker images
+      run: docker build -t enigmampc/salad_client .
+    - name: Run the tests
+      run: NODES=2 docker-compose -f docker-compose.yml -f docker-compose.salad.yml up --scale core=2 --scale p2p=2 --exit-code-from salad & sleep 120 && docker-compose -f docker-compose.yml -f docker-compose.salad.yml exec -T salad yarn test
+        
