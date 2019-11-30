@@ -23,7 +23,9 @@ describe('Salad', () => {
     let store;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const anonSetSize = threshold;
-    const provider = new Web3.providers.HttpProvider('http://127.0.0.1:9545');
+    const ethHost = (typeof process.env.ETH_HOST === 'undefined') ? 'localhost' : process.env.ETH_HOST;
+    const ethPort = (typeof process.env.ETH_PORT === 'undefined') ? '9545' : process.env.ETH_PORT;
+    const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
     const web3 = new Web3(provider);
     before(async () => {
         store = new Store();

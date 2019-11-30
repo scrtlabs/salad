@@ -22,7 +22,12 @@ if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW'
     EnigmaContract = require('../build/enigma_contracts/Enigma.json');
 }
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-const provider = new Web3.providers.HttpProvider('http://localhost:9545');
+
+const ethHost = (typeof process.env.ETH_HOST === 'undefined') ? 'localhost' : process.env.ETH_HOST;
+const ethPort = (typeof process.env.ETH_PORT === 'undefined') ? '9545' : process.env.ETH_PORT;
+
+
+const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
 const web3 = new Web3(provider);
 let enigma = null;
 
