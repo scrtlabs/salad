@@ -7,7 +7,7 @@
     "test": "test"
   },
   "devDependencies": {
-    "@enigmampc/discovery-cli": "0.1.5",
+    "@enigmampc/discovery-cli": "0.1.7",
     "mocha": "^6.2.2"
   },
   "dependencies": {

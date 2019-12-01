@@ -1,4 +1,0 @@
-# This file is placed here because discovery-cli doesn't generate the build directory if it's missing.
-# https://github.com/enigmampc/discovery-cli/issues/19
-*
-!.gitignore
