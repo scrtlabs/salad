@@ -16,7 +16,6 @@ import {initializeWeb3, initializeSalad} from '../actions';
 import getWeb3 from '../utils/getWeb3';
 import SaladContract from '../build/smart_contracts/Salad';
 import {CoinjoinClient} from "@salad/client";
-import EnigmaContract from "../build/enigma_contracts/Enigma";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
 const styles = theme => ({

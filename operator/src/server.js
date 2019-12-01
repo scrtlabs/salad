@@ -10,7 +10,6 @@ const args = process.argv;
 const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
 let server;
 (async () => {
-    console.log('SERVER STARTED!');
     const operatorAccountIndex = 0;
     const store = new Store();
     await store.initAsync();

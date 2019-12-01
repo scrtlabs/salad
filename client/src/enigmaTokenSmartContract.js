@@ -7,13 +7,15 @@ const KUBERNETES_NETWORK_TOKEN_CONTRACT_LOCATION = `http://${process.env.CONTRAC
 async function getEnigmaTokenContractAddress() {
     let enigmaTokenContractAddress;
     if (process.env.ENIGMA_ENV === 'COMPOSE') {
+        console.error('looking up Enigma address for the Enigma token contract at ' + KUBERNETES_NETWORK_TOKEN_CONTRACT_LOCATION);
         // The contract was deployed by the network itself, and is published behind this URL:
         enigmaTokenContractAddress = (await axios.get(KUBERNETES_NETWORK_TOKEN_CONTRACT_LOCATION)).data;
     } else {
         // The contract was migrated locally, so we can find its address here:
-        const EnigmaTokenContract = require('./EnigmaToken.json');
+        const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
         enigmaTokenContractAddress = EnigmaTokenContract[process.env.ETH_NETWORK_ID || '4447'].address;
     }
+    console.error('found Enigma token contract address ' + enigmaContractAddress);
 
     return enigmaTokenContractAddress;
 }

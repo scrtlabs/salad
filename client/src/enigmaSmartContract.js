@@ -4,12 +4,11 @@ const KUBERNETES_NETWORK_CONTRACT_LOCATION = `http://${process.env.CONTRACT_ADDR
 
 let enigmaContractPath;
 if (process.env.SGX_MODE === 'SW') {
-    enigmaContractPath = './EnigmaSimulation.json';  // TODO change back to refer to the build dir, and delete the local copy
+    enigmaContractPath = '../../build/enigma_contracts/EnigmaSimulation.json';
 } else if (process.env.SGX_MODE === 'HW') {
-    enigmaContractPath = './Enigma.json';
+    enigmaContractPath = '../../build/enigma_contracts/Enigma.json';
 } else {
-    console.log('SGX_MODE must be set to either SW or HW (default)');
-    process.exit(1);
+    throw new Error('SGX_MODE must be set to either SW or HW (default)');
 }
 
 // This function is provided because the address of the enigma contract is available in different locations
@@ -17,7 +16,7 @@ if (process.env.SGX_MODE === 'SW') {
 async function getEnigmaContractAddress() {
     let enigmaContractAddress;
     if (process.env.ENIGMA_ENV === 'COMPOSE') {
-        console.log('looking up address');
+        console.error('looking up Enigma address for the Enigma contract at ' + KUBERNETES_NETWORK_CONTRACT_LOCATION);
         // The contract was deployed by the network itself, and is published behind this URL:
         enigmaContractAddress = (await axios.get(KUBERNETES_NETWORK_CONTRACT_LOCATION)).data;
     } else {
@@ -25,7 +24,7 @@ async function getEnigmaContractAddress() {
         const EnigmaContract = require(enigmaContractPath);
         enigmaContractAddress = EnigmaContract[process.env.ETH_NETWORK_ID || '4447'].address;
     }
-    console.log('found address ' + enigmaContractAddress);
+    console.error('found Enigma contract address ' + enigmaContractAddress);
 
     return enigmaContractAddress;
 }
