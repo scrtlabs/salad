@@ -9,7 +9,13 @@ const Web3 = require('web3');
 const {Store} = require("@salad/operator");
 
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
+var EnigmaContract = null;
+if (typeof process.env.SGX_MODE !== 'undefined' && process.env.SGX_MODE == 'SW') {
+  EnigmaContract = require('../build/enigma_contracts/EnigmaSimulation');
+} else {
+  EnigmaContract = require('../build/enigma_contracts/Enigma');
+}
+
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
 describe('Salad', () => {
