@@ -2,7 +2,12 @@ const {Enigma, eeConstants} = require('enigma-js/node');
 const debug = require('debug')('operator:secret-contract');
 
 // TODO: Move path to config and reference Github
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
+var EnigmaContract = null;
+if (typeof process.env.SGX_MODE !== 'undefined' && process.env.SGX_MODE == 'SW') {
+  EnigmaContract = require('../../build/enigma_contracts/EnigmaSimulation');
+} else {
+  EnigmaContract = require('../../build/enigma_contracts/Enigma');
+}
 const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 
 function sleep(ms) {

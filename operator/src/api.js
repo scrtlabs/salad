@@ -7,7 +7,12 @@ const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
+var EnigmaContract = null;
+if (typeof process.env.SGX_MODE !== 'undefined' && process.env.SGX_MODE == 'SW') {
+  EnigmaContract = require('../../build/enigma_contracts/EnigmaSimulation');
+} else {
+  EnigmaContract = require('../../build/enigma_contracts/Enigma');
+}
 const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 const {recoverTypedSignature_v4} = require('eth-sig-util');
 

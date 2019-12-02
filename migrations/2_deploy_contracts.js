@@ -23,8 +23,8 @@ if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW'
 }
 const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
 
-const ethHost = (typeof process.env.ETH_HOST === 'undefined') ? 'localhost' : process.env.ETH_HOST;
-const ethPort = (typeof process.env.ETH_PORT === 'undefined') ? '9545' : process.env.ETH_PORT;
+const ethHost = process.env.ETH_HOST || 'localhost'
+const ethPort = process.env.ETH_PORT || '9545'
 
 
 const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
@@ -88,9 +88,9 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    let ethNetworkID = (typeof process.env.ETH_NETWORK_ID === 'undefined') ? '4447' : process.env.ETH_NETWORK_ID;
-    let enigmaHost = (typeof process.env.ENIGMA_HOST === 'undefined') ? 'localhost' : process.env.ENIGMA_HOST;
-    let enigmaPort = (typeof process.env.ENIGMA_PORT === 'undefined') ? '3333' : process.env.ENIGMA_PORT;
+    const ethNetworkID = process.env.ETH_NETWORK_ID || '4447';
+    const enigmaHost = process.env.ENIGMA_HOST || 'localhost';
+    const enigmaPort = process.env.ENIGMA_PORT || '3333';
 
     enigma = new Enigma(
         web3,

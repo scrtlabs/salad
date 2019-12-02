@@ -29,8 +29,9 @@ describe('Salad', () => {
     let store;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const anonSetSize = threshold;
-    const ethHost = (typeof process.env.ETH_HOST === 'undefined') ? 'localhost' : process.env.ETH_HOST;
-    const ethPort = (typeof process.env.ETH_PORT === 'undefined') ? '9545' : process.env.ETH_PORT;
+    const ethHost = process.env.ETH_HOST || 'localhost';
+    const ethPort = process.env.ETH_PORT || '9545';
+    const ethNetworkId = process.env.ETH_NETWORK_ID || '4447';
     const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
     const web3 = new Web3(provider);
     before(async () => {
@@ -41,7 +42,7 @@ describe('Salad', () => {
         saladContractAddr = await store.fetchSmartContractAddr();
         await store.closeAsync();
 
-        const enigmaContractAddr = EnigmaContract.networks[process.env.ETH_NETWORK_ID].address;
+        const enigmaContractAddr = EnigmaContract.networks[ethNetworkId].address;
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
         server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
 
@@ -67,7 +68,7 @@ describe('Salad', () => {
             gas: 4712388,
             gasPrice: 100000000000,
         };
-        const tokenAddr = EnigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
+        const tokenAddr = EnigmaTokenContract.networks[ethNetworkId].address;
         token = new web3.eth.Contract(EnigmaTokenContract['abi'], tokenAddr);
         debug('Environment initialized');
     });
