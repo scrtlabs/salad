@@ -15,7 +15,7 @@ async function getEnigmaTokenContractAddress() {
         const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
         enigmaTokenContractAddress = EnigmaTokenContract[process.env.ETH_NETWORK_ID || '4447'].address;
     }
-    console.error('found Enigma token contract address ' + enigmaContractAddress);
+    console.error('found Enigma token contract address ' + enigmaTokenContractAddress);
 
     return enigmaTokenContractAddress;
 }
