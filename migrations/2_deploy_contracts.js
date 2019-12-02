@@ -41,6 +41,37 @@ async function deploySecretContract(config, mixerEthAddress) {
     }
     const {args} = config;
     args.push([mixerEthAddress, 'address']);
+
+    let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
+    let enigmaPort = process.env.ENIGMA_PORT || '3333';
+
+    console.log('enigma host is at ' + 'http://'+enigmaHost+':'+enigmaPort);
+    enigma = new Enigma(
+        web3,
+        await getEnigmaContractAddress(),
+        await getEnigmaTokenContractAddress(),
+        'http://' + enigmaHost + ':' + enigmaPort,
+        {
+            gas: 4712388,
+            gasPrice: 100000000000,
+            from: config.from,
+        },
+    );
+    enigma.admin();
+    enigma.setTaskKeyPair();
+
+    // Waiting for a worker to register with the enigma network:
+    while (true) {
+        console.log('waiting for a worker to register to the enigma network');
+        await sleep(5000);
+        const blockNumber = await web3.eth.getBlockNumber();
+        const worker_params = await enigma.getWorkerParams(blockNumber);
+        console.log('worker params := ' + JSON.stringify(worker_params));
+        if (worker_params.workers.length >= 1) {
+            break;
+        }
+    }
+
     scTask = await new Promise((resolve, reject) => {
         enigma.deploySecretContract(config.fn, args, config.gasLimit, config.gasPrice, config.from, preCode)
             .on(eeConstants.DEPLOY_SECRET_CONTRACT_RESULT, (receipt) => resolve(receipt))
@@ -49,27 +80,21 @@ async function deploySecretContract(config, mixerEthAddress) {
 
     // Wait for the confirmed deploy contract task
     do {
-        await sleep(1000);
+        console.log('waiting for the secret contract to finish deploying.');
+        await sleep(5000);
         try {
             scTask = await enigma.getTaskRecordStatus(scTask);
         } catch (e) {
-            console.error('Unable to deploy', e);
+            console.log('Unable to deploy', e);
         }
-        process.stdout.write('Waiting. Current Task Status is ' + scTask.ethStatus + '\r');
+        console.log('Waiting. Current Task Status is ' + scTask.ethStatus);
     } while (scTask.ethStatus === 1);
-    process.stdout.write('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
+    console.log('Completed. Final Task Status is ' + scTask.ethStatus);
 
     console.log('SC ADDRESS', scTask.scAddr);
 
     // Verify deployed contract
-    const result = await enigma.admin.isDeployed(scTask.scAddr);
-    if (result) {
-        // fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
-        //     if (err) {
-        //         return console.log(err);
-        //     }
-        // });
-
+    if (await enigma.admin.isDeployed(scTask.scAddr)) {
         return scTask.scAddr;
     } else {
         console.log('Something went wrong deploying Secret Contract:', scTask.scAddr, ', aborting');
@@ -82,25 +107,6 @@ module.exports = async function (deployer, network, accounts) {
     const store = new Store();
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
-
-    let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
-    let enigmaPort = process.env.ENIGMA_PORT || '3333';
-
-
-    console.log('enigma host is at ' + 'http://'+enigmaHost+':'+enigmaPort);
-    enigma = new Enigma(
-        web3,
-        await getEnigmaContractAddress(),
-        await getEnigmaTokenContractAddress(),
-        'http://worker:3346',
-        {
-            gas: 4712388,
-            gasPrice: 100000000000,
-            from: accounts[0],
-        },
-    );
-    enigma.admin();
-    enigma.setTaskKeyPair();
 
     // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
