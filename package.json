@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "@enigmampc/discovery-cli": "0.1.7",
+    "@enigmampc/discovery-cli": "0.1.8",
     "@salad/client": "0.1.0",
     "@salad/operator": "0.1.0",
     "core-js": "^3.4.5",
