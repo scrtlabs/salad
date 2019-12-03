@@ -44,7 +44,7 @@ describe('Salad', () => {
         await server.store.truncate(CACHE_COLLECTION);
 
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
-        salad = new CoinjoinClient(saladContractAddr, enigmaContractAddr, operatorUrl, provider);
+        salad = new CoinjoinClient(operatorUrl, provider);
         // Always shutdown the WS server when tests end
         process.on('SIGINT', async () => {
             debug('Caught interrupt signal, shutting down WS server');
