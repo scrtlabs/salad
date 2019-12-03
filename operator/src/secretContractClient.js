@@ -62,8 +62,19 @@ class SecretContractClient {
 
     async waitTaskSuccessAsync(task) {
         debug('Waiting for task success', task);
+        let gracePeriodInBlocks = 10;
+        let previousEpochSize = null;
         do {
-            await sleep(1000);
+            await sleep(600);
+            const epochSize = parseInt(await this.enigma.enigmaContract.methods.getEpochSize().call());
+            if (previousEpochSize && epochSize > previousEpochSize) {
+                if (gracePeriodInBlocks === 0) {
+                    throw new Error("Epoch changed and grace period expired");
+                }
+                gracePeriodInBlocks = gracePeriodInBlocks - 1;
+            } else {
+                previousEpochSize = epochSize;
+            }
             task = await this.enigma.getTaskRecordStatus(task);
             debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
         } while (task.ethStatus === 1);
@@ -147,7 +158,7 @@ class SecretContractClient {
     }
 
     async verifyDepositsAsync(amount, deposits, chainId, opts) {
-        const { pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
+        const {pubKeys, encRecipients, senders, signatures} = this._prepareDepositsParams(deposits);
         debug('Calling `verify_deposits(uint256,bytes[],bytes[],address[],bytes[])`',
             amount, pubKeys, encRecipients, senders, signatures);
         const taskFn = 'verify_deposits(uint256,uint256,bytes[],bytes[],address[],bytes[])';
@@ -170,7 +181,15 @@ class SecretContractClient {
     async getPubKeyDataAsync(opts) {
         if (!this.pubKeyData) {
             debug('PubKey not found in cache, fetching from Enigma...');
-            await this.setPubKeyDataAsync(opts);
+            let pubKeySetSuccess = false;
+            do {
+                try {
+                    await this.setPubKeyDataAsync(opts);
+                    pubKeySetSuccess = true;
+                } catch (e) {
+                    debug('Unable to set pub key on Enigma, submitting a new Task', e);
+                }
+            } while (!pubKeySetSuccess);
             debug('Storing pubKey in cache', this.pubKeyData);
         }
         return this.pubKeyData;

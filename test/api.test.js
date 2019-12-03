@@ -12,6 +12,7 @@ const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json'
 const EnigmaContract = require('../build/enigma_contracts/Enigma.json');
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
+const DEPOSIT_AMOUNT = '0.01';
 describe('Salad', () => {
     let server;
     let salad;
@@ -93,7 +94,7 @@ describe('Salad', () => {
         await utils.sleep(300);
         debug('The block countdown', salad.blockCountdown);
         expect(salad.blockCountdown).to.be.above(0);
-        amount = web3Utils.toWei('0.1');
+        amount = web3Utils.toWei(DEPOSIT_AMOUNT);
     });
 
     it('should have an initial quorum of 0', async () => {
@@ -314,4 +315,17 @@ describe('Salad', () => {
     it('should finalize the second deal execution', async () => {
         await secondDealExecuted;
     });
+
+    it('should mine blocks until deal without reaching the quorum (empty deposits)', async () => {
+        await mineUntilDeal(web3, server);
+        // Catching the quorum not reached event
+        const quorumNotReachedPromise = new Promise((resolve) => {
+            salad.onQuorumNotReached(() => resolve(true));
+        });
+        // Calling here to verify that the deposits are empty
+        const deposits = await server.dealManager.balanceFillableDepositsAsync();
+        expect(deposits.length).to.equal(0);
+        await server.handleDealExecutionAsync();
+        expect(await quorumNotReachedPromise).to.equal(true);
+    }).timeout(120000); // Give enough time to execute the deal on Enigma
 });

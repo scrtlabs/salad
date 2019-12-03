@@ -8,6 +8,8 @@ const DEAL_STATUS = {
     EXECUTABLE: 1,
     EXECUTED: 2,
 };
+// TODO: Definitely move to config and pass to frontend
+const DEPOSIT_AMOUNT = '0.01';
 
 /**
  * @typedef {Object} Deal
@@ -50,6 +52,21 @@ class DealManager {
         this.threshold = threshold;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
         this.gasValues = gasValues;
+    }
+
+    /**
+     * Get deposits amount from deposits or default value
+     * @param {Web3} web3
+     * @param {Array<Deposit>} deposits
+     */
+    static getDepositAmount(web3, deposits) {
+        let depositAmount = web3.utils.toWei(DEPOSIT_AMOUNT, 'ether');
+        for (let deposit of deposits) {
+            if (deposit.amount !== depositAmount) {
+                throw new Error(`Mismatching deposit amount: ${deposit.amount}`);
+            }
+        }
+        return depositAmount;
     }
 
     /**
