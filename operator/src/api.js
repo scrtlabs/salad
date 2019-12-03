@@ -21,7 +21,7 @@ const {recoverTypedSignature_v4} = require('eth-sig-util');
 const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
 const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
 const EXECUTE_DEAL_GAS_PRICE = 0.001;
-const EXECUTE_DEAL_BASE_GAS_UNIT = 3000000;
+const EXECUTE_DEAL_BASE_GAS_UNIT = 6000000;
 const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 24000000;
 
 class OperatorApi {
@@ -184,53 +184,48 @@ class OperatorApi {
     async handleDealExecutionAsync() {
         debug('Evaluating deal creation in non-blocking scope');
         const deposits = await this.dealManager.balanceFillableDepositsAsync();
+        // Using at least one participant multiplier to avoid running out of gas
+        const participantMultiplier = (deposits.length === 0) ? 1 : deposits.length;
         const taskRecordOpts = {
-            taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (deposits.length * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
+            taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (participantMultiplier * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
         };
-        // TODO: Account for empty deposits
         /** @type string */
-        const depositAmount = deposits[0].amount;
+        const depositAmount = DealManager.getDepositAmount(this.web3, deposits);
         if (deposits.length >= this.threshold) {
             debug('Quorum reached with deposits', deposits);
             await this.dealManager.updateLastMixBlockNumberAsync();
-
-            let deal;
-            try {
-                deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
-                debug('Broadcasting new deal');
-                this.ee.emit(DEAL_CREATED_UPDATE, deal);
-                debug('Broadcasting quorum value 0 after new deal');
-                this.ee.emit(QUORUM_UPDATE, 0);
-            } catch (e) {
-                // TODO: Retry
-                console.error('Deal creation error', e);
-                debug('Broadcasting quorum value 0 after new deal');
-                this.ee.emit(QUORUM_UPDATE, 0);
-                // throw new Error('Unable to create deal');
-            }
-
-            try {
-                // Resetting quorum
-                this.ee.emit(QUORUM_UPDATE, 0);
-                debug('Deal created on Ethereum, executing...', deal._tx);
-                await this.dealManager.executeDealAsync(deal, taskRecordOpts);
-                debug('Deal executed on Ethereum', deal._tx);
-                this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
-            } catch (e) {
-                // TODO: Retry here, create new execution task when the epoch changes
-                console.error('Deal execution error', e);
-                // throw new Error('Unable to execute deal');
-            }
+            debug('Creating new deal on Ethereum');
+            const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
+            debug('Broadcasting new deal', deal);
+            this.ee.emit(DEAL_CREATED_UPDATE, deal);
+            debug('Broadcasting quorum value 0 after new deal');
+            // Resetting quorum
+            this.ee.emit(QUORUM_UPDATE, 0);
+            let dealExecutedSuccess = false;
+            do {
+                try {
+                    debug('Deal created on Ethereum, executing...', deal._tx);
+                    await this.dealManager.executeDealAsync(deal, taskRecordOpts);
+                    debug('Deal executed on Ethereum', deal._tx);
+                    this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
+                    dealExecutedSuccess = true;
+                } catch (e) {
+                    debug('Unable to execute deal on Enigma, submitting new Task', e);
+                }
+            } while (!dealExecutedSuccess);
         } else {
             debug('Quorum not reached skipping deal execution');
-            try {
-                await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
-                this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
-            } catch (e) {
-                // TODO: Retry here, create new execution task when the epoch changes
-                console.error('Unable to verify deposits', e);
-            }
+            let depositsVerifiedSuccess = false;
+            do {
+                try {
+                    await this.dealManager.verifyDepositsAsync(depositAmount, deposits, taskRecordOpts);
+                    this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
+                    depositsVerifiedSuccess = true;
+                } catch (e) {
+                    debug('Unable to verify deposits on Enigma, submitting new Task', e);
+                }
+            } while (!depositsVerifiedSuccess);
         }
     }
 
