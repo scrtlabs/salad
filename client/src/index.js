@@ -36,7 +36,12 @@ if (typeof window === 'undefined') {
 
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
-const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
+var EnigmaContract = null;
+if (typeof process.env.SGX_MODE !== 'undefined' && process.env.SGX_MODE == 'SW') {
+  EnigmaContract = require('../../build/enigma_contracts/EnigmaSimulation');
+} else {
+  EnigmaContract = require('../../build/enigma_contracts/Enigma');
+}
 
 class CoinjoinClient {
     constructor(operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
