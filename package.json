@@ -7,7 +7,7 @@
     "test": "test"
   },
   "devDependencies": {
-    "@enigmampc/discovery-cli": "0.1.7",
+    "@enigmampc/discovery-cli": "0.1.8",
     "mocha": "^6.2.2"
   },
   "dependencies": {
@@ -30,7 +30,7 @@
     "stop": "yarn dc stop",
     "compile": "yarn dc compile",
     "test": "yarn dc compile && mocha --exit ./test/api.test.js",
-    "migrate": "yarn dc compile && yarn dc migrate",
+    "migrate": "yarn dc migrate",
     "mocha": "mocha"
   },
   "author": "",

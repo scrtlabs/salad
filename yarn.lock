@@ -973,10 +973,10 @@
   resolved "https://registry.yarnpkg.com/@emotion/hash/-/hash-0.7.3.tgz#a166882c81c0c6040975dd30df24fae8549bd96f"
   integrity sha512-14ZVlsB9akwvydAdaEnVnvqu6J2P6ySv39hYyl/aoB6w/V+bXX0tay8cF6paqbgZsN2n5Xh15uF4pE+GvE+itw==
 
-"@enigmampc/discovery-cli@0.1.7":
-  version "0.1.7"
-  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.1.7.tgz#d3c082ee2d385e77f45d9bb20fb6304bd80f3f2a"
-  integrity sha512-MzR4Lq4w7l3f/DAzsTI6vnCPFwpP+22wwzGyKYsW0llewkzpp0YfHYHduEzmSCaLw8km9/4wDKFeJmRdZXob4w==
+"@enigmampc/discovery-cli@0.1.8":
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/@enigmampc/discovery-cli/-/discovery-cli-0.1.8.tgz#28af3065ce4c78192bfeb4fb543f4f5d7d1bc75b"
+  integrity sha512-j55nRzzxxkd6tT9gCTIFHXOrLwdHWTVbCprR5ORN7VehMUdwSlwuPP8y/fF+YquirmE5jOiM9Lvgrzbwj7ZYaQ==
   dependencies:
     "@truffle/workflow-compile" "^2.1.13"
     axios "^0.19.0"
