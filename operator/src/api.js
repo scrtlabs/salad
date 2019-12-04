@@ -114,16 +114,6 @@ class OperatorApi {
     }
 
     /**
-     * Call broadcast fn on pub key
-     * @param broadcastCallback
-     */
-    onPubKey(broadcastCallback) {
-        this.ee.on(PUB_KEY_UPDATE, (pubKeyData) => {
-            broadcastCallback({action: PUB_KEY_UPDATE, payload: {pubKeyData}})
-        });
-    }
-
-    /**
      * Call broadcast fn on Deal creation
      * @param broadcastCallback
      */

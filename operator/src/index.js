@@ -25,7 +25,6 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         }
 
         // Subscribe to events to broadcast
-        api.onPubKey(broadcast);
         api.onDealCreated(broadcast);
         api.onDealExecuted(broadcast);
         api.onQuorumNotReached(broadcast);
@@ -44,7 +43,6 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
             const {action, payload} = JSON.parse(message);
             switch (action) {
                 case 'ping':
-                    debug('Sending pong');
                     ws.send(JSON.stringify({action: 'pong', payload: {}}));
                     break;
                 case FETCH_CONFIG:
