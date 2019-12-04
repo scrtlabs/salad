@@ -6,9 +6,8 @@ ENV PATH=/root/.cargo/bin:$PATH
 
 COPY rust-toolchain /root/salad/rust-toolchain
 
-RUN export RUST_NIGHTLY=$(cat /root/salad/rust-toolchain) && \
-  rustup toolchain install $RUST_NIGHTLY && \
-  rustup target add wasm32-unknown-unknown --toolchain $RUST_NIGHTLY
+RUN export RUST_TOOLCHAIN=$(cat /root/salad/rust-toolchain) && \
+  rustup toolchain add $RUST_TOOLCHAIN --target wasm32-unknown-unknown
 
 COPY .env.template /root/salad/.env
 COPY client/ /root/salad/client/
