@@ -1,5 +1,5 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE, PUB_KEY_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
+const {BLOCK_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
 const debug = require('debug')('client');
 const {recoverTypedSignature_v4} = require('eth-sig-util');
 debug.enabled = true;
@@ -27,15 +27,19 @@ if (typeof window === 'undefined') {
  * @property {string} pubKey - The user generated pubKey
  */
 
+/**
+ * @typedef  {Object} Config
+ * @property {string} saladAddr - The salad smart contract address
+ * @property {string} enigmaAddr - The salad secret contract address
+ * @property {EncryptionPubKey} pubKeyData - The encryption public key data and cryptographic proof
+ */
+
 // TODO: Move path to config and reference Github
 const SaladContract = require('../../build/smart_contracts/Salad.json');
 const EnigmaContract = require('../../build/enigma_contracts/Enigma.json');
 
 class CoinjoinClient {
-    constructor(contractAddr, enigmaContractAddr, operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
-        // debug('new CoinjoinClient(', contractAddr, enigmaContractAddr, operatorUrl, provider, ')');
-        // TODO: Remove when sig issue is resolved
-        this.patchedWeb3 = new Web3(new Web3.providers.HttpProvider('http://localhost:9545'));
+    constructor(operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
         this.ws = new WebSocket(operatorUrl);
         this.isConnected = new Promise((resolve) => {
@@ -51,15 +55,14 @@ class CoinjoinClient {
         });
         this.ee = new EventEmitter();
         /** @type EncryptionPubKey|null */
-        this.pubKeyData = null;
         this.blockCountdown = null;
         this.keyPair = null;
         this.threshold = null;
         this.quorum = 0;
-        // TODO: Should fetch addresses from server on init
-        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
-        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaContractAddr);
-        this.config = null;
+        // Initialized in the initAsync method after fetching the configuration
+        this.pubKeyData = null;
+        this.contract = null;
+        this.enigmaContract = null;
     }
 
     static obtainKeyPair() {
@@ -154,6 +157,10 @@ class CoinjoinClient {
         return messageBytes;
     }
 
+    /**
+     * Fetch the environment configuration parameters including contract address and encryption keys
+     * @returns {Promise<Config>}
+     */
     async fetchConfigAsync() {
         const promise = new Promise((resolve) => {
             this.ee.once(FETCH_CONFIG_SUCCESS, (result) => resolve(result.config));
@@ -169,6 +176,7 @@ class CoinjoinClient {
      * Init the client
      * 1- Wait for the WS client connection
      * 2- Fetch Ethereum accounts
+     * 3- Fetch the configuration parameters including contract addresses
      * @returns {Promise<void>}
      */
     async initAsync() {
@@ -176,12 +184,10 @@ class CoinjoinClient {
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this.isConnected;
         this.accounts = await this.web3.eth.getAccounts();
-        const config = await this.fetchConfigAsync();
-        const {saladAddr, enigmaAddr, pubKeyData} = config;
+        const {saladAddr, enigmaAddr, pubKeyData} = await this.fetchConfigAsync();
         this.pubKeyData = pubKeyData;
-        // TODO: Remove from the constructor
-        // this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
-        // this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
+        this.enigmaContract = new this.web3.eth.Contract(EnigmaContract['abi'], enigmaAddr);
     }
 
     /**
@@ -192,6 +198,9 @@ class CoinjoinClient {
         this.ws.close();
     }
 
+    /**
+     * Subscribing to the WS update messages
+     */
     watch() {
         const callback = (msg) => {
             msg = (msg.data) ? msg.data : msg;
@@ -339,7 +348,6 @@ class CoinjoinClient {
         debug('Deriving encryption from private key', privateKey);
         const derivedKey = utils.getDerivedKey(pubKey, privateKey);
         const recipientBytes = new Uint8Array(this.web3.utils.hexToBytes(recipient));
-        // const recipientBytes = recipient;
         return utils.encryptMessage(derivedKey, recipientBytes);
     }
 
@@ -422,6 +430,13 @@ class CoinjoinClient {
         return deals;
     }
 
+    /**
+     * Sign the message typed data using ERC-721
+     * Currently supports Metamask and Ganache
+     * @param {Object} data - The type data
+     * @param {string} sender - The signing address
+     * @returns {Promise<string>}
+     */
     async signMsgAsync(data, sender) {
         return new Promise((resolve, reject) => {
             function handleResult(err, result) {

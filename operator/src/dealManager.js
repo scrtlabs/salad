@@ -128,8 +128,9 @@ class DealManager {
             t: 'bytes',
             v: this.web3.utils.bytesToHex(dealIdMessage),
         });
-        const deal = {dealId, depositAmount, participants, nonce, _tx: null, status: DEAL_STATUS.NEW};
-        await this.store.insertDealAsync(deal);
+        /** @type Deal */
+        const deal = {dealId, depositAmount, participants, nonce, status: DEAL_STATUS.NEW, _tx: null, taskId: null};
+        await this.store.insertDealAsync(deal, participants);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,

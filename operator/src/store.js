@@ -151,28 +151,48 @@ class Store {
     /**
      * Insert Deal
      * @param {Deal} deal
+     * @param {Array<string>} participants
      */
-    async insertDealAsync(deal) {
+    async insertDealAsync(deal, participants) {
         const {dealId} = deal;
         deal._id = dealId;
         await this._insertRecordAsync(deal, DEALS_COLLECTION);
-        const query = {dealId: null};
+        const query = {dealId: null, sender: {$in: participants}};
         const newValues = {$set: {dealId}};
-        await this.db.collection(DEPOSITS_COLLECTION).updateMany(query, newValues);
+        const result = await this.db.collection(DEPOSITS_COLLECTION).updateMany(query, newValues);
+        if (result.modifiedCount !== participants.length) {
+            throw new Error(`Mismatching number of modified deposits: ${result.modifiedCount} !== ${participants.length}`);
+        }
     }
 
+    /**
+     * Update the deal document by dealId
+     * @param deal
+     * @returns {Promise<void>}
+     */
     async updateDealAsync(deal) {
         const query = {_id: deal.dealId};
         const record = {$set: {...deal}};
         await this.db.collection(DEALS_COLLECTION).updateOne(query, record);
     }
 
+    /**
+     * Query the fillable deposits (not yet assigned to deals)
+     * @param minimumAmount
+     * @returns {Promise<*>}
+     */
     async queryFillableDepositsAsync(minimumAmount) {
+        // TODO: Implement minimum deposit filter
         const query = {dealId: null};
         const result = await this.db.collection(DEPOSITS_COLLECTION).find(query);
         return result.toArray();
     }
 
+    /**
+     * Query Deals filtered by status code
+     * @param status
+     * @returns {Promise<Array<Deal>>}
+     */
     async queryDealsAsync(status) {
         const query = {status};
         const result = await this.db.collection(DEALS_COLLECTION).find(query);

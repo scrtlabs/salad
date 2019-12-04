@@ -42,22 +42,9 @@ class App extends Component {
         try {
             const web3 = await getWeb3();
             this.props.initializeWeb3(web3);
-            if (!SaladContract.networks[web3.networkId]) {
-                throw new Error('No contract found for network');
-            }
-            // TODO: Remove addresses for the constructor
-            const salad = new CoinjoinClient(
-                SaladContract.networks[web3.networkId].address,
-                EnigmaContract.networks[web3.networkId].address,
-                undefined,
-                web3
-            );
+            // TODO: Bootstrap the operator url during build
+            const salad = new CoinjoinClient( undefined, web3 );
             await salad.initAsync();
-            await new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve(true)
-                }, 3000);
-            });
             this.props.initializeSalad(salad);
         } catch (e) {
             console.error(e);
