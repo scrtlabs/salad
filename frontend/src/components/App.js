@@ -40,8 +40,8 @@ class App extends Component {
         try {
             const web3 = await getWeb3();
             this.props.initializeWeb3(web3);
-            // TODO: Bootstrap the operator url during build
-            const salad = new CoinjoinClient('http://salad_operator:8080', web3 );
+            const protocolHost = window.location.protocol + '//' + window.location.hostname;
+            const salad = new CoinjoinClient(process.env.REACT_APP_OPERATOR_URL || protocolHost, web3 );
             await salad.initAsync();
             this.props.initializeSalad(salad);
         } catch (e) {
