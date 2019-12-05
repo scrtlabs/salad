@@ -7,8 +7,6 @@ const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
-const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
-const {getEnigmaTokenContractAddress} = require('@salad/client/src/enigmaTokenSmartContract');
 const {recoverTypedSignature_v4} = require('eth-sig-util');
 
 /**
@@ -61,8 +59,8 @@ class OperatorApi {
     async fetchConfigAsync() {
         const scAddr = await this.store.fetchSecretContractAddr();
         const saladAddr = await this.store.fetchSmartContractAddr();
-        const enigmaAddr = await getEnigmaContractAddress();
-        const enigmaTokenAddr = await getEnigmaTokenContractAddress();
+        const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS;
+        const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS;
         const pubKeyData = await this.loadEncryptionPubKeyAsync();
         const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
         return {action: FETCH_CONFIG_SUCCESS, payload: {config}};

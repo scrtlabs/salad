@@ -10,17 +10,19 @@ const forge = require('node-forge');
 const EthCrypto = require('eth-crypto');
 
 let utils;
+let Enigma;
 let isNode = false;
 if (typeof window === 'undefined') {
     isNode = true;
-    utils = require('enigma-js/node').utils;
+    let enigma = require('enigma-js/node');
+    utils = enigma.utils;
+    Enigma = enigma.Enigma;
     WebSocket = require('ws');
 } else {
-    utils = require('enigma-js').utils;
+    let enigma = require('enigma-js');
+    utils = enigma.utils;
+    Enigma = enigma.Enigma;
 }
-
-const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
-const {getEnigmaTokenContractAddress} = require('@salad/client/src/enigmaTokenSmartContract');
 
 /**
  * @typedef {Object} DepositPayload
@@ -185,18 +187,15 @@ class CoinjoinClient {
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this.isConnected;
         this.accounts = await this.web3.eth.getAccounts();
-        const {saladAddr, pubKeyData} = await this.fetchConfigAsync();
+        const {saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData} = await this.fetchConfigAsync();
         this.pubKeyData = pubKeyData;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], saladAddr);
 
-        let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
-        let enigmaPort = process.env.ENIGMA_PORT || '3333';
-
         this.enigma = new Enigma(
             this.web3,
-            await getEnigmaContractAddress(),
-            await getEnigmaTokenContractAddress(),
-            'http://'+enigmaHost+':'+enigmaPort,
+            enigmaAddr,
+            enigmaTokenAddr,
+            null,  // We don't need to access the enigma network
             {
                 gas: 4712388,
                 gasPrice: 100000000000,

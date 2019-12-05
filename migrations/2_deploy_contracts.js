@@ -12,8 +12,6 @@ const debug = require('debug')('operator:server');
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-const {getEnigmaContractAddress} = require('@salad/client/src/enigmaSmartContract');
-const {getEnigmaTokenContractAddress} = require('@salad/client/src/enigmaTokenSmartContract');
 const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:9545`);
 const web3 = new Web3(provider);
 let enigma = null;
@@ -48,8 +46,8 @@ async function deploySecretContract(config, mixerEthAddress) {
     console.log('enigma host is at ' + 'http://'+enigmaHost+':'+enigmaPort);
     enigma = new Enigma(
         web3,
-        await getEnigmaContractAddress(),
-        await getEnigmaTokenContractAddress(),
+        process.env.ENIGMA_CONTRACT_ADDRESS,
+        process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS,
         'http://' + enigmaHost + ':' + enigmaPort,
         {
             gas: 4712388,
