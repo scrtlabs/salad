@@ -87,6 +87,7 @@ module.exports = async function (deployer, network, accounts) {
     let enigmaHost = (typeof process.env.ENIGMA_HOST === 'undefined') ? 'localhost' : process.env.ENIGMA_HOST;
     let enigmaPort = (typeof process.env.ENIGMA_PORT === 'undefined') ? '3333' : process.env.ENIGMA_PORT;
 
+    const sender = accounts[0];
     enigma = new Enigma(
         web3,
         EnigmaContract.networks[ethNetworkID].address,
@@ -95,7 +96,7 @@ module.exports = async function (deployer, network, accounts) {
         {
             gas: 4712388,
             gasPrice: 100000000000,
-            from: accounts[0],
+            from: sender,
         },
     );
     enigma.admin();
@@ -107,7 +108,7 @@ module.exports = async function (deployer, network, accounts) {
     const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
     const participationThreshold = process.env.PARTICIPATION_THRESHOLD;
     console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
-    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold);
+    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, sender, relayerFeePercent, participationThreshold);
     console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
     await store.insertSmartContractAddress(Salad.address);
 
@@ -117,7 +118,7 @@ module.exports = async function (deployer, network, accounts) {
         args: [],
         gasLimit: 2000000,
         gasPrice: utils.toGrains(0.001),
-        from: accounts[0]
+        from: sender
     };
     const scAddress = await deploySecretContract(config, Salad.address);
     await store.insertSecretContractAddress(scAddress);
