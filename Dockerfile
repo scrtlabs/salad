@@ -1,36 +1,46 @@
-FROM node:10.16.2-stretch
+FROM node:10-buster
 
-RUN \
-  apt-get update && \
-  apt-get -y upgrade && \
-  apt-get install -y build-essential && \
-  apt-get install -y software-properties-common && \
-  apt-get install -y curl git man unzip vim python \
-    ca-certificates file autoconf automake autotools-dev libtool \
-    xutils-dev
-
-# Rust stuff
-ENV SSL_VERSION=1.0.2s
-
-RUN curl https://www.openssl.org/source/openssl-$SSL_VERSION.tar.gz -O && \
-    tar -xzf openssl-$SSL_VERSION.tar.gz && \
-    cd openssl-$SSL_VERSION && ./config && make depend && make install && \
-    cd .. && rm -rf openssl-$SSL_VERSION*
-
-ENV OPENSSL_LIB_DIR=/usr/local/ssl/lib \
-    OPENSSL_INCLUDE_DIR=/usr/local/ssl/include \
-    OPENSSL_STATIC=1
-
-# install toolchain
-RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain nightly -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain nightly -y
 
 ENV PATH=/root/.cargo/bin:$PATH
-RUN rustup override set nightly-2019-07-04
 
-WORKDIR /root
-COPY /etc/start-build.sh start-build.sh
-RUN npm install -g yarn
+COPY rust-toolchain /root/salad/rust-toolchain
 
-ENTRYPOINT ["bash"]
-CMD ["/root/start-build.sh"]
+RUN export RUST_TOOLCHAIN=$(cat /root/salad/rust-toolchain) && \
+  rustup toolchain add $RUST_TOOLCHAIN --target wasm32-unknown-unknown
+
+COPY .env.template /root/salad/.env
+COPY client/ /root/salad/client/
+COPY config/ /root/salad/config/
+COPY docker-compose.cli-sw.yml /root/salad/docker-compose.cli-sw.yml
+COPY migrations/ /root/salad/migrations/
+COPY operator/ /root/salad/operator/
+COPY package.json /root/salad/package.json
+COPY secret_contracts/ /root/salad/secret_contracts/
+COPY smart_contracts/ /root/salad/smart_contracts/
+COPY test/ /root/salad/test/
+COPY truffle.js /root/salad/truffle.js
+COPY yarn.lock /root/salad/yarn.lock
+
+WORKDIR /root/salad
+RUN yarn install
+RUN yarn add -W async
+
+RUN sed -i "s/ETH_HOST=localhost/ETH_HOST=contract/" .env && \
+  sed -i "s/ENIGMA_HOST=localhost/ENIGMA_HOST=nginx/" .env && \
+  sed -i "s/MONGO_HOST=localhost/MONGO_HOST=mongo/" .env && \
+  sed -i "s/SGX_MODE=HW/SGX_MODE=SW/" .env
+
+RUN cp operator/.env.template operator/.env && \
+  sed -i "s/ETH_HOST=localhost/ETH_HOST=contract/" operator/.env && \
+  sed -i "s/ENIGMA_HOST=localhost/ENIGMA_HOST=nginx/" operator/.env && \
+  sed -i "s/MONGO_HOST=localhost/MONGO_HOST=mongo/" operator/.env
+
+RUN cp docker-compose.cli-sw.yml docker-compose.yml && \
+  sed -i "s/host: 'localhost'/host: 'contract'/" truffle.js
+
+RUN npx truffle compile
+RUN npx discovery compile
+
+ENTRYPOINT ["/usr/bin/env"]
+CMD ["/bin/bash"]
