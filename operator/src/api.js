@@ -172,7 +172,7 @@ class OperatorApi {
         debug('Evaluating deal creation in non-blocking scope');
         const deposits = await this.dealManager.balanceFillableDepositsAsync();
         // Using at least one participant multiplier to avoid running out of gas
-        const participantMultiplier = (deposits.length === 0) ? 1 : deposits.length;
+        const participantMultiplier = deposits.length || 1;
         const taskRecordOpts = {
             taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (participantMultiplier * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
