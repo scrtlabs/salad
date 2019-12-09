@@ -12,7 +12,8 @@ const debug = require('debug')('operator:server');
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:9545`);
+const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
+
 const web3 = new Web3(provider);
 let enigma = null;
 
@@ -106,13 +107,14 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
+    const sender = accounts[0];
     // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
     const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
     const participationThreshold = process.env.PARTICIPATION_THRESHOLD;
     console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
-    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold);
+    await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, sender, relayerFeePercent, participationThreshold);
     console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
     await store.insertSmartContractAddress(Salad.address);
 
@@ -122,7 +124,7 @@ module.exports = async function (deployer, network, accounts) {
         args: [],
         gasLimit: 2000000,
         gasPrice: utils.toGrains(0.001),
-        from: accounts[0]
+        from: sender
     };
     const scAddress = await deploySecretContract(config, Salad.address);
     await store.insertSecretContractAddress(scAddress);

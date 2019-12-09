@@ -1,0 +1,20 @@
+version: '3'
+
+services:
+
+  salad:
+    image: enigmampc/salad_client
+    container_name: salad
+    stdin_open: true
+    tty: true
+    networks:
+      - net
+    hostname: salad
+    environment:
+      - SGX_MODE
+    volumes:
+      - "${BUILD_CONTRACTS_PATH}:/root/salad/build/enigma_contracts"
+      - "shared:/root/.enigma"
+
+networks:
+    net:

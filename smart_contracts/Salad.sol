@@ -19,7 +19,7 @@ contract Salad is ISalad, Ownable {
         address[] recipients;
         DealStatus status;
     }
-    enum DealStatus {Undefined, Executable, Executed, Cancelled}
+    enum DealStatus {Undefined, Executable, Executed}
 
     struct Balance {
         uint amount;
@@ -28,6 +28,7 @@ contract Salad is ISalad, Ownable {
 
     mapping(bytes32 => Deal) public deals;
     mapping(address => Balance) public balances;
+    address[] authorizedRelayers;
     bytes32[] public dealIds;
     uint8 public depositLockPeriodInBlocks;
     uint8 public dealIntervalInBlocks;
@@ -47,12 +48,25 @@ contract Salad is ISalad, Ownable {
         _;
     }
 
-    constructor(uint8 _depositLockPeriodInBlocks, uint8 _dealIntervalInBlocks, uint8 _relayerFeePercent, uint8 _participationThreshold) public {
+    modifier onlyRelayer {
+        bool _authorized = false;
+        for (uint i = 0; i < authorizedRelayers.length; i++) {
+            if (authorizedRelayers[i] == msg.sender) {
+                _authorized = true;
+                break;
+            }
+        }
+        require(_authorized, "Relayer not authorized.");
+        _;
+    }
+
+    constructor(uint8 _depositLockPeriodInBlocks, uint8 _dealIntervalInBlocks, address _relayer, uint8 _relayerFeePercent, uint8 _participationThreshold) public {
         depositLockPeriodInBlocks = _depositLockPeriodInBlocks;
         dealIntervalInBlocks = _dealIntervalInBlocks;
         relayerFeePercent = _relayerFeePercent;
         participationThreshold = _participationThreshold;
         lastExecutionBlockNumber = block.number;
+        authorizedRelayers.push(_relayer);
     }
 
     function setDealInterval(uint8 _intervalInBlocks) public onlyOwner {
@@ -63,6 +77,18 @@ contract Salad is ISalad, Ownable {
         participationThreshold = _nbParticipants;
     }
 
+    function authorizeRelayer(address _relayer ) public onlyOwner {
+        authorizedRelayers.push(_relayer);
+    }
+
+    function denyRelayer(address _relayer) public onlyOwner {
+        for (uint i = 0; i < authorizedRelayers.length; i++) {
+           if (authorizedRelayers[i] == _relayer) {
+               delete authorizedRelayers[i];
+           }
+        }
+    }
+
     /**
     * Create a new Pending Deal
     *
@@ -71,7 +97,7 @@ contract Salad is ISalad, Ownable {
     * @param _nonce The nonce (operator's transaction count)
     */
     function newDeal(uint _amount, address[] memory _participants, uint _nonce)
-    public {
+    public onlyRelayer {
         uint newDealBlockNumber = lastExecutionBlockNumber.add(dealIntervalInBlocks);
         require(newDealBlockNumber < block.number, "Deal creation interval not reached");
         for (uint i = 0; i < _participants.length; i++) {
