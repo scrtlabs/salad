@@ -16,12 +16,12 @@ class SecretContractClient {
         this.accounts = [];
     }
 
-    async initAsync(engOpts) {
+    async initAsync(enigmaAddr, enigmaTokenAddr, engOpts) {
         const accounts = this.accounts = await this.web3.eth.getAccounts();
         this.enigma = new Enigma(
             this.web3,
-            process.env.ENIGMA_CONTRACT_ADDRESS,
-            process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS,
+            enigmaAddr,
+            enigmaTokenAddr,
             this.enigmaUrl,
             {
                 gas: engOpts.taskGasLimit,

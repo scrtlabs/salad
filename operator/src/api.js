@@ -47,7 +47,8 @@ class OperatorApi {
      */
     async initAsync() {
         await this.store.initAsync();
-        await this.sc.initAsync(this.defaultTaskRecordOpts);
+        const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
+        await this.sc.initAsync(enigmaAddr, enigmaTokenAddr, this.defaultTaskRecordOpts);
         this.active = true;
 
         process.on('SIGINT', async () => {
@@ -59,8 +60,9 @@ class OperatorApi {
     async fetchConfigAsync() {
         const scAddr = await this.store.fetchSecretContractAddr();
         const saladAddr = await this.store.fetchSmartContractAddr();
-        const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS;
-        const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS;
+        // const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS;
+        // const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS;
+        const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
         const pubKeyData = await this.loadEncryptionPubKeyAsync();
         const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
         return {action: FETCH_CONFIG_SUCCESS, payload: {config}};

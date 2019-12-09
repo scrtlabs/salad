@@ -76,6 +76,27 @@ class Store {
     }
 
     /**
+     * Insert Enigma contract addresses in cache
+     * @param {string} enigmaAddr
+     * @param {string} enigmaTokenAddr
+     * @returns {Promise<void>}
+     */
+    async insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr) {
+        const data = {_id: 'enigmaAddrs', addrs: {enigmaAddr, enigmaTokenAddr}};
+        await this._insertRecordAsync(data, CONFIG_COLLECTION);
+    }
+
+    /**
+     * Fetch the Enigma contract address from cache
+     * @returns {Promise<Map<string,string>>}
+     */
+    async fetchEnigmaContractAddrs() {
+        const query = {_id: 'enigmaAddrs'};
+        const data = await this.db.collection(CONFIG_COLLECTION).findOne(query);
+        return data.addrs;
+    }
+
+    /**
      * Insert Salad contract address in cache
      * @param {string} addr
      * @returns {Promise<void>}
