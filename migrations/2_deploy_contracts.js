@@ -29,6 +29,23 @@ if (process.env.ENIGMA_ENV === 'COMPOSE') {
     SECRET_CONTRACT_BUILD_FOLDER = '../build/secret_contracts';
 }
 
+function getEnigmaContractAddressFromJson() {
+    let enigmaContract;
+    if (process.env.SGX_MODE === 'SW') {
+        enigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
+    } else if (process.env.SGX_MODE === 'HW') {
+        enigmaContract = require('../build/enigma_contracts/Enigma.json');
+    } else {
+        throw new Error(`SGX_MODE must be set to either SW or HW`);
+    }
+    return enigmaContract.networks[process.env.ETH_NETWORK_ID];
+}
+
+function getEnigmaTokenContractAddressFromJson() {
+    const enigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
+    return enigmaTokenContract.networks[process.env.ETH_NETWORK_ID];
+}
+
 async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAddr) {
     debug(`Deploying Secret Contract "${config.filename}"...`);
     debug('The Enigma address / token address', enigmaAddr, enigmaTokenAddr);
@@ -108,27 +125,9 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    let enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS;
-    if (!enigmaAddr) {
-        let enigmaContract;
-        if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW' && process.env.SGX_MODE != 'HW')) {
-            debug(`Error reading ".env" file, aborting....`);
-            process.exit();
-        } else if (process.env.SGX_MODE === 'SW') {
-            enigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
-        } else {
-            enigmaContract = require('../build/enigma_contracts/Enigma.json');
-        }
-        // debug('The Enigma contract JSON', enigmaContract);
-        enigmaAddr = enigmaContract.networks[process.env.ETH_NETWORK_ID];
-    }
-    let enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS;
-    if (!enigmaTokenAddr) {
-        const enigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-        // debug('The Enigma token contract JSON', enigmaTokenContract);
-        enigmaTokenAddr = enigmaTokenContract.networks[process.env.ETH_NETWORK_ID];
-    }
-    // Adding the Enigma contract addresses to db to avoid importing the JSON files in any of the shared components
+    let enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || getEnigmaContractAddressFromJson();
+    let enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
+    // Adding the Enigma contract addresses to db to avoid re-fetching them from the environment in any of the shared components
     await store.insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr);
     const sender = accounts[0];
     // Deploy the Smart and Secret contracts:

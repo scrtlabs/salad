@@ -60,8 +60,6 @@ class OperatorApi {
     async fetchConfigAsync() {
         const scAddr = await this.store.fetchSecretContractAddr();
         const saladAddr = await this.store.fetchSmartContractAddr();
-        // const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS;
-        // const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS;
         const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
         const pubKeyData = await this.loadEncryptionPubKeyAsync();
         const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
