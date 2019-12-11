@@ -1,6 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
+const {DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
@@ -303,14 +303,13 @@ class OperatorApi {
 
     /**
      * Return the current Quorum value
-     * @returns {Promise<void>}
+     * @returns {Promise<OperatorAction>}
      */
-    async broadcastQuorumAsync(minimumAmount) {
+    async getQuorumAsync(minimumAmount) {
         // Sending current quorum on connection
         const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         const quorum = fillableDeposits.length;
-        debug('Broadcasting quorum', quorum);
-        this.ee.emit(QUORUM_UPDATE, quorum);
+        return {action: QUORUM_UPDATE, payload: {quorum}};
     }
 }
 

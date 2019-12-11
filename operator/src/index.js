@@ -13,30 +13,30 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
 
     const wss = new WebSocket.Server({port});
     debug('Starting the websocket server');
+
+    function broadcast(actionData) {
+        debug('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify(actionData));
+            }
+        });
+    }
+
+    // Subscribe to events to broadcast
+    api.onDealCreated(broadcast);
+    api.onDealExecuted(broadcast);
+    api.onQuorumNotReached(broadcast);
+    api.onQuorumUpdate(broadcast);
+    api.onBlock(broadcast);
+
     wss.on('connection', async function connection(ws) {
-
-        function broadcast(actionData) {
-            debug('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify(actionData));
-                }
-            });
-        }
-
-        // Subscribe to events to broadcast
-        api.onDealCreated(broadcast);
-        api.onDealExecuted(broadcast);
-        api.onQuorumNotReached(broadcast);
-        api.onQuorumUpdate(broadcast);
-        api.onBlock(broadcast);
-
         // Sending threshold on connection
         debug('Sending threshold value', threshold);
         const thresholdAction = api.getThreshold();
         ws.send(JSON.stringify(thresholdAction));
-
-        await api.broadcastQuorumAsync(0);
+        const quorumAction = await api.getQuorumAsync(0);
+        ws.send(JSON.stringify(quorumAction));
 
         ws.on('message', async function incoming(message) {
             debug('received: %s', message);

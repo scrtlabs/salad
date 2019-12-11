@@ -7,6 +7,7 @@ const {mineUntilDeal, mineBlock} = require('@salad/operator/src/ganacheUtils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
 const {Store} = require("@salad/operator");
+const {QUORUM_UPDATE} = require("@salad/client").actions;
 
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
@@ -302,7 +303,8 @@ describe('Salad', () => {
     }
 
     it('should verify that deposits withdrawn are no longer in store', async () => {
-        await server.broadcastQuorumAsync();
+        const action = await server.getQuorumAsync();
+        server.ee.emit(QUORUM_UPDATE, action.payload.quorum);
         await utils.sleep(300);
         expect(salad.quorum).to.equal(0);
         debug('');
