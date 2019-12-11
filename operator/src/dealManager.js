@@ -190,6 +190,10 @@ class DealManager {
         deal.status = DEAL_STATUS.EXECUTED;
         await this.store.updateDealAsync(deal);
         deal._tx = task.transactionHash;
+        // Updating the local last mix block number to be in sync with the smart contract
+        // And avoid triggering deals too early
+        const blockNumber = await this.contract.methods.lastExecutionBlockNumber().call();
+        await this.store.setLastMixBlockNumber(blockNumber);
     }
 
     /**
@@ -212,7 +216,7 @@ class DealManager {
      */
     async updateLastMixBlockNumberAsync() {
         const blockNumber = await this.web3.eth.getBlockNumber();
-        await this.store.setLastMixBlockNumber(blockNumber);
+        await this.store.setLastMixBlockNumber(blockNumber.toString());
     }
 
     /**
