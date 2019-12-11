@@ -1,7 +1,8 @@
 const actions = require('./actions');
-const {BLOCK_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS} = actions;
+const {BLOCK_UPDATE, QUORUM_UPDATE, THRESHOLD_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, SUBMIT_DEPOSIT_METADATA, SUBMIT_DEPOSIT_METADATA_RESULT, FETCH_FILLABLE_DEPOSITS, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG, FETCH_CONFIG_SUCCESS, PING} = actions;
 const debug = require('debug')('client');
 const {recoverTypedSignature_v4} = require('eth-sig-util');
+const uuidv4 = require('uuid/v4');
 debug.enabled = true;
 
 const EventEmitter = require('events');
@@ -45,7 +46,7 @@ const SaladContract = require('../../build/smart_contracts/Salad.json');
 class CoinjoinClient {
     constructor(operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
         this.web3 = new Web3(provider);
-        this.ws = new WebSocket(operatorUrl);
+        this.ws = new WebSocket(`${operatorUrl}?id=${uuidv4()}`);
         this.isConnected = new Promise((resolve) => {
             const callback = () => {
                 debug('Connected to server');
@@ -57,6 +58,7 @@ class CoinjoinClient {
             }
             this.ws.onopen = callback;
         });
+        this.isAlive = false;
         this.ee = new EventEmitter();
         /** @type EncryptionPubKey|null */
         this.blockCountdown = null;
@@ -186,6 +188,9 @@ class CoinjoinClient {
         this.watch();
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this.isConnected;
+        this.isAlive = true;
+        // Run in the background
+        this.heartbeat();
         this.accounts = await this.web3.eth.getAccounts();
         const {saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData} = await this.fetchConfigAsync();
         this.pubKeyData = pubKeyData;
@@ -206,11 +211,25 @@ class CoinjoinClient {
         this.enigma.setTaskKeyPair();
     }
 
+    async heartbeat() {
+        while (this.isAlive === true) {
+            this.ws.send(JSON.stringify({
+                action: PING,
+                payload: {}
+            }));
+            // TODO: Consider re-connecting here if pong doesn't come back to force keep the connection alive
+            await new Promise((resolve) => {
+                setTimeout(() => resolve(true), 3000);
+            });
+        }
+    }
+
     /**
      * Shutdown the WS client
      * @returns {Promise<void>}
      */
     async shutdownAsync() {
+        this.isAlive = false;
         this.ws.close();
     }
 

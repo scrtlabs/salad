@@ -12,3 +12,5 @@ exports.FETCH_FILLABLE_SUCCESS = 'fetchFillableDepositsSuccess';
 exports.FETCH_FILLABLE_ERROR = 'fetchFillableDepositsError';
 exports.FETCH_CONFIG_SUCCESS = 'fetchConfigSuccess';
 exports.FETCH_CONFIG = 'fetchConfig';
+exports.PING = 'ping';
+exports.PONG = 'pong';

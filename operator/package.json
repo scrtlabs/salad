@@ -12,6 +12,7 @@
     "mongodb": "^3.3.5",
     "node-forge": "^0.9.1",
     "supports-color": "^7.1.0",
+    "url-parse": "^1.4.7",
     "web3": "^1.2.4",
     "ws": "^7.1.2"
   },

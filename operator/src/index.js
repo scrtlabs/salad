@@ -1,9 +1,10 @@
 require('dotenv').config();
 const WebSocket = require('ws');
-const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS, FETCH_CONFIG} = require("@salad/client").actions;
+const {SUBMIT_DEPOSIT_METADATA, FETCH_FILLABLE_DEPOSITS, FETCH_CONFIG, PING, PONG} = require("@salad/client").actions;
 const {OperatorApi} = require('./api');
 const debug = require('debug')('operator');
 const {Store} = require("./store");
+const parse = require('url-parse');
 
 const port = process.env.WS_PORT;
 
@@ -12,17 +13,31 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     await api.initAsync();
 
     const wss = new WebSocket.Server({port});
-    debug('Starting the websocket server');
-    wss.on('connection', async function connection(ws) {
+    const WS_CLIENT_TIMEOUT = 5000;
 
-        function broadcast(actionData) {
-            debug('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
-            wss.clients.forEach(client => {
-                if (client.readyState === WebSocket.OPEN) {
+    function broadcast(actionData) {
+        debug('Broadcasting action', actionData, 'to', wss.clients.size, 'clients');
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                debug('Found client', client.uid);
+                const timeout = Date.now() - WS_CLIENT_TIMEOUT;
+                debug('Comparing last ping / timeout', client.lastPing, timeout);
+                if (client.lastPing > timeout) {
+                    debug('Broadcasting to client', client);
                     client.send(JSON.stringify(actionData));
+                } else {
+                    debug('Terminating expired connection for client', client.uid);
+                    client.terminate();
                 }
-            });
-        }
+            }
+        });
+    }
+
+    debug('Starting the websocket server');
+    wss.on('connection', async function connection(ws, req) {
+        const params = parse(req.url, true);
+        ws.uid = params.query.id;
+        ws.lastPing = Date.now();
 
         // Subscribe to events to broadcast
         api.onDealCreated(broadcast);
@@ -31,19 +46,25 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         api.onQuorumUpdate(broadcast);
         api.onBlock(broadcast);
 
-        // Sending threshold on connection
-        debug('Sending threshold value', threshold);
+        // Sending threshold and quorum on connection
+        // Send to the connected client only
         const thresholdAction = api.getThreshold();
         ws.send(JSON.stringify(thresholdAction));
-
-        await api.broadcastQuorumAsync(0);
+        const quorumAction = await api.getQuorumAsync(0);
+        ws.send(JSON.stringify(quorumAction));
 
         ws.on('message', async function incoming(message) {
             debug('received: %s', message);
+            wss.clients.forEach((client) => {
+                if (client.uid === ws.uid) {
+                    ws.lastPing = Date.now();
+                    return true;
+                }
+            });
             const {action, payload} = JSON.parse(message);
             switch (action) {
-                case 'ping':
-                    ws.send(JSON.stringify({action: 'pong', payload: {}}));
+                case PING:
+                    ws.send(JSON.stringify({action: PONG, payload: {}}));
                     break;
                 case FETCH_CONFIG:
                     const configAction = await api.fetchConfigAsync();
