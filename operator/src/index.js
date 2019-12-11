@@ -33,18 +33,18 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
         });
     }
 
+    // Subscribe to events to broadcast
+    api.onDealCreated(broadcast);
+    api.onDealExecuted(broadcast);
+    api.onQuorumNotReached(broadcast);
+    api.onQuorumUpdate(broadcast);
+    api.onBlock(broadcast);
+
     debug('Starting the websocket server');
     wss.on('connection', async function connection(ws, req) {
         const params = parse(req.url, true);
         ws.uid = params.query.id;
         ws.lastPing = Date.now();
-
-        // Subscribe to events to broadcast
-        api.onDealCreated(broadcast);
-        api.onDealExecuted(broadcast);
-        api.onQuorumNotReached(broadcast);
-        api.onQuorumUpdate(broadcast);
-        api.onBlock(broadcast);
 
         // Sending threshold and quorum on connection
         // Send to the connected client only
