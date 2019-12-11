@@ -31,6 +31,7 @@
     "compile": "yarn dc compile",
     "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
     "integration-test": "mocha --exit integration_tests/",
+    "test-q": "mocha --exit integration_tests/reach_quorum.test.js",
     "migrate": "yarn dc migrate",
     "mocha": "mocha"
   },
