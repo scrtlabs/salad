@@ -177,11 +177,12 @@ class OperatorApi {
             taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (participantMultiplier * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
         };
+        debug('Updating the last mix block number');
+        await this.dealManager.updateLastMixBlockNumberAsync();
         /** @type string */
         const depositAmount = DealManager.getDepositAmount(this.web3, deposits);
         if (deposits.length >= this.threshold) {
             debug('Quorum reached with deposits', deposits);
-            await this.dealManager.updateLastMixBlockNumberAsync();
             debug('Creating new deal on Ethereum');
             const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
             debug('Broadcasting new deal', deal);
