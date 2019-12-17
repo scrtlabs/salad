@@ -9,6 +9,11 @@ module.exports = {
             port: 9545,
             network_id: '4447' // Match ganache network id
         },
+        compose: {
+            host: 'contract',
+            port: 9545,
+            network_id: '4447' // Match ganache network id
+        },
     },
     solc: {
         // Turns on the Solidity optimizer. For development the optimizer's
@@ -22,4 +27,4 @@ module.exports = {
             runs: 200
         }
     }
-}
+};

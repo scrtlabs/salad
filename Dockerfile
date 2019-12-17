@@ -28,13 +28,13 @@ RUN yarn add -W async
 
 RUN sed -i "s/ETH_HOST=localhost/ETH_HOST=contract/" .env && \
   sed -i "s/ENIGMA_HOST=localhost/ENIGMA_HOST=nginx/" .env && \
-  sed -i "s/MONGO_HOST=localhost/MONGO_HOST=mongo/" .env && \
+  sed -i "s/localhost:27017/mongo:27017/" .env && \
   sed -i "s/SGX_MODE=HW/SGX_MODE=SW/" .env
 
 RUN cp operator/.env.template operator/.env && \
   sed -i "s/ETH_HOST=localhost/ETH_HOST=contract/" operator/.env && \
   sed -i "s/ENIGMA_HOST=localhost/ENIGMA_HOST=nginx/" operator/.env && \
-  sed -i "s/MONGO_HOST=localhost/MONGO_HOST=mongo/" operator/.env
+  sed -i "s/localhost:27017/mongo:27017/" operator/.env
 
 RUN cp docker-compose.cli-sw.yml docker-compose.yml && \
   sed -i "s/host: 'localhost'/host: 'contract'/" truffle.js

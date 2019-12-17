@@ -8,7 +8,7 @@ const CONFIG_COLLECTION = 'config';
 
 class Store {
     constructor() {
-        this._url = `mongodb://${process.env.MONGO_HOST}:${process.env.MONGO_PORT}`;
+        this._url = `${process.env.MONGO_URL}` || 'mongodb://localhost:27017/';
         this._dbName = process.env.DB_NAME;
     }
 
@@ -73,6 +73,27 @@ class Store {
     async insertSmartContractAddress(addr) {
         const data = {_id: 'saladContractAddr', addr};
         await this._insertRecordAsync(data, CONFIG_COLLECTION);
+    }
+
+    /**
+     * Insert Enigma contract addresses in cache
+     * @param {string} enigmaAddr
+     * @param {string} enigmaTokenAddr
+     * @returns {Promise<void>}
+     */
+    async insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr) {
+        const data = {_id: 'enigmaAddrs', addrs: {enigmaAddr, enigmaTokenAddr}};
+        await this._insertRecordAsync(data, CONFIG_COLLECTION);
+    }
+
+    /**
+     * Fetch the Enigma contract address from cache
+     * @returns {Promise<Map<string,string>>}
+     */
+    async fetchEnigmaContractAddrs() {
+        const query = {_id: 'enigmaAddrs'};
+        const data = await this.db.collection(CONFIG_COLLECTION).findOne(query);
+        return data.addrs;
     }
 
     /**

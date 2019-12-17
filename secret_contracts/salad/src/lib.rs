@@ -73,47 +73,44 @@ impl Contract {
         user_pubkey: &[u8; PUB_KEY_SIZE],
         chain_id: &U256,
     ) -> H160 {
-        eprint!("Verifying signature: {:?}", signature.to_vec());
+        eprint!("Verifying signature: {:?}", signature.as_ref());
         let mut message: Vec<u8> = Vec::new();
         // EIP191 header for EIP712 prefix
         message.extend_from_slice(b"\x19\x01");
 
         let mut domain_message: Vec<u8> = Vec::new();
-        let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256().to_vec();
-        let domain_name_hash = b"Salad Deposit".keccak256().to_vec();
-        let domain_version_hash = b"1".keccak256().to_vec();
-        let chain_id_param = H256::from(chain_id).to_vec();
-        domain_message.extend_from_slice(&eip712_domain_seperator);
-        domain_message.extend_from_slice(&domain_name_hash);
-        domain_message.extend_from_slice(&domain_version_hash);
-        domain_message.extend_from_slice(&chain_id_param);
-        let domain_hash = domain_message.keccak256().to_vec();
-        message.extend_from_slice(&domain_hash);
+        let eip712_domain_seperator = b"EIP712Domain(string name,string version,uint256 chainId)".keccak256();
+        let domain_name_hash = b"Salad Deposit".keccak256();
+        let domain_version_hash = b"1".keccak256();
+        let chain_id = H256::from(chain_id);
+        domain_message.extend_from_slice(eip712_domain_seperator.as_ref());
+        domain_message.extend_from_slice(domain_name_hash.as_ref());
+        domain_message.extend_from_slice(domain_version_hash.as_ref());
+        domain_message.extend_from_slice(chain_id.as_ref());
+
+        let domain_hash = domain_message.keccak256();
+        message.extend_from_slice(domain_hash.as_ref());
 
         let mut deposit_message: Vec<u8> = Vec::new();
-        let deposit_seperator_hash = b"Deposit(address sender,uint256 amount,bytes encRecipient,bytes pubKey)".keccak256().to_vec();
-        deposit_message.extend_from_slice(&deposit_seperator_hash);
+        let deposit_seperator_hash = b"Deposit(address sender,uint256 amount,bytes encRecipient,bytes pubKey)".keccak256();
+        deposit_message.extend_from_slice(deposit_seperator_hash.as_ref());
         eprint!("The sender: {:?}", sender);
         // addresses must be resized to 32 bytes
-        let sender_prefix: [u8; 12] = [0; 12];
-        let mut sender_part = sender_prefix.to_vec();
-        sender_part.extend_from_slice(&sender.to_vec());
+        let mut sender_part = vec![0_u8; 12];
+        sender_part.extend_from_slice(sender.as_ref());
         eprint!("The resized sender: {:?}", sender_part);
         deposit_message.extend_from_slice(&sender_part);
         deposit_message.extend_from_slice(&H256::from(amount));
         // bytes must be keccak hashes
-        let enc_recipient_hash = enc_recipient.keccak256().to_vec();
-        let user_pubkey_hash = user_pubkey.keccak256().to_vec();
-        deposit_message.extend_from_slice(&enc_recipient_hash);
-        deposit_message.extend_from_slice(&user_pubkey_hash);
+        deposit_message.extend_from_slice(enc_recipient.keccak256().as_ref());
+        deposit_message.extend_from_slice(user_pubkey.keccak256().as_ref());
         eprint!("The typed deposit message: {:?}", deposit_message);
 
-        let deposit_hash = deposit_message.keccak256().to_vec();
-        message.extend_from_slice(&deposit_hash);
+        message.extend_from_slice(deposit_message.keccak256().as_ref());
         eprint!("The typed data message: {:?}", message);
 
         let sender_pubkey = KeyPair::recover(&message, signature).unwrap();
-        let mut sender_raw = [0u8; 20];
+        let mut sender_raw = [0_u8; 20];
         sender_raw.copy_from_slice(&sender_pubkey.keccak256()[12..32]);
         let sender = H160::from(&sender_raw);
         eprint!("Recovered sender: {:?}", sender);
@@ -126,7 +123,7 @@ impl Contract {
         operator_address: &H160,
         operator_nonce: &U256,
     ) -> H256 {
-        let u32_prefix: [u8; 4] = [0; 4];
+        let u32_prefix = [0_u8; 4];
         let mut message: Vec<u8> = Vec::new();
         message.extend_from_slice(&u32_prefix);
         message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
@@ -145,8 +142,8 @@ impl Contract {
         message.extend_from_slice(&UNIT256_SIZE.to_be_bytes());
         message.extend_from_slice(&H256::from(operator_nonce));
         eprint!("The DealId message: {:?}", message);
-        let mut hash_raw: [u8; 32] = [0; 32];
-        hash_raw.copy_from_slice(&message.keccak256().to_vec());
+        let mut hash_raw = [0_u8; 32];
+        hash_raw.copy_from_slice(&message.keccak256().as_ref());
         H256::from(&hash_raw)
     }
 
@@ -169,9 +166,12 @@ impl Contract {
         let keypair = Self::get_keypair();
         for i in 0..nb_participants {
             eprint!("Decrypting recipient {}: {:?}", i, enc_recipients[i]);
-            let mut user_pubkey = [0; PUB_KEY_SIZE];
-            user_pubkey.copy_from_slice(&pub_keys[i]);
-            eprint!("The user pubKey: {:?}", user_pubkey.to_vec());
+            let user_pubkey = {
+                let mut key = [0; PUB_KEY_SIZE];
+                key.copy_from_slice(&pub_keys[i]);
+                key
+            };
+            eprint!("The user pubKey: {:?}", &user_pubkey[..]);
 
             let shared_key = keypair.derive_key(&user_pubkey).unwrap();
             let plaintext = decrypt(&enc_recipients[i], &shared_key);

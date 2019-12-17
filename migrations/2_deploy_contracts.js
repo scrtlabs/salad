@@ -8,26 +8,13 @@ const {Store} = require("@salad/operator");
 const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
-const debug = require('debug')('operator:server');
+const debug = require('debug')('deploy');
+debug.enabled = true;
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
-let EnigmaContract;
-if (typeof process.env.SGX_MODE === 'undefined' || (process.env.SGX_MODE != 'SW' && process.env.SGX_MODE != 'HW')) {
-    console.log(`Error reading ".env" file, aborting....`);
-    process.exit();
-} else if (process.env.SGX_MODE == 'SW') {
-    EnigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
-} else {
-    EnigmaContract = require('../build/enigma_contracts/Enigma.json');
-}
-const EnigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
+const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
 
-const ethHost = process.env.ETH_HOST || 'localhost'
-const ethPort = process.env.ETH_PORT || '9545'
-
-
-const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
 const web3 = new Web3(provider);
 let enigma = null;
 
@@ -35,17 +22,74 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function deploySecretContract(config, mixerEthAddress) {
+let SECRET_CONTRACT_BUILD_FOLDER = null;
+if (process.env.ENIGMA_ENV === 'COMPOSE') {
+    // In the docker compose environment, this file is provided in the root directory of the project
+    SECRET_CONTRACT_BUILD_FOLDER = '..';
+} else {
+    SECRET_CONTRACT_BUILD_FOLDER = '../build/secret_contracts';
+}
+
+function getEnigmaContractAddressFromJson() {
+    let enigmaContract;
+    if (process.env.SGX_MODE === 'SW') {
+        enigmaContract = require('../build/enigma_contracts/EnigmaSimulation.json');
+    } else if (process.env.SGX_MODE === 'HW') {
+        enigmaContract = require('../build/enigma_contracts/Enigma.json');
+    } else {
+        throw new Error(`SGX_MODE must be set to either SW or HW`);
+    }
+    return enigmaContract.networks[process.env.ETH_NETWORK_ID].address;
+}
+
+function getEnigmaTokenContractAddressFromJson() {
+    const enigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
+    return enigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
+}
+
+async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAddr) {
     debug(`Deploying Secret Contract "${config.filename}"...`);
+    debug('The Enigma address / token address', enigmaAddr, enigmaTokenAddr);
     let scTask;
     let preCode;
     try {
-        preCode = fs.readFileSync(path.resolve(migrationsFolder, '../build/secret_contracts', config.filename));
+        preCode = fs.readFileSync(path.resolve(migrationsFolder, SECRET_CONTRACT_BUILD_FOLDER, config.filename));
     } catch (e) {
-        console.log('Error:', e.stack);
+        debug('Error:', e.stack);
     }
     const {args} = config;
-    args.push([mixerEthAddress, 'address']);
+    args.push([saladAddr, 'address']);
+
+    let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
+    let enigmaPort = process.env.ENIGMA_PORT || '3333';
+
+    debug('enigma host is at ' + 'http://' + enigmaHost + ':' + enigmaPort);
+    enigma = new Enigma(
+        web3,
+        enigmaAddr,
+        enigmaTokenAddr,
+        'http://' + enigmaHost + ':' + enigmaPort,
+        {
+            gas: 4712388,
+            gasPrice: 100000000000,
+            from: config.from,
+        },
+    );
+    enigma.admin();
+    enigma.setTaskKeyPair();
+
+    // Waiting for a worker to register with the enigma network:
+    while (true) {
+        debug('waiting for a worker to register to the enigma network');
+        await sleep(5000);
+        const blockNumber = await web3.eth.getBlockNumber();
+        const worker_params = await enigma.getWorkerParams(blockNumber);
+        debug('worker params := ' + JSON.stringify(worker_params));
+        if (worker_params.workers.length >= 1) {
+            break;
+        }
+    }
+
     scTask = await new Promise((resolve, reject) => {
         enigma.deploySecretContract(config.fn, args, config.gasLimit, config.gasPrice, config.from, preCode)
             .on(eeConstants.DEPLOY_SECRET_CONTRACT_RESULT, (receipt) => resolve(receipt))
@@ -54,67 +98,48 @@ async function deploySecretContract(config, mixerEthAddress) {
 
     // Wait for the confirmed deploy contract task
     do {
-        await sleep(1000);
+        debug('waiting for the secret contract to finish deploying.');
+        await sleep(5000);
         try {
             scTask = await enigma.getTaskRecordStatus(scTask);
         } catch (e) {
-            console.error('Unable to deploy', e);
+            debug('Unable to deploy', e);
         }
-        process.stdout.write('Waiting. Current Task Status is ' + scTask.ethStatus + '\r');
+        debug('Waiting. Current Task Status is ' + scTask.ethStatus);
     } while (scTask.ethStatus === 1);
-    process.stdout.write('Completed. Final Task Status is ' + scTask.ethStatus + '\n');
+    debug('Completed. Final Task Status is ' + scTask.ethStatus);
 
-    console.log('SC ADDRESS', scTask.scAddr);
+    debug('SC ADDRESS', scTask.scAddr);
 
     // Verify deployed contract
-    const result = await enigma.admin.isDeployed(scTask.scAddr);
-    if (result) {
-        // fs.writeFile(path.resolve(migrationsFolder, '../test/', config.filename.replace(/\.wasm$/, '.txt')), scTask.scAddr, 'utf8', function (err) {
-        //     if (err) {
-        //         return console.log(err);
-        //     }
-        // });
-
+    if (await enigma.admin.isDeployed(scTask.scAddr)) {
         return scTask.scAddr;
     } else {
-        console.log('Something went wrong deploying Secret Contract:', scTask.scAddr, ', aborting');
-        console.log(scTask);
+        debug('Something went wrong deploying Secret Contract:', scTask.scAddr, ', aborting');
+        debug(scTask);
         process.exit();
     }
 }
 
 module.exports = async function (deployer, network, accounts) {
+    debug('Deploying Salad contracts');
     const store = new Store();
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    const ethNetworkID = process.env.ETH_NETWORK_ID || '4447';
-    const enigmaHost = process.env.ENIGMA_HOST || 'localhost';
-    const enigmaPort = process.env.ENIGMA_PORT || '3333';
-
+    const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || getEnigmaContractAddressFromJson();
+    const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
+    // Adding the Enigma contract addresses to db to avoid re-fetching them from the environment in any of the shared components
+    await store.insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr);
     const sender = accounts[0];
-    enigma = new Enigma(
-        web3,
-        EnigmaContract.networks[ethNetworkID].address,
-        EnigmaTokenContract.networks[ethNetworkID].address,
-        'http://'+enigmaHost+':'+enigmaPort,
-        {
-            gas: 4712388,
-            gasPrice: 100000000000,
-            from: sender,
-        },
-    );
-    enigma.admin();
-    enigma.setTaskKeyPair();
-
     // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
     const relayerFeePercent = process.env.RELAYER_FEE_PERCENT;
     const participationThreshold = process.env.PARTICIPATION_THRESHOLD;
-    console.log('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
+    debug('Deploying Salad(', depositLockPeriodInBlocks, dealIntervalInBlocks, relayerFeePercent, participationThreshold, ')');
     await deployer.deploy(Salad, depositLockPeriodInBlocks, dealIntervalInBlocks, sender, relayerFeePercent, participationThreshold);
-    console.log(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
+    debug(`Smart Contract "Salad.Sol" has been deployed at ETH address: ${Salad.address}`);
     await store.insertSmartContractAddress(Salad.address);
 
     const config = {
@@ -125,8 +150,8 @@ module.exports = async function (deployer, network, accounts) {
         gasPrice: utils.toGrains(0.001),
         from: sender
     };
-    const scAddress = await deploySecretContract(config, Salad.address);
+    const scAddress = await deploySecretContract(config, Salad.address, enigmaAddr, enigmaTokenAddr);
     await store.insertSecretContractAddress(scAddress);
-    console.log(`Secret Contract "${config.filename}" deployed at Enigma address: ${scAddress}`);
+    debug(`Secret Contract "${config.filename}" deployed at Enigma address: ${scAddress}`);
     await store.closeAsync();
 };

@@ -1,19 +1,12 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
-const {PUB_KEY_UPDATE, DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
+const {DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
 const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
 const {CoinjoinClient} = require('@salad/client');
 const debug = require('debug')('operator:api');
-var EnigmaContract = null;
-if (typeof process.env.SGX_MODE !== 'undefined' && process.env.SGX_MODE == 'SW') {
-  EnigmaContract = require('../../build/enigma_contracts/EnigmaSimulation');
-} else {
-  EnigmaContract = require('../../build/enigma_contracts/Enigma');
-}
-const EnigmaTokenContract = require('../../build/enigma_contracts/EnigmaToken.json');
 const {recoverTypedSignature_v4} = require('eth-sig-util');
 
 /**
@@ -54,7 +47,8 @@ class OperatorApi {
      */
     async initAsync() {
         await this.store.initAsync();
-        await this.sc.initAsync(this.defaultTaskRecordOpts);
+        const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
+        await this.sc.initAsync(enigmaAddr, enigmaTokenAddr, this.defaultTaskRecordOpts);
         this.active = true;
 
         process.on('SIGINT', async () => {
@@ -66,9 +60,7 @@ class OperatorApi {
     async fetchConfigAsync() {
         const scAddr = await this.store.fetchSecretContractAddr();
         const saladAddr = await this.store.fetchSmartContractAddr();
-        const networkId = await this.web3.eth.net.getId();
-        const enigmaAddr = EnigmaContract.networks[networkId].address;
-        const enigmaTokenAddr = EnigmaTokenContract.networks[networkId].address;
+        const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
         const pubKeyData = await this.loadEncryptionPubKeyAsync();
         const config = {scAddr, saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData};
         return {action: FETCH_CONFIG_SUCCESS, payload: {config}};
@@ -180,7 +172,7 @@ class OperatorApi {
         debug('Evaluating deal creation in non-blocking scope');
         const deposits = await this.dealManager.balanceFillableDepositsAsync();
         // Using at least one participant multiplier to avoid running out of gas
-        const participantMultiplier = (deposits.length === 0) ? 1 : deposits.length;
+        const participantMultiplier = deposits.length || 1;
         const taskRecordOpts = {
             taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (participantMultiplier * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
             taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
@@ -311,14 +303,13 @@ class OperatorApi {
 
     /**
      * Return the current Quorum value
-     * @returns {Promise<void>}
+     * @returns {Promise<OperatorAction>}
      */
-    async broadcastQuorumAsync(minimumAmount) {
+    async getQuorumAsync(minimumAmount) {
         // Sending current quorum on connection
         const fillableDeposits = await this.dealManager.balanceFillableDepositsAsync(minimumAmount);
         const quorum = fillableDeposits.length;
-        debug('Broadcasting quorum', quorum);
-        this.ee.emit(QUORUM_UPDATE, quorum);
+        return {action: QUORUM_UPDATE, payload: {quorum}};
     }
 }
 

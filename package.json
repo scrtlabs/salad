@@ -6,23 +6,33 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {
+  "devDependencies": {
     "@enigmampc/discovery-cli": "0.1.8",
+    "mocha": "^6.2.2"
+  },
+  "dependencies": {
     "@salad/client": "0.1.0",
     "@salad/operator": "0.1.0",
     "core-js": "^3.4.5",
     "debug": "^4.1.1",
     "dotenv": "^8.2.0",
     "enigma-js": "0.3.0",
-    "mocha": "^6.2.2",
     "openzeppelin-solidity": "^2.4.0",
     "supports-color": "^7.1.0"
   },
   "scripts": {
     "clean-run-operator": "yarn dc migrate && node ./operator/src/server.js -t -i",
     "run-operator": "node ./operator/src/server.js",
+    "dc": "discovery",
+    "configure": "scripts/configure.sh",
+    "configure-sw": "SGX_MODE=SW scripts/configure.sh",
+    "start": "yarn dc start",
+    "stop": "yarn dc stop",
+    "compile": "yarn dc compile",
     "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
-    "dc": "node ./node_modules/@enigmampc/discovery-cli/src/index.js"
+    "integration-test": "mocha --exit integration_tests/",
+    "migrate": "yarn dc migrate",
+    "mocha": "mocha"
   },
   "author": "",
   "license": "ISC",

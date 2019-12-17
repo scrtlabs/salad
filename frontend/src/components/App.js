@@ -14,9 +14,7 @@ import Notifier from './Notifier';
 import {initializeWeb3, initializeSalad} from '../actions';
 
 import getWeb3 from '../utils/getWeb3';
-import SaladContract from '../build/smart_contracts/Salad';
 import {CoinjoinClient} from "@salad/client";
-import EnigmaContract from "../build/enigma_contracts/Enigma";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
 const styles = theme => ({
@@ -42,8 +40,8 @@ class App extends Component {
         try {
             const web3 = await getWeb3();
             this.props.initializeWeb3(web3);
-            // TODO: Bootstrap the operator url during build
-            const salad = new CoinjoinClient( undefined, web3 );
+            const protocolHost = window.location.protocol + '//' + window.location.hostname;
+            const salad = new CoinjoinClient(process.env.REACT_APP_OPERATOR_URL || protocolHost, web3 );
             await salad.initAsync();
             this.props.initializeSalad(salad);
         } catch (e) {
