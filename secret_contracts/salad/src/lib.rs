@@ -1,5 +1,5 @@
 use eng_wasm::*;
-use eng_wasm::{String, Vec, H160, H256, U256, eprint, decrypt, generate_key, SymmetricKey};
+use eng_wasm::{String, Vec, H160, H256, U256, eprint, decrypt, generate_key, SymmetricKey, Rand};
 use eng_wasm_derive::eth_contract;
 use eng_wasm_derive::pub_interface;
 use enigma_crypto::hash::Keccak256;
@@ -238,10 +238,9 @@ impl ContractInterface for Contract {
             senders.clone(),
             signatures,
             chain_id);
-        // TODO: Use the rand service
-        let seed = 10;
+        let seed: u64 = Rand::gen();
         for i in (0..recipients.len()).rev() {
-            let j = seed % (i + 1);
+            let j = seed as usize % (i + 1);
             let recipient = recipients[j];
             recipients[j] = recipients[i];
             recipients[i] = recipient;
