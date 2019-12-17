@@ -194,6 +194,7 @@ describe('Salad', () => {
 
         it('should verify the deal execution', async () => {
             const {deal} = await executedDealPromise;
+            await utils.sleep(300);
             debug('Executed deal', deal);
             const distributeReceipts = await salad.contract.getPastEvents('Distribute', {
                 filter: {},
