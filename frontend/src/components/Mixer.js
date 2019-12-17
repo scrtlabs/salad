@@ -238,7 +238,7 @@ class Mixer extends Component {
                                 The anonymity set is <b>{deal.participants.length}</b>.
                             </p>
                             <p>
-                                {web3.utils.fromWei(deal.depositAmount, 'ether')} ETH {(isPending) ? 'will be' : 'have been'} transferred to you recipient account.
+                                {web3.utils.fromWei(deal.depositAmount, 'ether')} ETH {(isPending) ? 'will be' : 'has been'} transferred to your recipient account.
                             </p>
                             <p>
                                 Deal Id <b>{deal.dealId}</b>
