@@ -9,6 +9,7 @@ const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
 const debug = require('debug')('deploy');
+debug.enabled = true;
 
 const migrationsFolder = process.cwd();   // save it because it changes later on...
 
@@ -38,12 +39,12 @@ function getEnigmaContractAddressFromJson() {
     } else {
         throw new Error(`SGX_MODE must be set to either SW or HW`);
     }
-    return enigmaContract.networks[process.env.ETH_NETWORK_ID];
+    return enigmaContract.networks[process.env.ETH_NETWORK_ID].address;
 }
 
 function getEnigmaTokenContractAddressFromJson() {
     const enigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
-    return enigmaTokenContract.networks[process.env.ETH_NETWORK_ID];
+    return enigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
 }
 
 async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAddr) {
@@ -121,12 +122,13 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
 }
 
 module.exports = async function (deployer, network, accounts) {
+    debug('Deploying Salad contracts');
     const store = new Store();
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    let enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || getEnigmaContractAddressFromJson();
-    let enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
+    const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || getEnigmaContractAddressFromJson();
+    const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
     // Adding the Enigma contract addresses to db to avoid re-fetching them from the environment in any of the shared components
     await store.insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr);
     const sender = accounts[0];

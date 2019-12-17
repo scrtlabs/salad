@@ -29,7 +29,7 @@
     "start": "yarn dc start",
     "stop": "yarn dc stop",
     "compile": "yarn dc compile",
-    "test": "yarn dc compile && mocha --exit ./test/api.test.js",
+    "test": "yarn dc migrate && mocha --exit ./test/api.test.js",
     "integration-test": "mocha --exit integration_tests/",
     "migrate": "yarn dc migrate",
     "mocha": "mocha"
