@@ -20,11 +20,11 @@ describe('Salad', () => {
     let accounts;
     let saladContractAddr;
     let store;
+    let enigmaContract;
     const threshold = parseInt(process.env.PARTICIPATION_THRESHOLD);
     const anonSetSize = threshold;
     const ethHost = process.env.ETH_HOST || 'localhost';
     const ethPort = process.env.ETH_PORT || '9545';
-    const ethNetworkId = process.env.ETH_NETWORK_ID || '4447';
     const provider = new Web3.providers.HttpProvider('http://'+ethHost+':'+ethPort);
     const web3 = new Web3(provider);
     before(async () => {
@@ -43,6 +43,7 @@ describe('Salad', () => {
         await server.store.truncate(DEALS_COLLECTION);
         await server.store.truncate(CACHE_COLLECTION);
 
+        enigmaContract = server.dealManager.scClient.enigma.enigmaContract;
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
         salad = new CoinjoinClient(operatorUrl, provider);
         // Always shutdown the WS server when tests end
@@ -194,10 +195,6 @@ describe('Salad', () => {
         it('should verify the deal execution', async () => {
             const {deal} = await executedDealPromise;
             debug('Executed deal', deal);
-            const {enigmaContract} = salad;
-            const taskRecord = await enigmaContract.methods.getTaskRecord(deal.taskId).call();
-            debug('The task record', taskRecord);
-
             const distributeReceipts = await salad.contract.getPastEvents('Distribute', {
                 filter: {},
                 fromBlock: lastDepositBlockNumber,
