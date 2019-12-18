@@ -22,13 +22,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-let SECRET_CONTRACT_BUILD_FOLDER = null;
-if (process.env.ENIGMA_ENV === 'COMPOSE') {
-    // In the docker compose environment, this file is provided in the root directory of the project
-    SECRET_CONTRACT_BUILD_FOLDER = '..';
-} else {
-    SECRET_CONTRACT_BUILD_FOLDER = '../build/secret_contracts';
-}
+let SECRET_CONTRACT_BUILD_FOLDER = process.env.SECRET_CONTRACT_BUILD_FOLDER || '../build/secret_contracts';
 
 function getEnigmaContractAddressFromJson() {
     let enigmaContract;
