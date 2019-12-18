@@ -14,6 +14,11 @@ module.exports = {
             port: 9545,
             network_id: '4447' // Match ganache network id
         },
+        k8s: {
+            host: 'contract-service',
+            port: 9545,
+            network_id: '4447' // Match ganache network id
+        },
     },
     solc: {
         // Turns on the Solidity optimizer. For development the optimizer's
