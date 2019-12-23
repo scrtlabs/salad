@@ -8,12 +8,12 @@ const CONFIG_COLLECTION = 'config';
 
 class Store {
     constructor() {
-        this._url = `${process.env.MONGO_URL}` || 'mongodb://localhost:27017/';
+        this._url = process.env.MONGO_URL || 'mongodb://localhost:27017/';
         this._dbName = process.env.DB_NAME;
     }
 
     async initAsync() {
-        this.client = await MongoClient.connect(this._url);
+        this.client = await MongoClient.connect(this._url, { useUnifiedTopology: true });
         this.db = this.client.db(this._dbName);
     }
 
