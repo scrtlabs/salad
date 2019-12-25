@@ -13,7 +13,7 @@ class Store {
     }
 
     async initAsync() {
-        this.client = await MongoClient.connect(this._url, { useUnifiedTopology: true });
+        this.client = await MongoClient.connect(this._url);
         this.db = this.client.db(this._dbName);
     }
 
