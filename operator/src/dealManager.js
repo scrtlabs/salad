@@ -78,7 +78,7 @@ class DealManager {
     async verifyDepositAmountAsync(sender, amount) {
         debug('Verifying balance for deposit', sender, amount);
         const account = this.web3.utils.toChecksumAddress(sender);
-        const balance = await this.contract.methods.getParticipantBalance(account).call({from: this.scClient.getOperatorAccount()});
+        const balance = await this.contract.methods.getParticipantBalance(account).call();
         debug('Comparing balance with amount', balance, amount);
         const senderBalance = this.web3.utils.toBN(balance);
         const depositAmount = this.web3.utils.toBN(amount);
@@ -134,7 +134,6 @@ class DealManager {
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
             ...opts,
             gas: this.gasValues.createDeal,
-            from: sender,
         });
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {

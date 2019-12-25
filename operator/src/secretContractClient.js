@@ -6,18 +6,15 @@ function sleep(ms) {
 }
 
 class SecretContractClient {
-    constructor(web3, scAddr, enigmaUrl, accountIndex = 0) {
+    constructor(web3, scAddr, enigmaUrl) {
         this.enigmaUrl = enigmaUrl;
         this.scAddr = scAddr;
         /** @type EncryptionPubKey|null */
         this.pubKeyData = null;
         this.web3 = web3;
-        this.accountIndex = accountIndex;
-        this.accounts = [];
     }
 
     async initAsync(enigmaAddr, enigmaTokenAddr, engOpts) {
-        const accounts = this.accounts = await this.web3.eth.getAccounts();
         this.enigma = new Enigma(
             this.web3,
             enigmaAddr,
@@ -26,7 +23,6 @@ class SecretContractClient {
             {
                 gas: engOpts.taskGasLimit,
                 gasPrice: engOpts.taskGasPx,
-                from: accounts[this.accountIndex],
             },
         );
         this.enigma.admin();
@@ -35,7 +31,7 @@ class SecretContractClient {
     }
 
     getOperatorAccount() {
-        return this.accounts[this.accountIndex];
+        return this.web3.defaultAccount;
     }
 
     async fetchOutput(task) {
@@ -80,9 +76,9 @@ class SecretContractClient {
         return task;
     }
 
-    async submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, sender, contractAddr) {
+    async submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, contractAddr) {
         return new Promise((resolve, reject) => {
-            this.enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, sender, contractAddr)
+            this.enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), contractAddr)
                 .on(eeConstants.SEND_TASK_INPUT_RESULT, (result) => resolve(result))
                 .on(eeConstants.ERROR, (error) => reject(error));
         });
@@ -96,7 +92,7 @@ class SecretContractClient {
         const keyPair = this.enigma.obtainTaskKeyPair();
         debug('The key pair', keyPair);
         debug('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         debug('The pending task', pendingTask);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         debug('The completed task', task);
@@ -144,7 +140,7 @@ class SecretContractClient {
             [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         const {taskId} = task;
         const output = await this.fetchOutput(task);
@@ -166,7 +162,7 @@ class SecretContractClient {
             [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
         const output = await this.fetchOutput(task);
         debug('Got verified deposits task', task.taskId, 'with results:', output);

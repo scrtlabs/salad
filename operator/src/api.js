@@ -23,10 +23,10 @@ const EXECUTE_DEAL_BASE_GAS_UNIT = 6000000;
 const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 24000000;
 
 class OperatorApi {
-    constructor(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0, pauseOnRetryInSeconds = 10) {
+    constructor(web3, enigmaUrl, contractAddr, scAddr, threshold, pauseOnRetryInSeconds = 10) {
         this.store = new Store();
-        this.web3 = new Web3(provider);
-        this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl, accountIndex);
+        this.web3 = web3;
+        this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl);
         this.defaultTaskRecordOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
         this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store, threshold);
         this.ee = new EventEmitter();

@@ -5,7 +5,6 @@ const {recoverTypedSignature_v4} = require('eth-sig-util');
 debug.enabled = true;
 
 const EventEmitter = require('events');
-const Web3 = require('web3');
 const forge = require('node-forge');
 const EthCrypto = require('eth-crypto');
 
@@ -43,8 +42,8 @@ if (typeof window === 'undefined') {
 const SaladContract = require('../../build/smart_contracts/Salad.json');
 
 class CoinjoinClient {
-    constructor(operatorUrl = 'ws://localhost:8080', provider = Web3.givenProvider) {
-        this.web3 = new Web3(provider);
+    constructor(operatorUrl = 'ws://localhost:8080', web3) {
+        this.web3 = web3;
         this.ws = new WebSocket(operatorUrl);
         this.isConnected = new Promise((resolve) => {
             const callback = () => {

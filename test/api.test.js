@@ -30,13 +30,12 @@ describe('Salad', () => {
     before(async () => {
         store = new Store();
         await store.initAsync();
-        const operatorAccountIndex = 0;
         const scAddr = await store.fetchSecretContractAddr();
         saladContractAddr = await store.fetchSmartContractAddr();
         await store.closeAsync();
 
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
-        server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
+        server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold);
 
         // Truncating the database
         await server.store.truncate(DEPOSITS_COLLECTION);
@@ -45,7 +44,7 @@ describe('Salad', () => {
 
         enigmaContract = server.dealManager.scClient.enigma.enigmaContract;
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
-        salad = new CoinjoinClient(operatorUrl, provider);
+        salad = new CoinjoinClient(operatorUrl, web3);
         // Always shutdown the WS server when tests end
         process.on('SIGINT', async () => {
             debug('Caught interrupt signal, shutting down WS server');
