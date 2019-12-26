@@ -6,7 +6,7 @@ const {utils} = require('enigma-js/node');
 const {mineUntilDeal, mineBlock} = require('@salad/operator/src/ganacheUtils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
-const {Store} = require("@salad/operator");
+const {Store, configureWeb3Account} = require("@salad/operator");
 const {QUORUM_UPDATE} = require("@salad/client").actions;
 
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
@@ -35,6 +35,7 @@ describe('Salad', () => {
         await store.closeAsync();
 
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
+        await configureWeb3Account(web3);
         server = await startServer(web3, enigmaUrl, saladContractAddr, scAddr, threshold);
 
         // Truncating the database
