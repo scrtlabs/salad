@@ -17,10 +17,10 @@ const {recoverTypedSignature_v4} = require('eth-sig-util');
 
 // TODO: Consider moving to config
 const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
-const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 4712388;
+const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 1000;
 const EXECUTE_DEAL_GAS_PRICE = 0.001;
-const EXECUTE_DEAL_BASE_GAS_UNIT = 6000000;
-const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 24000000;
+const EXECUTE_DEAL_BASE_GAS_UNIT = 600;
+const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 2400;
 
 class OperatorApi {
     constructor(web3, enigmaUrl, contractAddr, scAddr, threshold, pauseOnRetryInSeconds = 10) {
