@@ -34,7 +34,7 @@ class SecretContractClient {
         return this.web3.eth.defaultAccount;
     }
 
-    async fetchOutput(task) {
+    async fetchTaskState(task) {
         const taskWithResults = await new Promise((resolve, reject) => {
             this.enigma.getTaskResult(task)
                 .on(eeConstants.GET_TASK_RESULT_RESULT, (result) => resolve(result))
@@ -43,8 +43,13 @@ class SecretContractClient {
         if (task.ethStatus !== 2) {
             throw new Error(`Illegal state to fetch results for task: ${taskWithResults.taskId}`);
         }
-        const encryptedOutput = taskWithResults.encryptedAbiEncodedOutputs;
         const taskWithPlaintextResults = await this.enigma.decryptTaskResult(taskWithResults);
+        return taskWithPlaintextResults;
+    }
+
+    async fetchOutput(task) {
+        const taskWithPlaintextResults = this.fetchTaskState(task);
+        const encryptedOutput = taskWithPlaintextResults.encryptedAbiEncodedOutputs;
         return {
             encrypted: encryptedOutput,
             plaintext: taskWithPlaintextResults.decryptedOutput,
@@ -70,6 +75,7 @@ class SecretContractClient {
             debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
         } while (task.ethStatus === 1);
         if (task.ethStatus === 3) {
+            task = this.fetchTaskState(task);
             debug('Enigma network error with task:', task);
             throw new Error(`Enigma network error with task: ${task.taskId}`);
         }
