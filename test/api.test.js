@@ -35,7 +35,7 @@ describe('Salad', () => {
         await store.closeAsync();
 
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
-        server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold);
+        server = await startServer(web3, enigmaUrl, saladContractAddr, scAddr, threshold);
 
         // Truncating the database
         await server.store.truncate(DEPOSITS_COLLECTION);
