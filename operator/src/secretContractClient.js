@@ -31,7 +31,7 @@ class SecretContractClient {
     }
 
     getOperatorAccount() {
-        return this.web3.defaultAccount;
+        return this.web3.eth.defaultAccount;
     }
 
     async fetchOutput(task) {

@@ -25,6 +25,7 @@ async function configureWeb3Account(web3) {
             throw new Error("Could not find or generate available account!")
         }
     }
+    debug(`Using the following ethereum account for the operator: ${address}`);
     web3.eth.defaultAccount = address;
     return address;
 }
