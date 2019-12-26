@@ -14,7 +14,7 @@ const port = process.env.WS_PORT;
 async function configureWeb3Account(web3) {
     let address;
     if (process.env.OPERATOR_ETH_PRIVATE_KEY) {
-        const account = web3.eth.accounts.privateKeyToAccount(process.env.OPERATOR_PRIVATE_KEY);
+        const account = web3.eth.accounts.privateKeyToAccount(process.env.OPERATOR_ETH_PRIVATE_KEY);
         web3.eth.accounts.wallet.add(account);
         address = account.address;
     } else {
