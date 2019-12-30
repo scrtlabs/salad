@@ -1,7 +1,6 @@
 const {SecretContractClient} = require("./secretContractClient");
 const {Store} = require("./store");
 const {DEAL_CREATED_UPDATE, DEAL_EXECUTED_UPDATE, QUORUM_UPDATE, BLOCK_UPDATE, THRESHOLD_UPDATE, SUBMIT_DEPOSIT_METADATA_RESULT, SUBMIT_DEPOSIT_METADATA_ERROR, FETCH_FILLABLE_SUCCESS, QUORUM_NOT_REACHED_UPDATE, FETCH_CONFIG_SUCCESS} = require("@salad/client").actions;
-const Web3 = require('web3');
 const {DealManager} = require("./dealManager");
 const {utils} = require('enigma-js/node');
 const EventEmitter = require('events');
@@ -16,11 +15,11 @@ const {recoverTypedSignature_v4} = require('eth-sig-util');
  */
 
 // TODO: Consider moving to config
-const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 0.001;
-const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 1000;
-const EXECUTE_DEAL_GAS_PRICE = 0.001;
-const EXECUTE_DEAL_BASE_GAS_UNIT = 600;
-const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 2400;
+const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 1e-8;
+const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 0.05e+8;
+const EXECUTE_DEAL_GAS_PRICE = 1e-8;
+const EXECUTE_DEAL_BASE_GAS_UNIT = 0.05e+8;
+const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 1e+8;
 
 class OperatorApi {
     constructor(web3, enigmaUrl, contractAddr, scAddr, threshold, pauseOnRetryInSeconds = 10) {
