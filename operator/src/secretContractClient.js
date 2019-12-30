@@ -84,9 +84,6 @@ class SecretContractClient {
     }
 
     async submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, contractAddr) {
-        let balance = await this.enigma.tokenContract.methods.balanceOf(this.getOperatorAccount()).call();
-        debug(`Our ENG balance is: ${balance}`);
-
         return new Promise((resolve, reject) => {
             this.enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), contractAddr)
                 .on(eeConstants.SEND_TASK_INPUT_RESULT, (result) => resolve(result))
