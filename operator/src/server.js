@@ -6,10 +6,11 @@ const {Store} = require("@salad/operator");
 const {DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION} = require('./store');
 const {mineUntilDeal} = require('@salad/operator/src/ganacheUtils');
 
-const args = process.argv;
-const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
-let server;
-(async () => {
+async function main() {
+    const args = process.argv;
+    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
+    let server;
+
     const operatorAccountIndex = 0;
     const store = new Store();
     await store.initAsync();
@@ -48,4 +49,6 @@ let server;
     await server.loadEncryptionPubKeyAsync();
     // Watch blocks and update create deals when reaching thresholds
     await server.watchBlocksUntilDeal();
-})();
+}
+
+main().catch(err => { console.error(err); process.exit(1) });
