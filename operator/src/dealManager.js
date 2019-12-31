@@ -50,7 +50,7 @@ class DealManager {
         this.scClient = scClient;
         this.store = store;
         this.threshold = threshold;
-        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr, {from: this.web3.eth.defaultAccount});
         this.gasValues = gasValues;
     }
 
