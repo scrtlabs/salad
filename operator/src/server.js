@@ -6,10 +6,9 @@ const {Store, configureWeb3Account} = require("@salad/operator");
 const {DEPOSITS_COLLECTION, DEALS_COLLECTION, CACHE_COLLECTION} = require('./store');
 const {mineUntilDeal} = require('@salad/operator/src/ganacheUtils');
 
-const args = process.argv;
-const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
-let server;
 async function main() {
+    const args = process.argv;
+    const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
     const store = new Store();
     await store.initAsync();
 
@@ -20,7 +19,7 @@ async function main() {
     await store.closeAsync();
     const web3 = new Web3(provider);
     await configureWeb3Account(web3);
-    server = await startServer(web3, enigmaUrl, contractAddr, scAddr, threshold);
+    let server = await startServer(web3, enigmaUrl, contractAddr, scAddr, threshold);
 
     // -t: Truncate db - Truncate the Deposits, Deals and Cache collections
     if (args.indexOf('-t') !== -1) {
