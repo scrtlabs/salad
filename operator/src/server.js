@@ -9,7 +9,7 @@ const {mineUntilDeal} = require('@salad/operator/src/ganacheUtils');
 const args = process.argv;
 const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
 let server;
-(async () => {
+async function main() {
     const store = new Store();
     await store.initAsync();
 
