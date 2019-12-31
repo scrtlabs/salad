@@ -8,7 +8,7 @@ const CONFIG_COLLECTION = 'config';
 
 class Store {
     constructor() {
-        this._url = `${process.env.MONGO_URL}` || 'mongodb://localhost:27017/';
+        this._url = process.env.MONGO_URL || 'mongodb://localhost:27017/';
         this._dbName = process.env.DB_NAME;
     }
 

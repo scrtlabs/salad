@@ -48,4 +48,6 @@ let server;
     await server.loadEncryptionPubKeyAsync();
     // Watch blocks and update create deals when reaching thresholds
     await server.watchBlocksUntilDeal();
-})();
+}
+
+main().catch(err => { console.error(err); process.exit(1) });
