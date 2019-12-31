@@ -15,9 +15,8 @@ const {recoverTypedSignature_v4} = require('eth-sig-util');
  */
 
 // TODO: Consider moving to config
-const GET_ENCRYPTION_PUB_KEY_GAS_PRICE = 1e-8;
+const ENG_GAS_PRICE = process.env.ENG_GAS_PRICE || 1e-8;
 const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 0.05e+8;
-const EXECUTE_DEAL_GAS_PRICE = 1e-8;
 const EXECUTE_DEAL_BASE_GAS_UNIT = 0.05e+8;
 const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 1e+8;
 
@@ -175,7 +174,7 @@ class OperatorApi {
         const participantMultiplier = deposits.length || 1;
         const taskRecordOpts = {
             taskGasLimit: EXECUTE_DEAL_BASE_GAS_UNIT + (participantMultiplier * EXECUTE_DEAL_PARTICIPANT_GAS_UNIT),
-            taskGasPx: utils.toGrains(EXECUTE_DEAL_GAS_PRICE),
+            taskGasPx: utils.toGrains(ENG_GAS_PRICE),
         };
         debug('Updating the last mix block number');
         await this.dealManager.updateLastMixBlockNumberAsync();
@@ -225,7 +224,7 @@ class OperatorApi {
         debug('Sending encryption public key to new connected client');
         const taskRecordOpts = {
             taskGasLimit: GET_ENCRYPTION_PUB_KEY_GAS_LIMIT,
-            taskGasPx: utils.toGrains(GET_ENCRYPTION_PUB_KEY_GAS_PRICE),
+            taskGasPx: utils.toGrains(ENG_GAS_PRICE),
         };
         /** @type EncryptionPubKey|null */
         let pubKeyData = await this.store.fetchPubKeyData();
