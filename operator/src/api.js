@@ -37,6 +37,7 @@ class OperatorApi {
         this.txOpts = {
             gas: 100712388,
             gasPrice: process.env.GAS_PRICE,
+            from: web3.eth.defaultAccount,
         };
     }
 
