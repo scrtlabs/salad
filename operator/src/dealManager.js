@@ -42,14 +42,13 @@ const DEPOSIT_AMOUNT = '0.01';
  * Coordinate deal execution
  */
 class DealManager {
-    constructor(web3, scClient, contractAddr, store, threshold, gasValues = {
+    constructor(web3, scClient, contractAddr, store, gasValues = {
         createDeal: 4712388,
         fetchPubKey: 4712388,
     }) {
         this.web3 = web3;
         this.scClient = scClient;
         this.store = store;
-        this.threshold = threshold;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr, {from: this.web3.eth.defaultAccount});
         this.gasValues = gasValues;
     }
@@ -111,7 +110,7 @@ class DealManager {
      * @param {Object} opts - Ethereum tx options
      * @returns {Promise<Deal>}
      */
-    async createDealAsync(depositAmount, deposits, opts) {
+    async createDealAsync(depositAmount, deposits) {
         const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
         if (pendingDeals.length > 0) {
             debug('The executable deals', pendingDeals);
@@ -132,7 +131,6 @@ class DealManager {
         const deal = {dealId, depositAmount, participants, nonce, status: DEAL_STATUS.NEW, _tx: null, taskId: null};
         await this.store.insertDealAsync(deal, participants);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
-            ...opts,
             gas: this.gasValues.createDeal,
         });
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;

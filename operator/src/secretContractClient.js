@@ -21,15 +21,14 @@ class SecretContractClient {
         this.web3 = web3;
     }
 
-    async initAsync(enigmaAddr, enigmaTokenAddr, engOpts) {
+    async initAsync(enigmaAddr, enigmaTokenAddr) {
         this.enigma = new Enigma(
             this.web3,
             enigmaAddr,
             enigmaTokenAddr,
             this.enigmaUrl,
             {
-                gas: engOpts.taskGasLimit,
-                gasPrice: engOpts.taskGasPx,
+                gas: 4712388,
             },
         );
         this.enigma.admin();

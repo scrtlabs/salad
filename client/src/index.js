@@ -197,7 +197,6 @@ class CoinjoinClient {
             null,  // We don't need to access the enigma network
             {
                 gas: 4712388,
-                gasPrice: 100000000000,
                 from: this.accounts[0],
             },
         );

@@ -20,23 +20,18 @@ const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 0.05e+8;
 const EXECUTE_DEAL_BASE_GAS_UNIT = 0.05e+8;
 const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 1e+8;
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 class OperatorApi {
     constructor(web3, enigmaUrl, contractAddr, scAddr, threshold, pauseOnRetryInSeconds = 10) {
         this.store = new Store();
         this.web3 = web3;
         this.sc = new SecretContractClient(this.web3, scAddr, enigmaUrl);
-        this.defaultTaskRecordOpts = {taskGasLimit: 4712388, taskGasPx: 100000000000};
-        this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store, threshold);
+        this.dealManager = new DealManager(this.web3, this.sc, contractAddr, this.store);
         this.ee = new EventEmitter();
         this.threshold = threshold;
         this.pauseOnRetryInSeconds = pauseOnRetryInSeconds;
         this.active = false;
-
-        // TODO: Default Ethereum options, add to config
-        this.txOpts = {
-            gas: 100712388,
-            gasPrice: process.env.GAS_PRICE,
-        };
     }
 
     /**
@@ -46,7 +41,7 @@ class OperatorApi {
     async initAsync() {
         await this.store.initAsync();
         const {enigmaAddr, enigmaTokenAddr} = await this.store.fetchEnigmaContractAddrs();
-        await this.sc.initAsync(enigmaAddr, enigmaTokenAddr, this.defaultTaskRecordOpts);
+        await this.sc.initAsync(enigmaAddr, enigmaTokenAddr);
         this.active = true;
 
         process.on('SIGINT', async () => {
@@ -182,7 +177,7 @@ class OperatorApi {
         if (deposits.length >= this.threshold) {
             debug('Quorum reached with deposits', deposits);
             debug('Creating new deal on Ethereum');
-            const deal = await this.dealManager.createDealAsync(depositAmount, deposits, this.txOpts);
+            const deal = await this.dealManager.createDealAsync(depositAmount, deposits);
             debug('Broadcasting new deal', deal);
             this.ee.emit(DEAL_CREATED_UPDATE, deal);
             debug('Broadcasting quorum value 0 after new deal');
@@ -209,7 +204,8 @@ class OperatorApi {
                     this.ee.emit(QUORUM_NOT_REACHED_UPDATE, null);
                     depositsVerifiedSuccess = true;
                 } catch (e) {
-                    debug('Unable to verify deposits on Enigma, submitting new Task', e);
+                    debug('Unable to verify deposits on Enigma, submitting new Task.', e);
+                    await sleep(30000);
                 }
             } while (!depositsVerifiedSuccess);
         }

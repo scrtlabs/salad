@@ -59,7 +59,6 @@ describe('Salad', () => {
         // Default options of client-side transactions
         opts = {
             gas: 4712388,
-            gasPrice: 100000000000,
         };
         debug('Environment initialized');
     });

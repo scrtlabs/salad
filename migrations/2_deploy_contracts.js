@@ -65,7 +65,6 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
         'http://' + enigmaHost + ':' + enigmaPort,
         {
             gas: 4712388,
-            gasPrice: 1e+11,
             from: config.from,
         },
     );
