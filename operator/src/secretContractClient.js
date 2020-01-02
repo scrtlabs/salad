@@ -54,7 +54,7 @@ class SecretContractClient {
     }
 
     async waitTaskSuccessAsync(task) {
-        debug('Waiting for task success', task);
+        debug('Waiting for task success', JSON.stringify(task, null, 2));
         let gracePeriodInBlocks = 10;
         let previousEpochSize = null;
         do {
