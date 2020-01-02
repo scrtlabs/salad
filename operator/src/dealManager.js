@@ -51,6 +51,7 @@ class DealManager {
         this.store = store;
         this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr, {from: this.web3.eth.defaultAccount});
         this.gasValues = gasValues;
+        this.networkId = null;
     }
 
     /**
@@ -169,6 +170,17 @@ class DealManager {
     }
 
     /**
+     * Detect the network ID based on an env var, or fetch it from the web3 instance.
+     */
+    async getNetworkId() {
+        if (this.networkId === null) {
+            this.networkId = parseInt(process.env.NETWORK_ID) || await this.web3.eth.net.getId();
+            debug('The ethereum network ID for this connection is', this.networkId);
+        }
+        return this.networkId
+    }
+
+    /**
      * Execute pending Deal
      *   1- Send an Enigma tx with the `dealId` and `encRecipients`
      *   2- Enigma decrypts and shuffles the recipient Ethereum addresses
@@ -181,7 +193,7 @@ class DealManager {
     async executeDealAsync(deal, taskRecordOpts) {
         const {depositAmount, nonce} = deal;
         const deposits = await this.store.getDepositAsync(deal.dealId);
-        const chainId = await this.web3.eth.net.getId();
+        const chainId = await this.getNetworkId();
         const task = await this.scClient.executeDealAsync(depositAmount, deposits, nonce, chainId, taskRecordOpts);
         deal.taskId = task.taskId;
         deal.status = DEAL_STATUS.EXECUTED;
@@ -201,9 +213,20 @@ class DealManager {
      * @returns {Promise<void>}
      */
     async verifyDepositsAsync(amount, deposits, taskRecordOpts) {
-        const chainId = await this.web3.eth.net.getId();
-        const task = await this.scClient.verifyDepositsAsync(amount, deposits, chainId, taskRecordOpts);
-        debug('The verify deposit task', task);
+        try {
+            let chainId;
+            try {
+                chainId = await this.getNetworkId();
+            } catch (e) {
+                debug('######## error in web3.eth.net.getId', e);
+                throw e;
+            }
+            const task = await this.scClient.verifyDepositsAsync(amount, deposits, chainId, taskRecordOpts);
+            debug('The verify deposit task', task);
+        } catch (e) {
+            debug('######## error in scClient.verifyDepositsAsync', e);
+            throw e;
+        }
     }
 
     /**

@@ -58,7 +58,7 @@ class SecretContractClient {
         let gracePeriodInBlocks = 10;
         let previousEpochSize = null;
         do {
-            await sleep(600);
+            await sleep(5000);
             const epochSize = parseInt(await this.enigma.enigmaContract.methods.getEpochSize().call());
             if (previousEpochSize && epochSize > previousEpochSize) {
                 if (gracePeriodInBlocks === 0) {
@@ -69,7 +69,7 @@ class SecretContractClient {
                 previousEpochSize = epochSize;
             }
             task = await this.enigma.getTaskRecordStatus(task);
-            debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
+            debug('Waiting. Current Task Status is ' + task.ethStatus);
         } while (task.ethStatus === 1);
         if (task.ethStatus !== 2) {
             task = await this.fetchTaskState(task);
@@ -169,8 +169,20 @@ class SecretContractClient {
             [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
-        const task = await this.waitTaskSuccessAsync(pendingTask);
+        let pendingTask;
+        try {
+            pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
+        } catch (e) {
+            debug('######## error in submitTask', e);
+            throw e;
+        }
+        let task;
+        try {
+            task = await this.waitTaskSuccessAsync(pendingTask);
+        } catch (e) {
+            debug('######## error in waitTaskSuccessAsync', e);
+            throw e;
+        }
         debug('Got verified deposits task', task.taskId, 'with results:', {
             encrypted: task.encryptedAbiEncodedOutputs,
             plaintext: task.decryptedOutput,

@@ -192,7 +192,8 @@ class OperatorApi {
                     this.ee.emit(DEAL_EXECUTED_UPDATE, deal);
                     dealExecutedSuccess = true;
                 } catch (e) {
-                    debug('Unable to execute deal on Enigma, submitting new Task', e);
+                    debug('Unable to execute deal on Enigma, submitting new Task.', e);
+                    await sleep(5000);
                 }
             } while (!dealExecutedSuccess);
         } else {
