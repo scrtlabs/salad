@@ -6,7 +6,7 @@ const {utils} = require('enigma-js/node');
 const {mineUntilDeal, mineBlock} = require('@salad/operator/src/ganacheUtils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
-const {Store} = require("@salad/operator");
+const {Store, configureWeb3Account} = require("@salad/operator");
 
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
 
@@ -30,11 +30,12 @@ describe('Salad', () => {
     web3Utils = web3.utils;
 
     before(async () => {
-        salad1 = new CoinjoinClient(operatorUrl, provider);
+        await configureWeb3Account(web3);
+        salad1 = new CoinjoinClient(operatorUrl, web3);
         await salad1.initAsync();
-        salad2 = new CoinjoinClient(operatorUrl, provider);
+        salad2 = new CoinjoinClient(operatorUrl, web3);
         await salad2.initAsync();
-        salad3 = new CoinjoinClient(operatorUrl, provider);
+        salad3 = new CoinjoinClient(operatorUrl, web3);
         await salad3.initAsync();
 
     });
@@ -47,7 +48,7 @@ describe('Salad', () => {
         const receipt = await salad.makeDepositAsync(sender, amount, opts);
         expect(receipt.status).to.equal(true);
         encRecipient = await salad.encryptRecipientAsync(recipient);
-        const pubKey = salad.getPlaintextPubKey();
+        const pubKey = salad.keyPair.publicKey;
 
         signature = await salad.signDepositMetadataAsync(sender, amount, encRecipient, pubKey);
         const sigBytes = web3Utils.hexToBytes(signature);
@@ -58,14 +59,15 @@ describe('Salad', () => {
     }
 
     async function getBalances(symbol) {
-        balances[sender1 + symbol] = await web3.eth.getBalance(sender1, 'latest');
-        balances[recipient1 + symbol] = await web3.eth.getBalance(recipient1, 'latest');
-        balances[sender2 + symbol] = await web3.eth.getBalance(sender2, 'latest');
-        balances[recipient2 + symbol] = await web3.eth.getBalance(recipient2, 'latest');
-        balances[sender3 + symbol] = await web3.eth.getBalance(sender3, 'latest');
-        balances[recipient3 + symbol] = await web3.eth.getBalance(recipient3, 'latest');
+        for (let account of [sender1, recipient1, sender2, recipient2, sender3, recipient3]) {
+            let accountBalances = balances.get(account);
+            if (accountBalances === undefined) {
+                accountBalances = new Map();
+                balances.set(account, accountBalances);
+            }
+            accountBalances.set(symbol, await web3.eth.getBalance(account, 'latest'));
+        }
     }
-
 
     it('should collect balances', async () => {
         // collect balances
@@ -76,8 +78,8 @@ describe('Salad', () => {
         sender3 = salad3.accounts[7];
         recipient3 = salad3.accounts[6];
 
-        balances = {};
-        await getBalances('b');
+        balances = new Map();
+        await getBalances('before');
         console.log("the balances of the senders and recipients are: " + JSON.stringify(balances));
     });
 
@@ -90,9 +92,17 @@ describe('Salad', () => {
 
     it('should listen for balances to change', async () => {
         do {
-            await getBalances('a');
+            await getBalances('after');
             await utils.sleep(3000);
-        } while (balances[recipient1 + 'b'] === balances[recipient1 + 'a'] || balances[recipient2 + 'b'] === balances[recipient2 + 'a']);
-        console.log("the balances before (b) and after (a) are: " + JSON.stringify(balances));
+        } while (
+            balances.get(recipient1).get('before') === balances.get(recipient1).get('after')
+            || balances.get(recipient2).get('before') === balances.get(recipient2).get('after'))
+
+        let accountDiff = new Map();
+        for (let [account, accountBalances] of balances.entries()) {
+            accountDiff.set(account, (accountBalances.get('after') - accountBalances.get('before')) / 10**18);
+        }
+        console.log('The accounts have had their balances changed as follows:');
+        console.log(accountDiff);
     });
 });
