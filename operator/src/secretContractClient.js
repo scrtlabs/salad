@@ -147,6 +147,7 @@ class SecretContractClient {
         const {taskGasLimit, taskGasPx} = opts;
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
+        debug('The completed task', task);
         const {taskId} = task;
         debug('Got execute deal task', taskId, 'with results:', {
             encrypted: task.encryptedAbiEncodedOutputs,
