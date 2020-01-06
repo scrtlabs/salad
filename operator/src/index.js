@@ -7,8 +7,32 @@ const {Store} = require("./store");
 
 const port = process.env.WS_PORT;
 
-async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex = 0) {
-    const api = new OperatorApi(provider, enigmaUrl, contractAddr, scAddr, threshold, accountIndex);
+// This method tries to create an ethereum account from a private key provided from the environment.
+// If no private key is found, it attempts to fetch the unlocked accounts from the ethereum node,
+// and chooses the first one.
+// If that fails too, an error is thrown.
+async function configureWeb3Account(web3) {
+    let address;
+    if (process.env.OPERATOR_ETH_PRIVATE_KEY) {
+        const account = web3.eth.accounts.privateKeyToAccount(process.env.OPERATOR_ETH_PRIVATE_KEY);
+        web3.eth.accounts.wallet.add(account);
+        address = account.address;
+    } else {
+        const accounts = await web3.eth.getAccounts();
+        if (accounts.length > 0) {
+            address = accounts[0];
+        } else {
+            throw new Error("Could not find or generate available account!")
+        }
+    }
+    debug(`Using the following ethereum account for the operator: ${address}`);
+    web3.eth.defaultAccount = address;
+    return address;
+}
+
+
+async function startServer(web3, enigmaUrl, contractAddr, scAddr, threshold) {
+    const api = new OperatorApi(web3, enigmaUrl, contractAddr, scAddr, threshold);
     await api.initAsync();
 
     const wss = new WebSocket.Server({port});
@@ -68,4 +92,4 @@ async function startServer(provider, enigmaUrl, contractAddr, scAddr, threshold,
     return api;
 }
 
-module.exports = {startServer, Store};
+module.exports = {configureWeb3Account, startServer, Store};

@@ -20,10 +20,10 @@ describe('Salad', () => {
     // const anonSetSize = threshold;
     const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
     const operatorUrl = `ws://${process.env.OPERATOR_HOST}:${process.env.WS_PORT}`;
-    // const web3 = new Web3(provider);
+    const web3 = new Web3(provider);
 
     before(async () => {
-        salad = new CoinjoinClient(operatorUrl, provider);
+        salad = new CoinjoinClient(operatorUrl, web3);
         await salad.initAsync();
 
         process.on('SIGINT', async () => {

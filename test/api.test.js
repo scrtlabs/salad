@@ -6,7 +6,7 @@ const {utils} = require('enigma-js/node');
 const {mineUntilDeal, mineBlock} = require('@salad/operator/src/ganacheUtils');
 const debug = require('debug')('test');
 const Web3 = require('web3');
-const {Store} = require("@salad/operator");
+const {Store, configureWeb3Account} = require("@salad/operator");
 const {QUORUM_UPDATE} = require("@salad/client").actions;
 
 const {DEALS_COLLECTION, DEPOSITS_COLLECTION, CACHE_COLLECTION} = require('@salad/operator/src/store');
@@ -30,13 +30,13 @@ describe('Salad', () => {
     before(async () => {
         store = new Store();
         await store.initAsync();
-        const operatorAccountIndex = 0;
         const scAddr = await store.fetchSecretContractAddr();
         saladContractAddr = await store.fetchSmartContractAddr();
         await store.closeAsync();
 
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
-        server = await startServer(provider, enigmaUrl, saladContractAddr, scAddr, threshold, operatorAccountIndex);
+        await configureWeb3Account(web3);
+        server = await startServer(web3, enigmaUrl, saladContractAddr, scAddr, threshold);
 
         // Truncating the database
         await server.store.truncate(DEPOSITS_COLLECTION);
@@ -45,7 +45,7 @@ describe('Salad', () => {
 
         enigmaContract = server.dealManager.scClient.enigma.enigmaContract;
         const operatorUrl = `ws://localhost:${process.env.WS_PORT}`;
-        salad = new CoinjoinClient(operatorUrl, provider);
+        salad = new CoinjoinClient(operatorUrl, web3);
         // Always shutdown the WS server when tests end
         process.on('SIGINT', async () => {
             debug('Caught interrupt signal, shutting down WS server');
@@ -59,7 +59,6 @@ describe('Salad', () => {
         // Default options of client-side transactions
         opts = {
             gas: 4712388,
-            gasPrice: 100000000000,
         };
         debug('Environment initialized');
     });

@@ -18,10 +18,6 @@ const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}
 const web3 = new Web3(provider);
 let enigma = null;
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 let SECRET_CONTRACT_BUILD_FOLDER = process.env.SECRET_CONTRACT_BUILD_FOLDER || '../build/secret_contracts';
 
 function getEnigmaContractAddressFromJson() {
@@ -44,12 +40,12 @@ function getEnigmaTokenContractAddressFromJson() {
 async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAddr) {
     debug(`Deploying Secret Contract "${config.filename}"...`);
     debug('The Enigma address / token address', enigmaAddr, enigmaTokenAddr);
-    let scTask;
     let preCode;
     try {
         preCode = fs.readFileSync(path.resolve(migrationsFolder, SECRET_CONTRACT_BUILD_FOLDER, config.filename));
     } catch (e) {
         debug('Error:', e.stack);
+        throw e;
     }
     const {args} = config;
     args.push([saladAddr, 'address']);
@@ -65,7 +61,6 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
         'http://' + enigmaHost + ':' + enigmaPort,
         {
             gas: 4712388,
-            gasPrice: 100000000000,
             from: config.from,
         },
     );
@@ -75,7 +70,7 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
     // Waiting for a worker to register with the enigma network:
     while (true) {
         debug('waiting for a worker to register to the enigma network');
-        await sleep(5000);
+        await utils.sleep(5000);
         const blockNumber = await web3.eth.getBlockNumber();
         const worker_params = await enigma.getWorkerParams(blockNumber);
         debug('worker params := ' + JSON.stringify(worker_params));
@@ -84,7 +79,8 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
         }
     }
 
-    scTask = await new Promise((resolve, reject) => {
+    debug('Deploying salad secret contract');
+    let scTask = await new Promise((resolve, reject) => {
         enigma.deploySecretContract(config.fn, args, config.gasLimit, config.gasPrice, config.from, preCode)
             .on(eeConstants.DEPLOY_SECRET_CONTRACT_RESULT, (receipt) => resolve(receipt))
             .on(eeConstants.ERROR, (error) => reject(error));
@@ -93,7 +89,7 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
     // Wait for the confirmed deploy contract task
     do {
         debug('waiting for the secret contract to finish deploying.');
-        await sleep(5000);
+        await utils.sleep(5000);
         try {
             scTask = await enigma.getTaskRecordStatus(scTask);
         } catch (e) {
@@ -102,8 +98,21 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
         debug('Waiting. Current Task Status is ' + scTask.ethStatus);
     } while (scTask.ethStatus === 1);
     debug('Completed. Final Task Status is ' + scTask.ethStatus);
-
     debug('SC ADDRESS', scTask.scAddr);
+
+    scTask = await new Promise((resolve, reject) => {
+        enigma.getTaskResult(scTask)
+            .on(eeConstants.GET_TASK_RESULT_RESULT, (result) => resolve(result))
+            .on(eeConstants.ERROR, (error) => reject(error));
+    });
+    {
+        // Print the (interesting) contents of the task so we can see what things like the gas units used.
+        let copiedTask = {};
+        Object.assign(copiedTask, scTask);
+        copiedTask.encryptedAbiEncodedOutputs = null;
+        copiedTask.preCode = null;
+        debug('The full task object is:', copiedTask);
+    }
 
     // Verify deployed contract
     if (await enigma.admin.isDeployed(scTask.scAddr)) {
@@ -140,8 +149,8 @@ module.exports = async function (deployer, network, accounts) {
         filename: 'salad.wasm',
         fn: 'construct()',
         args: [],
-        gasLimit: 2000000,
-        gasPrice: utils.toGrains(0.001),
+        gasLimit: 1400000,
+        gasPrice: utils.toGrains(1e-8),
         from: sender
     };
     const scAddress = await deploySecretContract(config, Salad.address, enigmaAddr, enigmaTokenAddr);

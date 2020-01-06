@@ -42,15 +42,14 @@ const DEPOSIT_AMOUNT = '0.01';
  * Coordinate deal execution
  */
 class DealManager {
-    constructor(web3, scClient, contractAddr, store, threshold, gasValues = {
+    constructor(web3, scClient, contractAddr, store, gasValues = {
         createDeal: 4712388,
         fetchPubKey: 4712388,
     }) {
         this.web3 = web3;
         this.scClient = scClient;
         this.store = store;
-        this.threshold = threshold;
-        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr);
+        this.contract = new this.web3.eth.Contract(SaladContract['abi'], contractAddr, {from: this.web3.eth.defaultAccount});
         this.gasValues = gasValues;
     }
 
@@ -78,7 +77,7 @@ class DealManager {
     async verifyDepositAmountAsync(sender, amount) {
         debug('Verifying balance for deposit', sender, amount);
         const account = this.web3.utils.toChecksumAddress(sender);
-        const balance = await this.contract.methods.getParticipantBalance(account).call({from: this.scClient.getOperatorAccount()});
+        const balance = await this.contract.methods.getParticipantBalance(account).call();
         debug('Comparing balance with amount', balance, amount);
         const senderBalance = this.web3.utils.toBN(balance);
         const depositAmount = this.web3.utils.toBN(amount);
@@ -111,7 +110,7 @@ class DealManager {
      * @param {Object} opts - Ethereum tx options
      * @returns {Promise<Deal>}
      */
-    async createDealAsync(depositAmount, deposits, opts) {
+    async createDealAsync(depositAmount, deposits) {
         const pendingDeals = await this.store.queryDealsAsync(DEAL_STATUS.EXECUTABLE);
         if (pendingDeals.length > 0) {
             debug('The executable deals', pendingDeals);
@@ -132,9 +131,7 @@ class DealManager {
         const deal = {dealId, depositAmount, participants, nonce, status: DEAL_STATUS.NEW, _tx: null, taskId: null};
         await this.store.insertDealAsync(deal, participants);
         const receipt = await this.contract.methods.newDeal(depositAmount, participants, nonce).send({
-            ...opts,
             gas: this.gasValues.createDeal,
-            from: sender,
         });
         const receiptDealId = receipt.events.NewDeal.returnValues._dealId;
         if (receiptDealId !== dealId) {

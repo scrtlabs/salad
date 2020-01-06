@@ -1,32 +1,32 @@
-const {Enigma, eeConstants} = require('enigma-js/node');
+const {Enigma, eeConstants, utils} = require('enigma-js/node');
 const debug = require('debug')('operator:secret-contract');
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+// https://gist.github.com/valentinkostadinov/5875467
+function fromHex(h) {
+    let s = '';
+    for (let i = 0; i < h.length; i+=2) {
+        s += String.fromCharCode(parseInt(h.substr(i, 2), 16));
+    }
+    return decodeURIComponent(escape(s));
 }
 
 class SecretContractClient {
-    constructor(web3, scAddr, enigmaUrl, accountIndex = 0) {
+    constructor(web3, scAddr, enigmaUrl) {
         this.enigmaUrl = enigmaUrl;
         this.scAddr = scAddr;
         /** @type EncryptionPubKey|null */
         this.pubKeyData = null;
         this.web3 = web3;
-        this.accountIndex = accountIndex;
-        this.accounts = [];
     }
 
-    async initAsync(enigmaAddr, enigmaTokenAddr, engOpts) {
-        const accounts = this.accounts = await this.web3.eth.getAccounts();
+    async initAsync(enigmaAddr, enigmaTokenAddr) {
         this.enigma = new Enigma(
             this.web3,
             enigmaAddr,
             enigmaTokenAddr,
             this.enigmaUrl,
             {
-                gas: engOpts.taskGasLimit,
-                gasPrice: engOpts.taskGasPx,
-                from: accounts[this.accountIndex],
+                gas: 4712388,
             },
         );
         this.enigma.admin();
@@ -35,24 +35,20 @@ class SecretContractClient {
     }
 
     getOperatorAccount() {
-        return this.accounts[this.accountIndex];
+        return this.web3.eth.defaultAccount;
     }
 
-    async fetchOutput(task) {
+    async fetchTaskState(task) {
         const taskWithResults = await new Promise((resolve, reject) => {
             this.enigma.getTaskResult(task)
                 .on(eeConstants.GET_TASK_RESULT_RESULT, (result) => resolve(result))
                 .on(eeConstants.ERROR, (error) => reject(error));
         });
-        if (task.ethStatus !== 2) {
-            throw new Error(`Illegal state to fetch results for task: ${taskWithResults.taskId}`);
+        if (task.ethStatus === 1) {
+            throw new Error(`Illegal state to fetch results for task: ${taskWithResults.taskId} task is still pending`);
         }
-        const encryptedOutput = taskWithResults.encryptedAbiEncodedOutputs;
         const taskWithPlaintextResults = await this.enigma.decryptTaskResult(taskWithResults);
-        return {
-            encrypted: encryptedOutput,
-            plaintext: taskWithPlaintextResults.decryptedOutput,
-        };
+        return taskWithPlaintextResults;
     }
 
     async waitTaskSuccessAsync(task) {
@@ -60,7 +56,7 @@ class SecretContractClient {
         let gracePeriodInBlocks = 10;
         let previousEpochSize = null;
         do {
-            await sleep(600);
+            await utils.sleep(600);
             const epochSize = parseInt(await this.enigma.enigmaContract.methods.getEpochSize().call());
             if (previousEpochSize && epochSize > previousEpochSize) {
                 if (gracePeriodInBlocks === 0) {
@@ -73,16 +69,20 @@ class SecretContractClient {
             task = await this.enigma.getTaskRecordStatus(task);
             debug('Waiting. Current Task Status is ' + task.ethStatus + '\r');
         } while (task.ethStatus === 1);
-        if (task.ethStatus === 3) {
-            debug('Enigma network error with task:', task);
+        if (task.ethStatus !== 2) {
+            task = await this.fetchTaskState(task);
+            debug('error returned for task', task.taskId, 'with message:', fromHex(task.decryptedOutput).toString());
+            debug('task object was:', task);
             throw new Error(`Enigma network error with task: ${task.taskId}`);
         }
+        // Get the full task state after it succeeds
+        task = await this.fetchTaskState(task);
         return task;
     }
 
-    async submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, sender, contractAddr) {
+    async submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, contractAddr) {
         return new Promise((resolve, reject) => {
-            this.enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, sender, contractAddr)
+            this.enigma.computeTask(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), contractAddr)
                 .on(eeConstants.SEND_TASK_INPUT_RESULT, (result) => resolve(result))
                 .on(eeConstants.ERROR, (error) => reject(error));
         });
@@ -96,14 +96,13 @@ class SecretContractClient {
         const keyPair = this.enigma.obtainTaskKeyPair();
         debug('The key pair', keyPair);
         debug('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
-        debug('The pending task', pendingTask);
-        const task = await this.waitTaskSuccessAsync(pendingTask);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
+        let task = await this.waitTaskSuccessAsync(pendingTask);
         debug('The completed task', task);
-        const output = await this.fetchOutput(task);
+
         this.pubKeyData = {
             taskId: task.taskId,
-            encryptedOutput: output.encrypted,
+            encryptedOutput: task.encryptedAbiEncodedOutputs,
             userPrivateKey: keyPair.privateKey,
             workerPubKey: task.workerEncryptionKey,
         };
@@ -144,11 +143,14 @@ class SecretContractClient {
             [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, operatorAddress, this.scAddr);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
+        debug('The completed task', task);
         const {taskId} = task;
-        const output = await this.fetchOutput(task);
-        debug('Got execute deal task', taskId, 'with results:', output);
+        debug('Got execute deal task', taskId, 'with results:', {
+            encrypted: task.encryptedAbiEncodedOutputs,
+            plaintext: task.decryptedOutput,
+        });
         return task;
     }
 
@@ -166,10 +168,12 @@ class SecretContractClient {
             [chainId, 'uint256'],
         ];
         const {taskGasLimit, taskGasPx} = opts;
-        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr);
+        const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         const task = await this.waitTaskSuccessAsync(pendingTask);
-        const output = await this.fetchOutput(task);
-        debug('Got verified deposits task', task.taskId, 'with results:', output);
+        debug('Got verified deposits task', task.taskId, 'with results:', {
+            encrypted: task.encryptedAbiEncodedOutputs,
+            plaintext: task.decryptedOutput,
+        });
         return task;
     }
 
@@ -182,7 +186,8 @@ class SecretContractClient {
                     await this.setPubKeyDataAsync(opts);
                     pubKeySetSuccess = true;
                 } catch (e) {
-                    debug('Unable to set pub key on Enigma, submitting a new Task', e);
+                    debug('Unable to set pub key on Enigma, submitting a new Task.', e);
+                    await utils.sleep(30000)
                 }
             } while (!pubKeySetSuccess);
             debug('Storing pubKey in cache', this.pubKeyData);
