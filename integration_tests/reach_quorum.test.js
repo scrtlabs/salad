@@ -94,7 +94,10 @@ describe('Salad', () => {
     });
 
     it('should send funds and trigger the DEAL_EXECUTED_UPDATE event', async () => {
-        const deal = await new Promise(resolve => salad1.onDealExecuted(resolve));
+        const deal = await new Promise((resolve, reject) => {
+            setTimeout(() => resolve(null), 60 * 1000);
+            salad1.onDealExecuted(resolve);
+        });
         console.log('the deal was:', deal);
 
         await getBalances('after');
