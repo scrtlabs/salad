@@ -18,10 +18,6 @@ const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}
 const web3 = new Web3(provider);
 let enigma = null;
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 let SECRET_CONTRACT_BUILD_FOLDER = process.env.SECRET_CONTRACT_BUILD_FOLDER || '../build/secret_contracts';
 
 function getEnigmaContractAddressFromJson() {
@@ -74,7 +70,7 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
     // Waiting for a worker to register with the enigma network:
     while (true) {
         debug('waiting for a worker to register to the enigma network');
-        await sleep(5000);
+        await utils.sleep(5000);
         const blockNumber = await web3.eth.getBlockNumber();
         const worker_params = await enigma.getWorkerParams(blockNumber);
         debug('worker params := ' + JSON.stringify(worker_params));
@@ -93,7 +89,7 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
     // Wait for the confirmed deploy contract task
     do {
         debug('waiting for the secret contract to finish deploying.');
-        await sleep(5000);
+        await utils.sleep(5000);
         try {
             scTask = await enigma.getTaskRecordStatus(scTask);
         } catch (e) {

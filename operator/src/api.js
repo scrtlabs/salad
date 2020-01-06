@@ -20,8 +20,6 @@ const GET_ENCRYPTION_PUB_KEY_GAS_LIMIT = 0.05e+8;
 const EXECUTE_DEAL_BASE_GAS_UNIT = 0.05e+8;
 const EXECUTE_DEAL_PARTICIPANT_GAS_UNIT = 1e+8;
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 class OperatorApi {
     constructor(web3, enigmaUrl, contractAddr, scAddr, threshold, pauseOnRetryInSeconds = 10) {
         this.store = new Store();
@@ -205,7 +203,7 @@ class OperatorApi {
                     depositsVerifiedSuccess = true;
                 } catch (e) {
                     debug('Unable to verify deposits on Enigma, submitting new Task.', e);
-                    await sleep(30000);
+                    await utils.sleep(30000);
                 }
             } while (!depositsVerifiedSuccess);
         }

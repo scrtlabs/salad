@@ -1,7 +1,5 @@
-const {Enigma, eeConstants} = require('enigma-js/node');
+const {Enigma, eeConstants, utils} = require('enigma-js/node');
 const debug = require('debug')('operator:secret-contract');
-
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // https://gist.github.com/valentinkostadinov/5875467
 function fromHex(h) {
@@ -58,7 +56,7 @@ class SecretContractClient {
         let gracePeriodInBlocks = 10;
         let previousEpochSize = null;
         do {
-            await sleep(600);
+            await utils.sleep(600);
             const epochSize = parseInt(await this.enigma.enigmaContract.methods.getEpochSize().call());
             if (previousEpochSize && epochSize > previousEpochSize) {
                 if (gracePeriodInBlocks === 0) {
@@ -189,7 +187,7 @@ class SecretContractClient {
                     pubKeySetSuccess = true;
                 } catch (e) {
                     debug('Unable to set pub key on Enigma, submitting a new Task.', e);
-                    await sleep(30000)
+                    await utils.sleep(30000)
                 }
             } while (!pubKeySetSuccess);
             debug('Storing pubKey in cache', this.pubKeyData);
