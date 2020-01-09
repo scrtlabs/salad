@@ -7,7 +7,7 @@ git clone https://github.com/enigmampc/enigma-contract.git
 cd enigma-contract
 yarn
 # Assumption truffle-cli exists
-truffle compile
+npx truffle compile
 cd enigma-js
 yarn
 yarn webpack --env build
