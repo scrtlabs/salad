@@ -93,12 +93,14 @@ class SecretContractClient {
         const taskFn = 'get_pub_key()';
         const taskArgs = [];
         const {taskGasLimit, taskGasPx} = opts;
-        const keyPair = this.enigma.obtainTaskKeyPair();
-        debug('The key pair', keyPair);
         debug('submitTaskAsync(', taskFn, taskArgs, taskGasLimit, taskGasPx, this.getOperatorAccount(), this.scAddr, ')');
         const pendingTask = await this.submitTaskAsync(taskFn, taskArgs, taskGasLimit, taskGasPx, this.scAddr);
         let task = await this.waitTaskSuccessAsync(pendingTask);
         debug('The completed task', task);
+
+        const sender = this.getOperatorAccount();
+        const keyPair = this.enigma.obtainTaskKeyPair(sender, task.nonce);
+        debug('The key pair for the task was', keyPair);
 
         this.pubKeyData = {
             taskId: task.taskId,
