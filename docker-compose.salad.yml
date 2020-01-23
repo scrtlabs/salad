@@ -16,5 +16,20 @@ services:
       - "${BUILD_CONTRACTS_PATH}:/root/salad/build/enigma_contracts"
       - "shared:/root/.enigma"
 
+  frontend:
+    build: 
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+          - REACT_APP_OPERATOR_URL=ws://localhost/api/v1
+    container_name: salad_frontend
+    stdin_open: true
+    tty: true
+    networks:
+      - net
+    hostname: frontend
+    ports:
+      - "80:80"
+
 networks:
     net:
