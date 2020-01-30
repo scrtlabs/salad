@@ -1,6 +1,6 @@
 name: CI
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
@@ -8,14 +8,24 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Configure the run
+      run: cp .env.template .env
+    - name: Build the Docker Salad operator and client
       run: |
-        cp .env.template .env
-        cp docker-compose.cli-sw.yml docker-compose.yml
-    - name: Build the Docker Salad client
-      run: docker build -t enigmampc/salad_client .
-    - name: Run tests
+        export BRANCH_NAME="$(echo $GITHUB_REF | grep -o '[^/]\+$')"
+        git clone https://github.com/enigmampc/docker-environment
+        cd docker-environment
+        make clone-salad BRANCH=$BRANCH_NAME
+        make build-salad-operator DOCKER_TAG=develop
+        make build-salad-client DOCKER_TAG=develop
+    - name: Launch network and run the tests
       run: |
-        NODES=2 SGX_MODE=SW docker-compose -f docker-compose.yml -f docker-compose.salad.yml up --scale core=2 --scale p2p=2 --exit-code-from salad & 
-        until docker ps -a | grep salad >/dev/null 2>&1; do sleep 5; done
-        sleep 180 && echo "Network ready, starting salad tests"
-        docker-compose -f docker-compose.yml -f docker-compose.salad.yml exec -T salad yarn test
+        docker-compose -f docker-compose.yml -f docker-compose.salad.yml up &
+        TIMEOUT=250 # timeout in seconds
+        NOW=$(date +%s)
+        until docker-compose -f docker-compose.yml -f docker-compose.salad.yml logs --tail 1000 salad_client | grep -m 1 "You may start running tests" || [ $(( $(date +%s) - $NOW )) -gt $TIMEOUT ]; do
+            sleep 1
+        done
+        if [ $(( $(date +%s) - $NOW )) -gt $TIMEOUT ]; then
+            exit 1
+        fi
+        docker-compose -f docker-compose.yml -f docker-compose.salad.yml exec -T salad_client yarn test
