@@ -1,6 +1,6 @@
 name: CI
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -20,6 +20,7 @@ jobs:
         make build-salad-client DOCKER_TAG=develop
     - name: Launch network and run the tests
       run: |
+        cd docker-environment
         docker-compose -f docker-compose.yml -f docker-compose.salad.yml up &
         TIMEOUT=250 # timeout in seconds
         NOW=$(date +%s)
