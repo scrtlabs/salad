@@ -1,6 +1,6 @@
 name: CI
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -11,15 +11,19 @@ jobs:
       run: cp .env.template .env
     - name: Build the Docker Salad operator and client
       run: |
+        pwd
+        ls
         export BRANCH_NAME="$(echo $GITHUB_REF | grep -o '[^/]\+$')"
         git clone https://github.com/enigmampc/docker-environment
         cd docker-environment
         make clone-salad BRANCH=$BRANCH_NAME
         make clone-contract
-        make build-salad-operator DOCKER_TAG=develop
-        make build-salad-client DOCKER_TAG=develop
+        # make build-salad-operator DOCKER_TAG=develop
+        # make build-salad-client DOCKER_TAG=develop
     - name: Launch network and run the tests
       run: |
+        pwd
+        ls
         docker-compose -f docker-compose.yml -f docker-compose.salad.yml up &
         TIMEOUT=250 # timeout in seconds
         NOW=$(date +%s)
