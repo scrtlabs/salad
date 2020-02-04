@@ -21,6 +21,8 @@ jobs:
     - name: Launch network and run the tests
       run: |
         cd docker-environment
+        cp .env.template .env
+        export DOCKER_TAG=develop
         docker-compose -f docker-compose.yml -f docker-compose.salad.yml up &
         TIMEOUT=250 # timeout in seconds
         NOW=$(date +%s)
