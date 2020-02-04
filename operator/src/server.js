@@ -49,4 +49,4 @@ async function main() {
     await server.watchBlocksUntilDeal();
 }
 
-main().catch(err => { debug(err); process.exit(1) });
+main().catch(err => { debug(`crashing because of this error: ${err}`); process.exit(1) });
