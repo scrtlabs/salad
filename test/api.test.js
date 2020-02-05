@@ -35,6 +35,7 @@ describe('Salad', () => {
         await store.closeAsync();
 
         const enigmaUrl = `http://${process.env.ENIGMA_HOST}:${process.env.ENIGMA_PORT}`;
+        debug(`enigma url is: ${enigmaUrl}`);
         await configureWeb3Account(web3);
         server = await startServer(web3, enigmaUrl, saladContractAddr, scAddr, threshold);
 
