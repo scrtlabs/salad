@@ -4,7 +4,7 @@ const Web3 = require('web3');
 const dotenv = require('dotenv');
 const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
-const {Store} = require("@salad/operator");
+const {Store, configureWeb3Account} = require("@salad/operator");
 const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
 dotenv.config({path: path.resolve(process.cwd(), '..', '.env')});
@@ -16,6 +16,7 @@ const migrationsFolder = process.cwd();   // save it because it changes later on
 const provider = new Web3.providers.HttpProvider(`http://${process.env.ETH_HOST}:${process.env.ETH_PORT}`);
 
 const web3 = new Web3(provider);
+configureWeb3Account(web3);
 let enigma = null;
 
 let SECRET_CONTRACT_BUILD_FOLDER = process.env.SECRET_CONTRACT_BUILD_FOLDER || '../build/secret_contracts';
@@ -134,7 +135,7 @@ module.exports = async function (deployer, network, accounts) {
     const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
     // Adding the Enigma contract addresses to db to avoid re-fetching them from the environment in any of the shared components
     await store.insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr);
-    const sender = accounts[0];
+    const sender = web3.eth.defaultAccount;
     // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;
