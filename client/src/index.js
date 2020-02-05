@@ -525,12 +525,12 @@ class CoinjoinClient {
     }
 
     /**
-     * Without the user's entire deposit amount
+     * Withdraw the user's entire deposit amount
      * @param {string} sender The depositor
      * @param {Object} opts The tx options
      * @returns {Promise<*>}
      */
-    async withdraw(sender, opts) {
+    withdraw(sender, opts) {
         return this.contract.methods.withdraw().send({...opts, from: sender});
     }
 }

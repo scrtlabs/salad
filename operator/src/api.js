@@ -71,7 +71,7 @@ class OperatorApi {
                 try {
                     await this.handleDealExecutionAsync();
                 } catch (e) {
-                    console.error('Fatal execution error', e);
+                    debug('Fatal execution error', e);
                 }
             }
             await utils.sleep(10000);
@@ -97,7 +97,7 @@ class OperatorApi {
         try {
             await this.store.closeAsync();
         } catch (e) {
-            console.error('Unable to close the db connection', e);
+            debug('Unable to close the db connection', e);
         }
     }
 
@@ -232,7 +232,7 @@ class OperatorApi {
                 }
                 debug(`The secret contract method returned encryption key: ${pubKeyData}`)
             } catch (e) {
-                console.error('Unable to fetch public encryption key', e);
+                debug('Unable to fetch public encryption key', e);
                 // TODO: Consider cancelling and creating new task when the epoch changes
                 await utils.sleep(this.pauseOnRetryInSeconds * 1000);
             }
