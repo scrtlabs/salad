@@ -225,11 +225,12 @@ class OperatorApi {
         while (pubKeyData === null) {
             try {
                 await utils.sleep(300);
-                debug('This is the first start, fetching the encryption key from Enigma');
+                debug('Fetching the encryption key from Enigma');
                 pubKeyData = await this.sc.getPubKeyDataAsync(taskRecordOpts);
                 if (pubKeyData !== null) {
                     await this.store.insertPubKeyDataInCache(pubKeyData);
                 }
+                debug(`The secret contract method returned encryption key: ${pubKeyData}`)
             } catch (e) {
                 debug('Unable to fetch public encryption key', e);
                 // TODO: Consider cancelling and creating new task when the epoch changes

@@ -1,0 +1,77 @@
+version: "3"
+
+services:
+  bootstrap:
+    hostname: bootstrap
+    image: enigmampc/worker_sw:${DOCKER_TAG}
+    depends_on:
+      - contract
+      - km
+    environment:
+      - ENIGMA_ENV
+      - SGX_MODE
+      - MIN_CONFIRMATIONS
+      - BOOTSTRAP="TRUE"
+      - BOOTSTRAP_ID=B1
+      - LOG_LEVEL
+    expose:
+      - "10300" # libp2p port
+      - "8080"  # what is this?
+      - "3346"  # gateway port
+      - "9229"  # nodejs debugger 
+
+  worker:
+    hostname: worker
+    image: enigmampc/worker_sw:${DOCKER_TAG}
+    depends_on:
+      - contract
+      - km
+    environment:
+      - ENIGMA_ENV
+      - SGX_MODE
+      - MIN_CONFIRMATIONS
+      - LOG_LEVEL
+
+    expose:
+      - "9229" # nodejs debugger
+      - "3346" # gateway port
+      - "10300" # libp2p
+
+  contract:
+    hostname: contract
+    image: enigmampc/contract:${DOCKER_TAG}
+    environment:
+      - SGX_MODE
+      - ENIGMA_ENV
+      - AUTO_MINER
+      - BLOCK_TIME
+      - TIME_BETWEEN_BLOCKS
+      - LOG_LEVEL
+    expose:
+      - "8081" # contract discovery service
+      - "9545" # ethereum node port
+      - "8001" # faucet port
+
+  km:
+    hostname: km
+    image: enigmampc/key_management_sw:${DOCKER_TAG}
+    environment:
+      - ENIGMA_ENV
+      - SGX_MODE
+      - MIN_CONFIRMATIONS
+      - LOG_LEVEL
+    expose:
+      - "3040" # JSON RPC port
+      - "8081" # KM address discovery
+
+  client:
+    hostname: client
+    image: enigmampc/client:${DOCKER_TAG}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - contract
+    environment:
+      - ENIGMA_ENV
+      - SGX_MODE
+ 

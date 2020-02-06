@@ -2,8 +2,10 @@ const fs = require('fs');
 const path = require('path');
 const Web3 = require('web3');
 const dotenv = require('dotenv');
+const axios = require('axios').default;
 const Salad = artifacts.require('Salad.sol');
 const {Enigma, utils, eeConstants} = require('enigma-js/node');
+
 const {Store, configureWeb3Account} = require("@salad/operator");
 const {CONFIG_COLLECTION} = require('@salad/operator/src/store');
 
@@ -21,6 +23,10 @@ let enigma = null;
 
 let SECRET_CONTRACT_BUILD_FOLDER = process.env.SECRET_CONTRACT_BUILD_FOLDER || '../build/secret_contracts';
 
+let CONTRACT_DISCOVERY_ADDRESS = process.env.CONTRACT_DISCOVERY_ADDRESS || 'http://contract:8081';
+
+/** DEPRECATED for docker-environment, was used previously in discovery-docker-network **/
+/*
 function getEnigmaContractAddressFromJson() {
     let enigmaContract;
     if (process.env.SGX_MODE === 'SW') {
@@ -37,6 +43,33 @@ function getEnigmaTokenContractAddressFromJson() {
     const enigmaTokenContract = require('../build/enigma_contracts/EnigmaToken.json');
     return enigmaTokenContract.networks[process.env.ETH_NETWORK_ID].address;
 }
+*/
+
+async function getEnigmaContractAddressFromNetwork() {
+    let address=null;
+    await axios.get(CONTRACT_DISCOVERY_ADDRESS+'/contract/address?name=enigmacontract.txt')
+        .then(function (response) {
+            address=response.data;
+    })
+        .catch(function (error) {
+            debug('Failed to get Enigma Contract Address from the network.')
+            throw(error);
+    })
+    return address;
+}
+
+async function getEnigmaTokenContractAddressFromNetwork() {
+    let address=null;
+    await axios.get(CONTRACT_DISCOVERY_ADDRESS+'/contract/address?name=enigmatokencontract.txt')
+        .then(function (response) {
+            address=response.data;
+    })
+        .catch(function (error) {
+            debug('Failed to get Enigma Token Contract Address from the network.')
+            throw(error);
+    })
+    return address;
+}
 
 async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAddr) {
     debug(`Deploying Secret Contract "${config.filename}"...`);
@@ -52,7 +85,7 @@ async function deploySecretContract(config, saladAddr, enigmaAddr, enigmaTokenAd
     args.push([saladAddr, 'address']);
 
     let enigmaHost = process.env.ENIGMA_HOST || 'localhost';
-    let enigmaPort = process.env.ENIGMA_PORT || '3333';
+    let enigmaPort = process.env.ENIGMA_PORT || '3346';
 
     debug('enigma host is at ' + 'http://' + enigmaHost + ':' + enigmaPort);
     enigma = new Enigma(
@@ -131,11 +164,11 @@ module.exports = async function (deployer, network, accounts) {
     await store.initAsync();
     await store.truncate(CONFIG_COLLECTION);
 
-    const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || getEnigmaContractAddressFromJson();
-    const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || getEnigmaTokenContractAddressFromJson();
+    const enigmaAddr = process.env.ENIGMA_CONTRACT_ADDRESS || await getEnigmaContractAddressFromNetwork();
+    const enigmaTokenAddr = process.env.ENIGMA_TOKEN_CONTRACT_ADDRESS || await getEnigmaTokenContractAddressFromNetwork();
     // Adding the Enigma contract addresses to db to avoid re-fetching them from the environment in any of the shared components
     await store.insertEnigmaContractAddresses(enigmaAddr, enigmaTokenAddr);
-    const sender = web3.eth.defaultAccount;
+    const sender = process.env.ETH_SENDER || web3.eth.defaultAccount;
     // Deploy the Smart and Secret contracts:
     const depositLockPeriodInBlocks = process.env.DEPOSIT_LOCK_PERIOD_IN_BLOCKS;
     const dealIntervalInBlocks = process.env.DEAL_INTERVAL_IN_BLOCKS;

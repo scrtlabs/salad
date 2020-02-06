@@ -164,6 +164,7 @@ class CoinjoinClient {
      * @returns {Promise<Config>}
      */
     async fetchConfigAsync() {
+        debug('fetching congiguration from salad operator server');
         const promise = new Promise((resolve) => {
             this.ee.once(FETCH_CONFIG_SUCCESS, (result) => resolve(result.config));
         });
@@ -185,6 +186,7 @@ class CoinjoinClient {
         this.watch();
         this.keyPair = CoinjoinClient.obtainKeyPair();
         await this.isConnected;
+        debug('fetching accounts from ethereum node');
         this.accounts = await this.web3.eth.getAccounts();
         const {saladAddr, enigmaAddr, enigmaTokenAddr, pubKeyData} = await this.fetchConfigAsync();
         this.pubKeyData = pubKeyData;
